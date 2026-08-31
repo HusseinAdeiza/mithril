@@ -10,7 +10,7 @@ use mithril_common::{
 };
 
 use crate::{
-    Aggregator, MithrilInfrastructure, NodeVersion,
+    AggregateSignatureType, Aggregator, MithrilInfrastructure, NodeVersion,
     toolkit::ScenarioToolkit,
     utils::{
         randomly_take_blocks_hashes, randomly_take_transactions_hashes,
@@ -256,9 +256,16 @@ impl FullScenario {
         .await?;
 
         // Verify that artifacts are produced and signed correctly
-        let mut target_epoch = self
-            .verify_artifacts_production(target_epoch, aggregator, infrastructure)
-            .await?;
+        let mut target_epoch = if self.is_waiting_for_a_compatible_genesis(aggregator) {
+            info!(
+                "Deferring artifact verification of {} to after the era switch re-genesis",
+                aggregator.name()
+            );
+            target_epoch
+        } else {
+            self.verify_artifacts_production(target_epoch, aggregator, infrastructure)
+                .await?
+        };
 
         // Verify that artifacts are produced and signed correctly after era switch
         if let Some(next_era) = &self.next_era {
@@ -276,9 +283,12 @@ impl FullScenario {
                 )
                 .await?;
 
-            // Proceed to a re-genesis of the certificate chain
+            // Proceed to a re-genesis of the certificate chain, on the leader only since the
+            // followers catch the new genesis up through their certificate chain synchronization
             if self.regenesis_on_era_switch {
-                self.toolkit.exec.bootstrap_genesis_certificate(aggregator).await?;
+                if aggregator.is_leader() {
+                    self.toolkit.exec.bootstrap_genesis_certificate(aggregator).await?;
+                }
                 target_epoch += 5;
                 self.toolkit
                     .wait
@@ -311,6 +321,26 @@ impl FullScenario {
         }
 
         Ok(())
+    }
+
+    /// Tell if the aggregator can not produce certificates before the era switch re-genesis
+    /// provides a genesis certificate compatible with its aggregate signature type.
+    ///
+    /// A leader aggregator bootstraps its own compatible genesis certificate, so only a follower
+    /// defers its certification.
+    fn is_waiting_for_a_compatible_genesis(&self, aggregator: &Aggregator) -> bool {
+        Self::defers_certification_to_a_re_genesis(CertificationDeferralConditions {
+            is_leader_aggregator: aggregator.is_leader(),
+            aggregate_signature_type: aggregator.aggregate_signature_type(),
+            era_switch_with_regenesis_planned: self.next_era.is_some()
+                && self.regenesis_on_era_switch,
+        })
+    }
+
+    fn defers_certification_to_a_re_genesis(conditions: CertificationDeferralConditions) -> bool {
+        !conditions.is_leader_aggregator
+            && conditions.aggregate_signature_type == AggregateSignatureType::IvcSnark
+            && conditions.era_switch_with_regenesis_planned
     }
 
     async fn verify_artifacts_production(
@@ -411,5 +441,60 @@ impl FullScenario {
         }
 
         Ok(target_epoch)
+    }
+}
+
+/// Conditions determining whether an aggregator defers its certification to the re-genesis
+/// following an era switch.
+struct CertificationDeferralConditions {
+    /// Whether the aggregator is the leader of the network.
+    is_leader_aggregator: bool,
+    /// The aggregate signature type of the aggregator.
+    aggregate_signature_type: AggregateSignatureType,
+    /// Whether the scenario plans an era switch followed by a re-genesis.
+    era_switch_with_regenesis_planned: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_an_ivc_snark_follower_defers_its_certification_to_a_planned_re_genesis() {
+        assert!(FullScenario::defers_certification_to_a_re_genesis(
+            CertificationDeferralConditions {
+                is_leader_aggregator: false,
+                aggregate_signature_type: AggregateSignatureType::IvcSnark,
+                era_switch_with_regenesis_planned: true,
+            }
+        ));
+        assert!(!FullScenario::defers_certification_to_a_re_genesis(
+            CertificationDeferralConditions {
+                is_leader_aggregator: true,
+                aggregate_signature_type: AggregateSignatureType::IvcSnark,
+                era_switch_with_regenesis_planned: true,
+            }
+        ));
+        assert!(!FullScenario::defers_certification_to_a_re_genesis(
+            CertificationDeferralConditions {
+                is_leader_aggregator: false,
+                aggregate_signature_type: AggregateSignatureType::IvcSnark,
+                era_switch_with_regenesis_planned: false,
+            }
+        ));
+        assert!(!FullScenario::defers_certification_to_a_re_genesis(
+            CertificationDeferralConditions {
+                is_leader_aggregator: false,
+                aggregate_signature_type: AggregateSignatureType::Concatenation,
+                era_switch_with_regenesis_planned: true,
+            }
+        ));
+        assert!(!FullScenario::defers_certification_to_a_re_genesis(
+            CertificationDeferralConditions {
+                is_leader_aggregator: false,
+                aggregate_signature_type: AggregateSignatureType::Snark,
+                era_switch_with_regenesis_planned: true,
+            }
+        ));
     }
 }
