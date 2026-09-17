@@ -16,6 +16,10 @@ use crate::{
 };
 
 /// Bootstrap an aggregator and make it compute its genesis certificate
+///
+/// A signer's Proof of Bound Possession (when applicable) is only valid for the epoch it was
+/// registered for, so the signer fixture is rebound (same party ids and keys, fresh PoBP) to
+/// each registration round's specific epoch right before use.
 pub async fn bootstrap_aggregator(
     args: &AggregatorParameters,
     signers_fixture: &MithrilFixture,
@@ -97,10 +101,13 @@ pub async fn bootstrap_aggregator(
 
     restart_aggregator_and_move_one_epoch_forward(&mut aggregator, current_epoch, args).await?;
 
+    let first_round_epoch = current_epoch.offset_to_recording_epoch();
+    let signers_fixture = signers_fixture.bound_to_epoch(first_round_epoch);
+
     fake_signer::try_register_signer_until_registration_round_is_open(
         &aggregator,
         &signers_fixture.signers()[0],
-        *current_epoch + 1,
+        first_round_epoch,
         Duration::from_secs(60),
     )
     .await?;
@@ -109,7 +116,7 @@ pub async fn bootstrap_aggregator(
     let errors = fake_signer::register_signers_to_aggregator(
         &aggregator,
         &signers_fixture.signers(),
-        *current_epoch + 1,
+        first_round_epoch,
     )
     .await?;
     assert_eq!(0, errors);
@@ -117,18 +124,21 @@ pub async fn bootstrap_aggregator(
     fake_signer::try_register_signer_until_registration_round_is_open(
         &aggregator,
         &signers_fixture.signers()[0],
-        *current_epoch + 1,
+        first_round_epoch,
         Duration::from_secs(60),
     )
     .await?;
 
     restart_aggregator_and_move_one_epoch_forward(&mut aggregator, current_epoch, args).await?;
 
+    let second_round_epoch = current_epoch.offset_to_recording_epoch();
+    let signers_fixture = signers_fixture.bound_to_epoch(second_round_epoch);
+
     info!(">> Send the Signer Key Registrations payloads for next genesis signers");
     let errors = fake_signer::register_signers_to_aggregator(
         &aggregator,
         &signers_fixture.signers(),
-        *current_epoch + 1,
+        second_round_epoch,
     )
     .await?;
     assert_eq!(0, errors);
