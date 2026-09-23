@@ -26,6 +26,7 @@ As a minor extension, we have adopted a slightly different versioning convention
   - Hardened the SRS download of the Mithril aggregator: a cached SRS is verified against its pinned hash before use, the prover warm-up retries with a doubling delay and gives up on a failure no attempt resolves, and each download attempt is bounded and never leaves HTTPS.
   - Support for an IVC follower aggregator joining the network at any time, with a new optional `certificate_chain_aggregator_endpoint` configuration parameter of the Mithril aggregator to synchronize the full certificate chain from a distinct aggregator, defaulting to the leader aggregator endpoint.
   - Support for the `EarlyStopVerification` mode of the certificate chain verification cache in the Mithril client library, which stops the chain verification at the first cached certificate.
+  - Support for a file system backend of the certificate chain verification cache in the Mithril client library, which persists the verified certificates across runs.
 
 - **REMOVED** support for `Gzip` compression/decompression in the Mithril aggregator and client:
   - The aggregator no longer produces or supports `Gzip` compression for snapshot-related artifacts: immutable files and ancillaries.
