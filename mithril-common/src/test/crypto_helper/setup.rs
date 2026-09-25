@@ -4,7 +4,6 @@ use std::{fs, path::PathBuf, sync::Arc};
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
 
-#[cfg(feature = "snark")]
 use crate::entities::Epoch;
 use crate::{
     crypto_helper::{
