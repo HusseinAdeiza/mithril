@@ -12,13 +12,13 @@ It is written for developers implementing or changing them, and for reviewers an
 
 The book is ten parts, and no reader needs all of them. These are the routes through it.
 
-| If you want to | Read, in order |
-| --- | --- |
-| See what the SNARK flavors are and how they fit together | Part 2, then Part 3 |
-| Change one of the circuits | Part 3, then Part 4; add Part 5 for recursive changes; then Parts 6, 7 and 8 |
-| Review or audit the construction | Part 3, then Parts 4 and 5, then Parts 6, 7 and 9 |
-| Operate or roll out a SNARK flavor | Part 2, then Parts 6 and 8 |
-| Look up a term | Part 1 |
+| If you want to                                           | Read, in order                                                               |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| See what the SNARK flavors are and how they fit together | Part 2, then Part 3                                                          |
+| Change one of the circuits                               | Part 3, then Part 4; add Part 5 for recursive changes; then Parts 6, 7 and 8 |
+| Review or audit the construction                         | Part 3, then Parts 4 and 5, then Parts 6, 7 and 9                            |
+| Operate or roll out a SNARK flavor                       | Part 2, then Parts 6 and 8                                                   |
+| Look up a term                                           | Part 1                                                                       |
 
 Three things worth knowing before choosing a route.
 
@@ -49,11 +49,11 @@ Statements about the code are checked against one revision of `main`, named here
 
 A page describes what exists at that baseline unless it carries the **In review** marker: implemented in a named open pull request and not on `main` at the baseline. The marker does not mean approved, nor certain to ship as written. Open pull requests are rebased, so each was read at the head below, on the date given; a later head can carry the same change under another hash.
 
-| Pull request | Subject | Head read | Read on |
-| --- | --- | --- | --- |
-| #3539 | Proof of bound possession | `3f3d0db00` | 2026-09-28 |
-| #3541 | Circuit key registry crate and publication tooling | `da8618a7a` | 2026-09-28 |
-| #3514 | Circuit key registry enforcement | `313cd2c38` | 2026-09-28 |
+| Pull request | Subject                                            | Head read   | Read on    |
+| ------------ | -------------------------------------------------- | ----------- | ---------- |
+| #3539        | Proof of bound possession                          | `3f3d0db00` | 2026-09-28 |
+| #3541        | Circuit key registry crate and publication tooling | `da8618a7a` | 2026-09-28 |
+| #3514        | Circuit key registry enforcement                   | `313cd2c38` | 2026-09-28 |
 
 Where something is built but nothing calls it yet, the page says so. A feature gate is not a marker: whether code is merged and whether a distribution enables it are independent facts, and a page that depends on one states it in prose.
 
@@ -67,93 +67,93 @@ Terms are grouped by what they belong to, and pages link here on first use.
 
 ## Notation
 
-| Symbol | Meaning |
-| --- | --- |
-| <a id="symbol-k"></a>`k` | The quorum: the required number of distinct winning lottery indices for the signed message. One signer may contribute several winning indices. |
-| <a id="symbol-m"></a>`m` | The number of lottery indices evaluated for each signed message. Indices range from `0` to `m - 1`. |
-| <a id="symbol-phi-f"></a>`phi_f` | The protocol parameter in the ideal winning probability `1 - (1 - phi_f)^w`. |
-| <a id="symbol-w"></a>`w` | A signer's stake as a fraction of the total stake of all registered signers. |
-| <a id="symbol-capital-k"></a>`K` | The base-2 logarithm of the evaluation-domain size: `2^K` rows. The circuit must fit in the usable rows of that domain. Not the degree of a polynomial, and not the number of constraints. Written `K_certificate` and `K_recursive` where both appear on one page. |
-| <a id="symbol-lambda"></a>`lambda` | The target approximation precision in bits, written `epsilon = 2^-lambda` in the lottery error analysis. It does not state the security level of the protocol. |
+| Symbol                             | Meaning                                                                                                                                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="symbol-k"></a>`k`           | The quorum: the required number of distinct winning lottery indices for the signed message. One signer may contribute several winning indices.                                                                                                                      |
+| <a id="symbol-m"></a>`m`           | The number of lottery indices evaluated for each signed message. Indices range from `0` to `m - 1`.                                                                                                                                                                 |
+| <a id="symbol-phi-f"></a>`phi_f`   | The protocol parameter in the ideal winning probability `1 - (1 - phi_f)^w`.                                                                                                                                                                                        |
+| <a id="symbol-w"></a>`w`           | A signer's stake as a fraction of the total stake of all registered signers.                                                                                                                                                                                        |
+| <a id="symbol-capital-k"></a>`K`   | The base-2 logarithm of the evaluation-domain size: `2^K` rows. The circuit must fit in the usable rows of that domain. Not the degree of a polynomial, and not the number of constraints. Written `K_certificate` and `K_recursive` where both appear on one page. |
+| <a id="symbol-lambda"></a>`lambda` | The target approximation precision in bits, written `epsilon = 2^-lambda` in the lottery error analysis. It does not state the security level of the protocol.                                                                                                      |
 
 `k` and `K` are different quantities and are always written with the case shown here.
 
 ## Protocol terms
 
-| Term | Meaning |
-| --- | --- |
-| <a id="term-lottery-index"></a>Lottery index | An integer in `0..m` identifying one lottery for a signed message. Different signers can win the same index; that index counts once toward the quorum. |
-| <a id="term-aggregation-flavor"></a>Aggregation flavor | One of the three ways Mithril builds an aggregate signature: concatenation, non-recursive SNARK, recursive SNARK. |
-| <a id="term-aggregate-signature"></a>Aggregate signature | The artifact a flavor produces for clients to verify: a bundle of selected signatures, or a SNARK proof, together with the data that format requires. |
-| <a id="term-certificate-chain"></a>Certificate chain | See the [website](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates). |
-| <a id="term-aggregate-verification-key"></a>Aggregate verification key | The membership-tree commitment and total registered stake that a proof system verifies an aggregate against. Distinct from a circuit verification key. |
-| <a id="term-lottery-target"></a>Lottery target | The threshold derived from a signer's stake fraction and `phi_f` against which lottery evaluations are compared. |
-| <a id="term-continuation-data"></a>Continuation data | Data carried forward to produce later recursive steps, including the previous recursive proof, the chain state and the [accumulator](#term-accumulator). |
-| <a id="term-proof-of-possession"></a>Proof of possession | Evidence submitted with a verification key that the submitter holds the matching signing key. |
-| <a id="term-proof-of-bound-possession"></a>Proof of bound possession | A proof of possession whose signed value also covers the signer's stake, epoch and pool identifier, so it holds for one identity at one epoch only. Part 9 gives the construction. |
-| <a id="term-kes-signature"></a>KES signature | A key-evolving signature, made under a scheme whose signing key is advanced each period so that compromising it does not forge earlier signatures. Registration uses one to tie a submitted verification key to a stake pool operator. |
-| <a id="term-operational-certificate"></a>Operational certificate | The Cardano certificate authorizing a KES verification key under a stake pool's cold key, from which the pool identity is derived. |
-| <a id="term-ancillary-verifier-data"></a>Ancillary verifier data | Additional data carried with a certificate for its proof system's verifier. For the SNARK types it includes circuit verification keys; for the recursive type it also includes the genesis message hash. Receiving it does not establish trust in its contents. |
+| Term                                                                   | Meaning                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="term-lottery-index"></a>Lottery index                           | An integer in `0..m` identifying one lottery for a signed message. Different signers can win the same index; that index counts once toward the quorum.                                                                                                          |
+| <a id="term-aggregation-flavor"></a>Aggregation flavor                 | One of the three ways Mithril builds an aggregate signature: concatenation, non-recursive SNARK, recursive SNARK.                                                                                                                                               |
+| <a id="term-aggregate-signature"></a>Aggregate signature               | The artifact a flavor produces for clients to verify: a bundle of selected signatures, or a SNARK proof, together with the data that format requires.                                                                                                           |
+| <a id="term-certificate-chain"></a>Certificate chain                   | See the [website](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates).                                                                                                                                                             |
+| <a id="term-aggregate-verification-key"></a>Aggregate verification key | The membership-tree commitment and total registered stake that a proof system verifies an aggregate against. Distinct from a circuit verification key.                                                                                                          |
+| <a id="term-lottery-target"></a>Lottery target                         | The threshold derived from a signer's stake fraction and `phi_f` against which lottery evaluations are compared.                                                                                                                                                |
+| <a id="term-continuation-data"></a>Continuation data                   | Data carried forward to produce later recursive steps, including the previous recursive proof, the chain state and the [accumulator](#term-accumulator).                                                                                                        |
+| <a id="term-proof-of-possession"></a>Proof of possession               | Evidence submitted with a verification key that the submitter holds the matching signing key.                                                                                                                                                                   |
+| <a id="term-proof-of-bound-possession"></a>Proof of bound possession   | A proof of possession whose signed value also covers the signer's stake, epoch and pool identifier, so it holds for one identity at one epoch only. Part 9 gives the construction.                                                                              |
+| <a id="term-kes-signature"></a>KES signature                           | A key-evolving signature, made under a scheme whose signing key is advanced each period so that compromising it does not forge earlier signatures. Registration uses one to tie a submitted verification key to a stake pool operator.                          |
+| <a id="term-operational-certificate"></a>Operational certificate       | The Cardano certificate authorizing a KES verification key under a stake pool's cold key, from which the pool identity is derived.                                                                                                                              |
+| <a id="term-ancillary-verifier-data"></a>Ancillary verifier data       | Additional data carried with a certificate for its proof system's verifier. For the SNARK types it includes circuit verification keys; for the recursive type it also includes the genesis message hash. Receiving it does not establish trust in its contents. |
 
 ## Proof system terms
 
-| Term | Meaning |
-| --- | --- |
-| <a id="term-relation"></a>Relation | A condition connecting a public input to a witness. |
-| <a id="term-circuit"></a>Circuit | A relation expressed as arithmetic constraints. |
-| <a id="term-constraint"></a>Constraint | A condition the circuit enforces. |
-| <a id="term-public-input"></a>Public input | Values supplied to the prover and the verifier that specify the claim being proved. |
-| <a id="term-witness"></a>Witness | Data the prover supplies to satisfy the relation. The verifier does not need it to check the proof, and it need not be secret. |
-| <a id="term-proof"></a>Proof | An artifact that lets a verifier check a claim about a public input without receiving the witness used to establish it. |
-| <a id="term-prover"></a>Prover | The party that produces a proof. |
-| <a id="term-verifier"></a>Verifier | The party that checks a proof. |
-| <a id="term-proving"></a>Proving | Producing a proof. |
-| <a id="term-verification"></a>Verification | Checking a proof. |
-| <a id="term-soundness"></a>Soundness | The property that a verifier accepts a false claim only with negligible probability. Here it holds against computationally bounded provers, under the proof system's assumptions. |
-| <a id="term-knowledge-soundness"></a>Knowledge soundness | The stronger property that a prover producing an accepting proof must hold a witness satisfying the relation. Reading a certificate as evidence that the individual signatures exist relies on this. |
-| <a id="term-transcript"></a>Transcript | The ordered record of a proof's public data, from which the verification challenges are derived. |
-| <a id="term-recursive-proof"></a>Recursive proof | A proof whose circuit checks other proofs; here these include proofs of the same recursive relation. |
-| <a id="term-accumulator"></a>Accumulator | Proof-verification checks deferred and carried across recursive steps in folded form, so that they are checked once instead of at every step. Part 5 describes the mechanism. |
-| <a id="term-trusted-setup"></a>Trusted setup | The procedure that produces a structured reference string. In the multiparty setup used here, security relies on at least one participant contributing secret randomness that remains unknown to others and is securely erased after use, together with verification of the ceremony's updates. |
-| <a id="term-structured-reference-string"></a>Structured reference string | Abbreviated SRS. Public parameters produced by a trusted setup, reusable across circuits within the size the setup supports. |
-| <a id="term-proving-key"></a>Proving key | Derived from the structured reference string and a configured circuit; needed to produce a proof. |
-| <a id="term-verifying-key"></a>Verifying key | Derived from the structured reference string and a configured circuit; needed to check a proof. Distinct from a signer's verification key. |
-| <a id="term-circuit-verification-key"></a>Circuit verification key | Another name for the proof system's verifying key, distinguishing it from a signer's verification key. Part 6 explains its role in identifying a configured circuit. |
+| Term                                                                     | Meaning                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="term-relation"></a>Relation                                       | A condition connecting a public input to a witness.                                                                                                                                                                                                                                             |
+| <a id="term-circuit"></a>Circuit                                         | A relation expressed as arithmetic constraints.                                                                                                                                                                                                                                                 |
+| <a id="term-constraint"></a>Constraint                                   | A condition the circuit enforces.                                                                                                                                                                                                                                                               |
+| <a id="term-public-input"></a>Public input                               | Values supplied to the prover and the verifier that specify the claim being proved.                                                                                                                                                                                                             |
+| <a id="term-witness"></a>Witness                                         | Data the prover supplies to satisfy the relation. The verifier does not need it to check the proof, and it need not be secret.                                                                                                                                                                  |
+| <a id="term-proof"></a>Proof                                             | An artifact that lets a verifier check a claim about a public input without receiving the witness used to establish it.                                                                                                                                                                         |
+| <a id="term-prover"></a>Prover                                           | The party that produces a proof.                                                                                                                                                                                                                                                                |
+| <a id="term-verifier"></a>Verifier                                       | The party that checks a proof.                                                                                                                                                                                                                                                                  |
+| <a id="term-proving"></a>Proving                                         | Producing a proof.                                                                                                                                                                                                                                                                              |
+| <a id="term-verification"></a>Verification                               | Checking a proof.                                                                                                                                                                                                                                                                               |
+| <a id="term-soundness"></a>Soundness                                     | The property that a verifier accepts a false claim only with negligible probability. Here it holds against computationally bounded provers, under the proof system's assumptions.                                                                                                               |
+| <a id="term-knowledge-soundness"></a>Knowledge soundness                 | The stronger property that a prover producing an accepting proof must hold a witness satisfying the relation. Reading a certificate as evidence that the individual signatures exist relies on this.                                                                                            |
+| <a id="term-transcript"></a>Transcript                                   | The ordered record of a proof's public data, from which the verification challenges are derived.                                                                                                                                                                                                |
+| <a id="term-recursive-proof"></a>Recursive proof                         | A proof whose circuit checks other proofs; here these include proofs of the same recursive relation.                                                                                                                                                                                            |
+| <a id="term-accumulator"></a>Accumulator                                 | Proof-verification checks deferred and carried across recursive steps in folded form, so that they are checked once instead of at every step. Part 5 describes the mechanism.                                                                                                                   |
+| <a id="term-trusted-setup"></a>Trusted setup                             | The procedure that produces a structured reference string. In the multiparty setup used here, security relies on at least one participant contributing secret randomness that remains unknown to others and is securely erased after use, together with verification of the ceremony's updates. |
+| <a id="term-structured-reference-string"></a>Structured reference string | Abbreviated SRS. Public parameters produced by a trusted setup, reusable across circuits within the size the setup supports.                                                                                                                                                                    |
+| <a id="term-proving-key"></a>Proving key                                 | Derived from the structured reference string and a configured circuit; needed to produce a proof.                                                                                                                                                                                               |
+| <a id="term-verifying-key"></a>Verifying key                             | Derived from the structured reference string and a configured circuit; needed to check a proof. Distinct from a signer's verification key.                                                                                                                                                      |
+| <a id="term-circuit-verification-key"></a>Circuit verification key       | Another name for the proof system's verifying key, distinguishing it from a signer's verification key. Part 6 explains its role in identifying a configured circuit.                                                                                                                            |
 
 ## Testing terms
 
-| Term | Meaning |
-| --- | --- |
-| Golden test | A regression test checking current behaviour against a fixed expected value or a committed reference artifact. What it establishes depends on the artifact: some compare a fresh derivation with stored bytes, others load a stored artifact and verify it. Part 7 gives the kinds. |
-| Property test | A test asserting an invariant over generated inputs rather than over fixed ones. |
-| Fixture | Prepared test input or expected data — a proof, a state, an accumulator, a key — whether generated during the run, cached, or committed. |
-| Asset | A fixture committed to the repository as a file, rather than derived at test time. |
-| Mock prover | A checker that evaluates a circuit's constraints over an assignment without producing a proof. It establishes that the assignment satisfies the relation, not that a proof of it verifies. |
-| Slow test | A test placed in a `slow` submodule and therefore omitted by the base selective filter. Part 7 gives the thresholds for classifying one and the conditions under which it is selected again. |
-| Execution category | Whether a test is ordinary or lives in a `slow` submodule. Part 7 gives the thresholds and how selection uses them. |
-| Cost class | What work a test performs — pure functions, verification against a committed asset, circuit synthesis, or real proving. Independent of its execution category. |
-| Coverage layer | A grouping of tests by what they establish. The recursive circuit's tests name four: data and encoding invariants, state-transition rules, in-circuit mechanics, and off-circuit mechanics. |
-| Drift | Divergence between a committed artifact and what the current code would produce. Detecting it needs a fresh derivation compared against the stored material; reusing a cached result does not check whether its generator would still reproduce it. |
+| Term               | Meaning                                                                                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Golden test        | A regression test checking current behaviour against a fixed expected value or a committed reference artifact. What it establishes depends on the artifact: some compare a fresh derivation with stored bytes, others load a stored artifact and verify it. Part 7 gives the kinds. |
+| Property test      | A test asserting an invariant over generated inputs rather than over fixed ones.                                                                                                                                                                                                    |
+| Fixture            | Prepared test input or expected data — a proof, a state, an accumulator, a key — whether generated during the run, cached, or committed.                                                                                                                                            |
+| Asset              | A fixture committed to the repository as a file, rather than derived at test time.                                                                                                                                                                                                  |
+| Mock prover        | A checker that evaluates a circuit's constraints over an assignment without producing a proof. It establishes that the assignment satisfies the relation, not that a proof of it verifies.                                                                                          |
+| Slow test          | A test placed in a `slow` submodule and therefore omitted by the base selective filter. Part 7 gives the thresholds for classifying one and the conditions under which it is selected again.                                                                                        |
+| Execution category | Whether a test is ordinary or lives in a `slow` submodule. Part 7 gives the thresholds and how selection uses them.                                                                                                                                                                 |
+| Cost class         | What work a test performs — pure functions, verification against a committed asset, circuit synthesis, or real proving. Independent of its execution category.                                                                                                                      |
+| Coverage layer     | A grouping of tests by what they establish. The recursive circuit's tests name four: data and encoding invariants, state-transition rules, in-circuit mechanics, and off-circuit mechanics.                                                                                         |
+| Drift              | Divergence between a committed artifact and what the current code would produce. Detecting it needs a fresh derivation compared against the stored material; reusing a cached result does not check whether its generator would still reproduce it.                                 |
 
 ## Terms defined on the Mithril website
 
 These are not restated here.
 
-| Term | |
-| --- | --- |
-| Aggregator | [glossary](https://mithril.network/doc/next/glossary#mithril-aggregator) |
-| Certificate | [glossary](https://mithril.network/doc/next/glossary#certificate) |
-| Client | [glossary](https://mithril.network/doc/next/glossary#mithril-client) |
-| Epoch | [glossary](https://mithril.network/doc/next/glossary#epoch) |
-| Individual signature | [glossary](https://mithril.network/doc/next/glossary#individual-signature) |
-| IVC | [glossary](https://mithril.network/doc/next/glossary#incrementally-verifiable-computation). This book says "recursive"; IVC appears here only inside identifiers such as `IvcSnark`. |
-| Merkle tree | [glossary](https://mithril.network/doc/next/glossary#merkle-tree) |
-| Multi-signature | [glossary](https://mithril.network/doc/next/glossary#multi-signature) |
-| Signer | [glossary](https://mithril.network/doc/next/glossary#mithril-signer) |
-| SNARK | [glossary](https://mithril.network/doc/next/glossary#snark) |
-| Stake distribution | [glossary](https://mithril.network/doc/next/glossary#stake-distribution) |
-| Stake pool operator | [glossary](https://mithril.network/doc/next/glossary#stake-pool-operator-spo) |
-| Verification key | [glossary](https://mithril.network/doc/next/glossary#verification-key). Defines a signer's verification key. A circuit verification key is a different thing; see above. |
+| Term                 |                                                                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Aggregator           | [glossary](https://mithril.network/doc/next/glossary#mithril-aggregator)                                                                                                             |
+| Certificate          | [glossary](https://mithril.network/doc/next/glossary#certificate)                                                                                                                    |
+| Client               | [glossary](https://mithril.network/doc/next/glossary#mithril-client)                                                                                                                 |
+| Epoch                | [glossary](https://mithril.network/doc/next/glossary#epoch)                                                                                                                          |
+| Individual signature | [glossary](https://mithril.network/doc/next/glossary#individual-signature)                                                                                                           |
+| IVC                  | [glossary](https://mithril.network/doc/next/glossary#incrementally-verifiable-computation). This book says "recursive"; IVC appears here only inside identifiers such as `IvcSnark`. |
+| Merkle tree          | [glossary](https://mithril.network/doc/next/glossary#merkle-tree)                                                                                                                    |
+| Multi-signature      | [glossary](https://mithril.network/doc/next/glossary#multi-signature)                                                                                                                |
+| Signer               | [glossary](https://mithril.network/doc/next/glossary#mithril-signer)                                                                                                                 |
+| SNARK                | [glossary](https://mithril.network/doc/next/glossary#snark)                                                                                                                          |
+| Stake distribution   | [glossary](https://mithril.network/doc/next/glossary#stake-distribution)                                                                                                             |
+| Stake pool operator  | [glossary](https://mithril.network/doc/next/glossary#stake-pool-operator-spo)                                                                                                        |
+| Verification key     | [glossary](https://mithril.network/doc/next/glossary#verification-key). Defines a signer's verification key. A circuit verification key is a different thing; see above.             |
 
 # Part 2 — Overview and architecture
 
@@ -181,11 +181,11 @@ Given trusted [circuit verification keys](#term-circuit-verification-key) and th
 
 Both SNARK types use circuit verification keys carried in [ancillary verifier data](#term-ancillary-verifier-data), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. At this baseline the registry and certification primitives exist, but the standard certificate verifier does not yet invoke that certification check. Concatenation uses no circuit verification key.
 
-| Type | Flavor | Compiled | Tag | Certifies the full chain | Requires externally certified circuit keys |
-| --- | --- | --- | --- | --- | --- |
-| `Concatenation` | Concatenation | always | `0` | No | No |
-| `Snark` | Non-recursive SNARK | with `future_snark` | `1` | No | Yes |
-| `IvcSnark` | Recursive SNARK | with `future_snark` | `2` | Yes | Yes |
+| Type            | Flavor              | Compiled            | Tag | Certifies the full chain | Requires externally certified circuit keys |
+| --------------- | ------------------- | ------------------- | --- | ------------------------ | ------------------------------------------ |
+| `Concatenation` | Concatenation       | always              | `0` | No                       | No                                         |
+| `Snark`         | Non-recursive SNARK | with `future_snark` | `1` | No                       | Yes                                        |
+| `IvcSnark`      | Recursive SNARK     | with `future_snark` | `2` | Yes                      | Yes                                        |
 
 The current binary format stores the tag in a versioned CBOR envelope; the legacy format used it as a leading byte. Changing the tag mapping breaks compatibility with existing encoded data. Part 3 describes the encoding and decoding rules.
 
@@ -259,11 +259,11 @@ Parts 4 and 5 describe what each circuit proves. Part 3 specifies the registrati
 
 The SNARK flavors are built from primitives chosen to be cheap to express as circuit [constraints](#term-constraint), which is why they differ from the ones the concatenation flavor uses.
 
-| Role | Concatenation | SNARK flavors |
-| --- | --- | --- |
-| Signer signature scheme | BLS (Boneh-Lynn-Shacham) | Schnorr over the Jubjub curve |
-| Default membership-tree hash | Blake2b | Poseidon |
-| SNARK backend | Not used | Halo2 with KZG (Kate-Zaverucha-Goldberg) commitments over BLS12-381 |
+| Role                         | Concatenation            | SNARK flavors                                                       |
+| ---------------------------- | ------------------------ | ------------------------------------------------------------------- |
+| Signer signature scheme      | BLS (Boneh-Lynn-Shacham) | Schnorr over the Jubjub curve                                       |
+| Default membership-tree hash | Blake2b                  | Poseidon                                                            |
+| SNARK backend                | Not used                 | Halo2 with KZG (Kate-Zaverucha-Goldberg) commitments over BLS12-381 |
 
 Schnorr over Jubjub and Poseidon make signature and membership checks efficient to express as constraints. Jubjub's coordinate field is the native field of these circuits, the scalar field of BLS12-381, so its curve arithmetic can be checked without emulation. KZG is the scheme the proof system uses to commit to its polynomials.
 
@@ -275,13 +275,13 @@ The SNARK backend and circuit gadgets come from four pinned Midnight crates: `mi
 
 The cryptographic core is in `mithril-stm`. The five areas below connect protocol orchestration, signature schemes, membership commitments, proof systems and circuits. Network registration, certificate assembly and client integration involve other crates.
 
-| Module | Contents |
-| --- | --- |
-| `protocol/` | Registration, participants, single signatures, aggregate signatures, protocol parameters. Shared protocol types and orchestration across flavors. |
-| `signature_scheme/` | BLS multi-signatures and Schnorr signatures. |
-| `membership_commitment/` | Merkle trees and paths. |
-| `proof_system/` | One module per flavor: `concatenation/`, `halo2_snark/`, `halo2_ivc_snark/`. Each holds the prover, the verifier and the flavor's own types. |
-| `circuits/` | The circuits themselves: `halo2/` for the certificate circuit, `halo2_ivc/` for the recursive one, plus the trusted setup, key generation, key serialization and the circuit verification key digest. |
+| Module                   | Contents                                                                                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocol/`              | Registration, participants, single signatures, aggregate signatures, protocol parameters. Shared protocol types and orchestration across flavors.                                                     |
+| `signature_scheme/`      | BLS multi-signatures and Schnorr signatures.                                                                                                                                                          |
+| `membership_commitment/` | Merkle trees and paths.                                                                                                                                                                               |
+| `proof_system/`          | One module per flavor: `concatenation/`, `halo2_snark/`, `halo2_ivc_snark/`. Each holds the prover, the verifier and the flavor's own types.                                                          |
+| `circuits/`              | The circuits themselves: `halo2/` for the certificate circuit, `halo2_ivc/` for the recursive one, plus the trusted setup, key generation, key serialization and the circuit verification key digest. |
 
 `circuits/` and the two SNARK proof-system modules are compiled with `future_snark`. `circuits/` defines the relations, their constraints and the circuit-key machinery. `proof_system/` prepares inputs and drives proving and verification; its runtime setup objects hold the circuit, the setup parameters and the keys obtained through that machinery.
 
@@ -291,14 +291,14 @@ Later parts name the files they discuss.
 
 Part 2 described the pipeline as five steps. This part opens each one, in the same order, under a heading of its own. Both SNARK flavors depend on every rule here. Two steps are specified by the circuits instead of by this part, and the table says where they are.
 
-| Pipeline step | Specified in |
-| --- | --- |
-| Registration | This part |
-| Signing | This part |
-| Aggregation, selecting the signatures | This part |
-| Aggregation, proving the certificate circuit | Parts 4 and 5 |
-| Certificate assembly | This part |
-| Verification | Parts 4, 5 and 6 |
+| Pipeline step                                | Specified in     |
+| -------------------------------------------- | ---------------- |
+| Registration                                 | This part        |
+| Signing                                      | This part        |
+| Aggregation, selecting the signatures        | This part        |
+| Aggregation, proving the certificate circuit | Parts 4 and 5    |
+| Certificate assembly                         | This part        |
+| Verification                                 | Parts 4, 5 and 6 |
 
 ## Registration
 
@@ -308,16 +308,16 @@ Registration is where the signer set is fixed. It is specified in two halves: wh
 
 Registration fixes a signer set, and that set signs later. A round opened during [epoch](https://mithril.network/doc/next/glossary#epoch) `E` records under the label `E + 1`, and those registrations supply the signer set used at `E + 2`. A signer sends one registration message to the [aggregator](https://mithril.network/doc/next/glossary#mithril-aggregator), which authenticates it and records an entry under the round's label.
 
-| Field | Contents |
-| --- | --- |
-| `epoch` | The round's recording label, which the submission must match. |
-| `party_id` | The signer's pool identity. Certified from the [operational certificate](#term-operational-certificate); an uncertified value is accepted only in test configurations. |
-| `verification_key_for_concatenation` | The BLS verification key with its [proof of possession](#term-proof-of-possession). Serialized as `verification_key`. |
-| `verification_key_signature_for_concatenation` | A [KES signature](#term-kes-signature) over that key. Serialized as `verification_key_signature`. |
-| `operational_certificate` | The stake pool operator's operational certificate. |
-| `kes_evolutions` | KES evolutions since the operational certificate's start period. Serialized as `kes_period`. At submission the aggregator authenticates with the value it derives from the chain's current KES period. |
-| `verification_key_for_snark` | The Schnorr verification key. Optional. |
-| `verification_key_signature_for_snark` | A KES signature over the Schnorr verification key. Required whenever that key is present. |
+| Field                                          | Contents                                                                                                                                                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `epoch`                                        | The round's recording label, which the submission must match.                                                                                                                                          |
+| `party_id`                                     | The signer's pool identity. Certified from the [operational certificate](#term-operational-certificate); an uncertified value is accepted only in test configurations.                                 |
+| `verification_key_for_concatenation`           | The BLS verification key with its [proof of possession](#term-proof-of-possession). Serialized as `verification_key`.                                                                                  |
+| `verification_key_signature_for_concatenation` | A [KES signature](#term-kes-signature) over that key. Serialized as `verification_key_signature`.                                                                                                      |
+| `operational_certificate`                      | The stake pool operator's operational certificate.                                                                                                                                                     |
+| `kes_evolutions`                               | KES evolutions since the operational certificate's start period. Serialized as `kes_period`. At submission the aggregator authenticates with the value it derives from the chain's current KES period. |
+| `verification_key_for_snark`                   | The Schnorr verification key. Optional.                                                                                                                                                                |
+| `verification_key_signature_for_snark`         | A KES signature over the Schnorr verification key. Required whenever that key is present.                                                                                                              |
 
 The two SNARK fields are everything the SNARK flavors add to a submission. A signer may omit them both, registering normally and taking part in concatenation aggregation alone. A Schnorr key supplied without its KES signature is rejected on the certified path.
 
@@ -339,12 +339,12 @@ Closing sums the stake of every entry, rejecting both an overflow and a total of
 
 Each proof system then commits its own leaf form over those entries, in a [Merkle tree](https://mithril.network/doc/next/glossary#merkle-tree) of its own.
 
-| | Concatenation | SNARK |
-| --- | --- | --- |
-| Leaf contents | Concatenation verification key, stake | Schnorr verification key, lottery target value |
-| Leaf width | 104 bytes: 96-byte key, 8-byte big-endian stake | 96 bytes: 64-byte key, 32-byte target value |
-| Membership hash | Blake2b | Poseidon |
-| Leaf order | By stake, then concatenation verification key | The same sequence, filtered to entries with a Schnorr key |
+|                 | Concatenation                                   | SNARK                                                     |
+| --------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| Leaf contents   | Concatenation verification key, stake           | Schnorr verification key, lottery target value            |
+| Leaf width      | 104 bytes: 96-byte key, 8-byte big-endian stake | 96 bytes: 64-byte key, 32-byte target value               |
+| Membership hash | Blake2b                                         | Poseidon                                                  |
+| Leaf order      | By stake, then concatenation verification key   | The same sequence, filtered to entries with a Schnorr key |
 
 The concatenation leaf commits the stake; the SNARK leaf commits the target value derived from it. Performing that conversion once at closing keeps the stake arithmetic out of the [circuit](#term-circuit), which compares a lottery evaluation against a value it reads from the leaf. Part 4 shows the comparison. The proof therefore rests on the authenticated root for the target's correctness: the circuit does not recompute the target from stake and total stake.
 
@@ -368,12 +368,12 @@ A signer signs two things bound together: the message a [certificate](https://mi
 
 **The preimage.** In the Lagrange era, a protocol message is laid out in four fixed-width slots, and the era requires a SNARK aggregate verification key to exist. The preimage is each slot's label followed by its value, concatenated in this order.
 
-| Slot label | Width | Value |
-| --- | --- | --- |
-| `digest` | 32 bytes | Legacy SHA-256 hash of the message's remaining parts, once the three source parts below are removed. |
+| Slot label                        | Width    | Value                                                                                                                                                                                                       |
+| --------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `digest`                          | 32 bytes | Legacy SHA-256 hash of the message's remaining parts, once the three source parts below are removed.                                                                                                        |
 | `next_aggregate_verification_key` | 44 bytes | The next SNARK [aggregate verification key](#term-aggregate-verification-key), in its rigid encoding. The rigid slot, under [certificate assembly](#certificate-assembly), gives the layout of those bytes. |
-| `next_protocol_parameters` | 32 bytes | The hash of the next protocol parameters, not the parameters themselves. |
-| `current_epoch` | 8 bytes | The epoch, read from its decimal value and written little-endian. |
+| `next_protocol_parameters`        | 32 bytes | The hash of the next protocol parameters, not the parameters themselves.                                                                                                                                    |
+| `current_epoch`                   | 8 bytes  | The epoch, read from its decimal value and written little-endian.                                                                                                                                           |
 
 That is 74 bytes of labels and 116 of values: 190 in total, hashed with SHA-256 to produce the 32-byte protocol message hash.
 
@@ -389,11 +389,11 @@ Pairing the commitment with the message binds a signature to a registration set:
 
 **Domain separation.** Poseidon hash purposes are separated by fixed field-element tags prefixed to their input. The crate defines four such tags, of which three matter here. The aggregator's selection hashes are separated too, but they are SHA-256 over byte-string tags of their own; aggregation covers them.
 
-| Tag | Enters | Does not enter |
-| --- | --- | --- |
-| Unique signature | The signature's challenge. | The commitment point, or the lottery. |
-| Lottery | The lottery prefix, and through it every evaluation. | The signature's challenge. |
-| Circuit verification key digest | The digest identifying a configured circuit, covered in Part 6. | Signing or the lottery directly. |
+| Tag                             | Enters                                                          | Does not enter                        |
+| ------------------------------- | --------------------------------------------------------------- | ------------------------------------- |
+| Unique signature                | The signature's challenge.                                      | The commitment point, or the lottery. |
+| Lottery                         | The lottery prefix, and through it every evaluation.            | The signature's challenge.            |
+| Circuit verification key digest | The digest identifying a configured circuit, covered in Part 6. | Signing or the lottery directly.      |
 
 The certificate circuit assigns the signature and lottery tags as fixed values, and a unit test asserts the two differ.
 
@@ -467,22 +467,22 @@ Assembly puts the [aggregate signature](#term-aggregate-signature) and its [anci
 
 **What a certificate carries.** Four fields hold the material specified here, each a hex string.
 
-| Field | Contents | Encoding |
-| --- | --- | --- |
-| `multi_signature` | The aggregate signature | JSON-hex for concatenation, binary-hex for both SNARK flavors |
-| `aggregate_verification_key` | The concatenation aggregate verification key, on every certificate | JSON-hex |
-| `aggregate_verification_key_snark` | The SNARK aggregate verification key, when the epoch has one | Binary-hex |
-| `ancillary_verifier_data` | What the flavor's verifier needs, when the flavor needs anything | Binary-hex |
+| Field                              | Contents                                                           | Encoding                                                      |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `multi_signature`                  | The aggregate signature                                            | JSON-hex for concatenation, binary-hex for both SNARK flavors |
+| `aggregate_verification_key`       | The concatenation aggregate verification key, on every certificate | JSON-hex                                                      |
+| `aggregate_verification_key_snark` | The SNARK aggregate verification key, when the epoch has one       | Binary-hex                                                    |
+| `ancillary_verifier_data`          | What the flavor's verifier needs, when the flavor needs anything   | Binary-hex                                                    |
 
 The two verification keys occupy separate fields rather than one field that changes encoding, so a SNARK certificate carries both. Only `multi_signature` varies with the flavor: concatenation stays on JSON there because the binary aggregate signature encoding is readable only by clients from distribution 2617.0 onward, and distributions up to 2603.1 are still supported. A reader tries JSON-hex first and falls back to binary-hex.
 
 **The aggregate signature in binary.** A version byte of 1, followed by a CBOR structure holding a type tag and the inner proof's own bytes.
 
-| Aggregation flavor | Type tag |
-| --- | --- |
-| Concatenation | 0 |
-| Non-recursive SNARK | 1 |
-| Recursive SNARK | 2 |
+| Aggregation flavor  | Type tag |
+| ------------------- | -------- |
+| Concatenation       | 0        |
+| Non-recursive SNARK | 1        |
+| Recursive SNARK     | 2        |
 
 An earlier outer framing, the type tag followed directly by the inner proof bytes, is still read. Decoding dispatches on the first byte: a leading 1 is decoded as CBOR and falls back to the earlier framing if that fails, and any other leading byte goes straight to the earlier framing. The fallback exists because a leading 1 means either the version byte or the non-recursive SNARK type tag, and nothing in the byte distinguishes them.
 
@@ -492,11 +492,11 @@ The earlier framing only strips the outer byte; what is accepted after that is t
 
 **Ancillary verifier data.** Each flavor emits what its verifier needs.
 
-| Flavor | Ancillary verifier data |
-| --- | --- |
-| Concatenation | None |
-| Non-recursive SNARK | The certificate circuit verification key |
-| Recursive SNARK | The certificate and recursive circuit verification keys, and the genesis message hash |
+| Flavor              | Ancillary verifier data                                                               |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| Concatenation       | None                                                                                  |
+| Non-recursive SNARK | The certificate circuit verification key                                              |
+| Recursive SNARK     | The certificate and recursive circuit verification keys, and the genesis message hash |
 
 It occupies its own optional certificate field rather than travelling inside the aggregate signature, and verification requires the variant matching the flavor. Its encoding is the version byte followed by CBOR of the variant, with no legacy fallback: bytes without the prefix are rejected. A recursive certificate may separately carry prover continuation data, which is a different field with a different purpose; Part 5 covers it.
 
@@ -528,12 +528,12 @@ What is absent matters as much. Total stake never appears, because each signer's
 
 The [witness](#term-witness) is exactly `k` entries, one per selected [lottery index](#term-lottery-index), in strictly increasing index order.
 
-| Entry field | Contents |
-| --- | --- |
-| Leaf | The signer's Schnorr verification key and its lottery target value: the two halves of its SNARK Merkle leaf. |
-| Merkle path | The authentication path opening that leaf to the public commitment, padded to the fixed depth. |
-| Unique Schnorr signature | The signature over the signed message, carrying the commitment point the lottery consumes. |
-| Lottery index | The index this entry claims. |
+| Entry field              | Contents                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Leaf                     | The signer's Schnorr verification key and its lottery target value: the two halves of its SNARK Merkle leaf. |
+| Merkle path              | The authentication path opening that leaf to the public commitment, padded to the fixed depth.               |
+| Unique Schnorr signature | The signature over the signed message, carrying the commitment point the lottery consumes.                   |
+| Lottery index            | The index this entry claims.                                                                                 |
 
 One signer appears in several entries when it won several selected indices, its leaf and path repeated in each.
 
@@ -549,11 +549,11 @@ Witness construction then computes one Merkle path per unique selected signer an
 
 Three guards run at the start of synthesis, before any constraint is emitted. The parameters guard always runs; the other two read the witness, so they run only when proving.
 
-| Guard | Rejects |
-| --- | --- |
-| Parameters | `k >= m`, or `m` above `2^16 - 1` |
-| Witness length | Any length other than `k` |
-| Lottery index | An index at or above `m`, or above `2^16 - 1` |
+| Guard          | Rejects                                       |
+| -------------- | --------------------------------------------- |
+| Parameters     | `k >= m`, or `m` above `2^16 - 1`             |
+| Witness length | Any length other than `k`                     |
+| Lottery index  | An index at or above `m`, or above `2^16 - 1` |
 
 Further checks run as the witness is assigned: path siblings and positions are matched against the configured depth, and a signature's commitment point is reconstructed as a prime-order point, which can fail. Those make synthesis well defined rather than filtering eligibility.
 
@@ -591,14 +591,14 @@ flowchart TD
 
 **Per entry.** Each of the `k` entries contributes four kinds of check.
 
-| Constraint | What it enforces |
-| --- | --- |
-| Index order | This entry's index is strictly greater than the previous entry's. Not emitted for the first entry. |
-| Membership | The leaf rebuilt from the entry's verification key and lottery target value opens to the public commitment. |
-| Signature | The unique Schnorr signature verifies under that verification key, over the hashed message. |
-| Lottery | The evaluation derived from the prefix, the signature's commitment point and the index is at most the leaf's target. |
+| Constraint  | What it enforces                                                                                                     |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| Index order | This entry's index is strictly greater than the previous entry's. Not emitted for the first entry.                   |
+| Membership  | The leaf rebuilt from the entry's verification key and lottery target value opens to the public commitment.          |
+| Signature   | The unique Schnorr signature verifies under that verification key, over the hashed message.                          |
+| Lottery     | The evaluation derived from the prefix, the signature's commitment point and the index is at most the leaf's target. |
 
-The lottery comparison is written as its negation: the circuit derives the evaluation, then asserts that the target is *not* strictly below it, which is the inclusive test the host performs. Index order and index bounds both reduce to the same 16-bit comparison, one asserting the previous index is below the current, the other asserting an index is below `m`.
+The lottery comparison is written as its negation: the circuit derives the evaluation, then asserts that the target is _not_ strictly below it, which is the inclusive test the host performs. Index order and index bounds both reduce to the same 16-bit comparison, one asserting the previous index is below the current, the other asserting an index is below `m`.
 
 **Once more at the end.** The last index is checked against `m`. For a nonempty witness one check suffices for all `k`: the indices strictly increase, so bounding the largest bounds every one. That is also why distinctness needs no set membership check, and why the witness must arrive sorted.
 
@@ -624,10 +624,10 @@ The walk ends by asserting the computed root equals the public Merkle tree commi
 
 One equation carries this check. The circuit computes two multi-scalar multiplications over the same pair of scalars, the signature's response and its challenge:
 
-| Result | Points |
-| --- | --- |
-| `R1` | The curve point hashed from the two public inputs, and the signature's commitment point |
-| `R2` | The Jubjub generator, and the signer's verification key |
+| Result | Points                                                                                  |
+| ------ | --------------------------------------------------------------------------------------- |
+| `R1`   | The curve point hashed from the two public inputs, and the signature's commitment point |
+| `R2`   | The Jubjub generator, and the signer's verification key                                 |
 
 It then hashes eleven field elements with Poseidon: the signature domain separation tag, then the coordinate pairs of the hashed point, the verification key, the commitment point, `R1` and `R2`. The constraint is that this equals the challenge the [witness](#term-witness) supplied.
 
@@ -657,12 +657,12 @@ The degree is [`K`](#symbol-capital-k) in the book's notation: the circuit occup
 
 The certificate circuit's degree is not pinned to a constant. It follows from the configuration — `k`, `m` and the depth — and is bounded above by the trusted setup, whose structured reference string supports degree 22. Different configurations legitimately reach different degrees, which is why a key declares its own degree in its bytes rather than matching a constant. The recursive circuit is the opposite case: Part 5 covers its pinned degree.
 
-| Quantity | Bound | Fixed by |
-| --- | --- | --- |
-| Witness entries | Exactly `k`, 1944 in production | The circuit, which rejects any other count |
-| Lottery indices | `m` at most `2^16 - 1` | The 16-bit comparison used for index checks |
-| Tree leaves | 8192 | The fixed path length of 13 |
-| Degree | At most 22; the production circuit is at 22 | The [trusted setup](#term-trusted-setup) |
+| Quantity        | Bound                                       | Fixed by                                    |
+| --------------- | ------------------------------------------- | ------------------------------------------- |
+| Witness entries | Exactly `k`, 1944 in production             | The circuit, which rejects any other count  |
+| Lottery indices | `m` at most `2^16 - 1`                      | The 16-bit comparison used for index checks |
+| Tree leaves     | 8192                                        | The fixed path length of 13                 |
+| Degree          | At most 22; the production circuit is at 22 | The [trusted setup](#term-trusted-setup)    |
 
 **What this constrains.** The bounds are not alike in what it takes to move them. Depth is a configuration value, so serving more than 8192 signers means generating the circuit at a greater depth and issuing a new key. The production circuit already sits at degree 22, so a greater depth also has to fit within that degree or come with a larger setup artifact. An `m` above 65535 is not reachable that way at all: it needs the 16-bit comparison and its validation changed, which is an implementation change. Raising `k` raises the row count directly, since each entry contributes its own membership, signature and lottery constraints, so a large enough quorum pushes the degree past what the trusted setup supports.
 
@@ -680,11 +680,11 @@ Under concatenation and non-recursive SNARK, a certificate establishes that a qu
 
 The recursive [circuit](#term-circuit) consumes two proofs at each step: the certificate proof for the new certificate, and the recursive proof carried in the previous committed rolling state. A proof together with its accumulator covers the ancestry that rolling state represents, so a client checks one proof instead of following links back to genesis.
 
-That ancestry is not a step count. Only some publications commit a new rolling state, so two certificates can share an ancestry without either covering the other. *The rolling state and its encoding* gives the rule.
+That ancestry is not a step count. Only some publications commit a new rolling state, so two certificates can share an ancestry without either covering the other. _The rolling state and its encoding_ gives the rule.
 
 The size of a step does not depend on how many steps precede it, because the predecessor enters as a fixed-size proof rather than as a history.
 
-Two costs come with that. The circuit does not finish either verification inside itself: the pairing check that completes one is expensive to emulate in this circuit's field, so the circuit prepares both proofs and defers the rest, and a single check at the end discharges what has accumulated. *The accumulation constraint* describes what is deferred and what settles it. Separately, the recursive circuit is built for one specific certificate circuit: its relation embeds that circuit's verifier metadata, so a change reaching that metadata reaches the recursive key. The dependency does not run the other way — a change confined to the recursive circuit leaves the certificate key alone. Part 6 covers key compatibility.
+Two costs come with that. The circuit does not finish either verification inside itself: the pairing check that completes one is expensive to emulate in this circuit's field, so the circuit prepares both proofs and defers the rest, and a single check at the end discharges what has accumulated. _The accumulation constraint_ describes what is deferred and what settles it. Separately, the recursive circuit is built for one specific certificate circuit: its relation embeds that circuit's verifier metadata, so a change reaching that metadata reaches the recursive key. The dependency does not run the other way — a change confined to the recursive circuit leaves the certificate key alone. Part 6 covers key compatibility.
 
 ## Producing a step, end to end
 
@@ -717,14 +717,14 @@ flowchart TD
 
 **The certificate proof comes next.** Aggregation selects the signatures and the certificate prover of Part 4 turns them into a proof. Nothing about that step is recursion-specific; the recursive path consumes its output.
 
-**The host then verifies and prepares.** It re-validates the transition, verifies the certificate proof off-circuit, builds the next state, builds the folded next accumulator, verifying the previous recursive proof carried in the rolling state as it does, and assembles the witness. *What the host checks before proving* covers this.
+**The host then verifies and prepares.** It re-validates the transition, verifies the certificate proof off-circuit, builds the next state, builds the folded next accumulator, verifying the previous recursive proof carried in the rolling state as it does, and assembles the witness. _What the host checks before proving_ covers this.
 
 **The recursive prover runs the circuit, once or twice.** Both runs prove the same statement over the same witness, proving key and public inputs. They differ in the transcript hash used to derive the Fiat-Shamir challenges, because the two outputs have different readers.
 
-| Proof | Transcript | Read by | Produced |
-| --- | --- | --- | --- |
-| Published | Blake2b | Verifiers outside a circuit | Every certificate step |
-| Continuation | Poseidon | The next step's circuit | Next-epoch steps only |
+| Proof        | Transcript | Read by                     | Produced               |
+| ------------ | ---------- | --------------------------- | ---------------------- |
+| Published    | Blake2b    | Verifiers outside a circuit | Every certificate step |
+| Continuation | Poseidon   | The next step's circuit     | Next-epoch steps only  |
 
 Poseidon costs few constraints to recompute inside a circuit, which is what the continuation proof is for. Blake2b is what the intended outside reader would already have: the Plutus builtin surface exposes Blake2b and no Poseidon, so an on-chain consumer could use the hash the ledger provides instead of implementing one in a contract. The certificate proof uses Poseidon because the recursive circuit has to read it, and it keeps Poseidon when published on its own, so it is not the artifact such a consumer would read. Part 8 gives the implementation status.
 
@@ -738,11 +738,11 @@ At the very first step there is no rolling state. The prover runs an internal ge
 
 The circuit's public inputs are three groups, in this order: the global anchor, the next chain state, and the next accumulator.
 
-| Group | Contents |
-| --- | --- |
-| Global anchor | The genesis message and the genesis verification key, plus the transcript representations of the certificate circuit's and the recursive circuit's verification keys. Constant for the whole chain. |
-| Next chain state | Seven values: the step counter, the message, the current and next Merkle tree commitments, the current and next protocol parameter hashes, and the current epoch. |
-| Next accumulator | The verification work this step has deferred, carried forward for the final verifier to discharge. |
+| Group            | Contents                                                                                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Global anchor    | The genesis message and the genesis verification key, plus the transcript representations of the certificate circuit's and the recursive circuit's verification keys. Constant for the whole chain. |
+| Next chain state | Seven values: the step counter, the message, the current and next Merkle tree commitments, the current and next protocol parameter hashes, and the current epoch.                                   |
+| Next accumulator | The verification work this step has deferred, carried forward for the final verifier to discharge.                                                                                                  |
 
 The previous state and the previous accumulator are witnessed; the next ones are public. A verifier reads the state the chain reached, not the state the step started from. Other witness fields are not private by consequence: the global anchor is witnessed and published, and on an ordinary step the certificate's message and commitment reappear inside the derived state.
 
@@ -750,14 +750,14 @@ The previous state and the previous accumulator are witnessed; the next ones are
 
 The [witness](#term-witness) is one structure holding six parts.
 
-| Part | Contents |
-| --- | --- |
-| Global anchor | The same four values, assigned from the witness and then constrained as public. |
-| Previous state | The seven state values as they stood before this step. |
-| Certificate material | The genesis signature, the certificate's message and Merkle tree commitment, and the protocol message preimage. |
-| Certificate proof | The non-recursive proof being aggregated, as bytes. |
-| Previous recursive proof | The proof carried in the rolling state, as bytes. |
-| Previous accumulator | The deferred verification work carried in. |
+| Part                     | Contents                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Global anchor            | The same four values, assigned from the witness and then constrained as public.                                 |
+| Previous state           | The seven state values as they stood before this step.                                                          |
+| Certificate material     | The genesis signature, the certificate's message and Merkle tree commitment, and the protocol message preimage. |
+| Certificate proof        | The non-recursive proof being aggregated, as bytes.                                                             |
+| Previous recursive proof | The proof carried in the rolling state, as bytes.                                                               |
+| Previous accumulator     | The deferred verification work carried in.                                                                      |
 
 **What this constrains.** The global anchor is witnessed and then published, so a proof records which keys and which genesis it was made against without establishing that those are the correct ones. A verifier holds the genesis verification key independently, in the trusted bundle Part 2 describes. The genesis message and the circuit keys arrive in the certificate's ancillary verifier data, and Part 6 covers authorizing the keys.
 
@@ -767,14 +767,14 @@ A recursive proving run is expensive, so the host validates its inputs first. Mo
 
 **The transition inputs.** One checker validates the caller's material before either proof is produced.
 
-| Check | What it rejects |
-| --- | --- |
-| Genesis data | A missing or structurally invalid genesis verification key, or a bootstrap input that does not parse. Always run, since the genesis key is a public input at every step. |
-| Rolling state | A state still at the genesis step, with a step counter of zero. |
-| Preimage | A protocol message preimage that is not exactly the fixed size. |
-| Branch | Whichever of the rolling state or the genesis bootstrap applies, checked against the message and the aggregate verification key. |
-| Parameter promotion | On a next-epoch transition, a previous state whose announced protocol parameter hash already differs from its current one. |
-| Message | A preimage whose hash is not the certificate's message hash. |
+| Check               | What it rejects                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Genesis data        | A missing or structurally invalid genesis verification key, or a bootstrap input that does not parse. Always run, since the genesis key is a public input at every step. |
+| Rolling state       | A state still at the genesis step, with a step counter of zero.                                                                                                          |
+| Preimage            | A protocol message preimage that is not exactly the fixed size.                                                                                                          |
+| Branch              | Whichever of the rolling state or the genesis bootstrap applies, checked against the message and the aggregate verification key.                                         |
+| Parameter promotion | On a next-epoch transition, a previous state whose announced protocol parameter hash already differs from its current one.                                               |
+| Message             | A preimage whose hash is not the certificate's message hash.                                                                                                             |
 
 The parameter-promotion row is the exception, and what it refuses is the promotion rather than the announcement. A certificate may announce a different parameter hash at an epoch boundary and pass. The state it produces then carries a current hash and a differing announced one, and same-epoch certificates continue on that state, because a same-epoch step never consumes the announced value. The step that is rejected is the next-epoch one after it, which would make the announced value current.
 
@@ -814,11 +814,11 @@ flowchart TD
 
 **The genesis bit** is derived from the step counter being zero. It decides whether the genesis signature is enforced, which transition rules apply and which link and consistency requirements are skipped, and whether the two prepared proof obligations contribute or are masked out. At the first step there is no predecessor to verify, so those two contributions are scaled away and the incoming accumulator, which an honest bootstrap supplies as a trivial one, is folded on its own.
 
-**The transition** binds the message to its preimage, reads the next commitment, next parameter hash and epoch from that preimage at fixed offsets, classifies the epoch as same or next, checks the chain link, and selects which values carry forward. *The transition constraint* gives the rules.
+**The transition** binds the message to its preimage, reads the next commitment, next parameter hash and epoch from that preimage at fixed offsets, classifies the epoch as same or next, checks the chain link, and selects which values carry forward. _The transition constraint_ gives the rules.
 
-**Preparation and folding** complete neither proof's verification. The circuit derives each proof's opening claim and folds it, with the accumulator carried in, into the next one. No pairing is computed at this point; *The accumulation constraint* covers why, and what discharges the obligation.
+**Preparation and folding** complete neither proof's verification. The circuit derives each proof's opening claim and folds it, with the accumulator carried in, into the next one. No pairing is computed at this point; _The accumulation constraint_ covers why, and what discharges the obligation.
 
-**What this constrains.** A step enforces the state transition, authenticates the genesis message when it is the genesis step, and establishes that the accumulator it publishes is the correct fold of the obligations the two proofs leave behind. It does not complete either proof's verification, and *The accumulation constraint* covers what that leaves for a final verifier to settle.
+**What this constrains.** A step enforces the state transition, authenticates the genesis message when it is the genesis step, and establishes that the accumulator it publishes is the correct fold of the obligations the two proofs leave behind. It does not complete either proof's verification, and _The accumulation constraint_ covers what that leaves for a final verifier to settle.
 
 ## The transition constraint
 
@@ -846,25 +846,25 @@ flowchart TD
 
 **The message and its preimage.** The step selects the genesis message at genesis and the certificate's message otherwise, then binds that selection to the protocol message preimage by requiring it to equal the preimage's SHA-256 digest reduced into the circuit's field. The comparison is between field elements, not between 32-byte strings: the circuit combines the digest's bytes into a native field element, and the host reduces the same digest the same way. Genesis does not skip this; it binds to a different message. The next commitment, the next protocol parameter hash and the epoch are then read from fixed byte ranges of that preimage, each reconstructed from its bytes as a field element. Part 3 specifies the layout those offsets depend on.
 
-The state carries parameter *hashes*, not the numeric `k`, `m` and `phi_f`, and those hashes are carried as field elements by the same reduction. The circuit compares hashes, so it can enforce that a value is preserved or promoted without knowing which parameters it stands for. The converse also holds: a hash the circuit accepts reconfigures nothing, because the certificate circuit's numeric parameters are fixed in its key rather than read from the state.
+The state carries parameter _hashes_, not the numeric `k`, `m` and `phi_f`, and those hashes are carried as field elements by the same reduction. The circuit compares hashes, so it can enforce that a value is preserved or promoted without knowing which parameters it stands for. The converse also holds: a hash the circuit accepts reconfigures nothing, because the certificate circuit's numeric parameters are fixed in its key rather than read from the state.
 
 **The step counter** increases by one at every step, and it is the only value that always moves.
 
 **The three rule sets.** Outside genesis, the epoch read from the preimage is classified by comparing it with the state's current epoch: equal makes it a same-epoch step, one greater makes it a next-epoch step. Neither holding is a failure on its own, but the link and consistency checks below then have no branch that can be satisfied. At genesis the comparison does not decide anything, because both of those checks admit the genesis branch directly.
 
-| | Genesis | Same epoch | Next epoch |
-| --- | --- | --- | --- |
-| Message bound to | The genesis message | The certificate's message | The certificate's message |
-| Genesis signature | Enforced | Skipped | Skipped |
-| Current commitment | Set to zero | Must equal the previous current | Must equal the previous announced |
-| Current parameter hash | Set to zero | The previous current | The previous announced |
-| Announced values | Taken from the preimage | Must equal the previous announced | Taken from the preimage |
+|                        | Genesis                 | Same epoch                        | Next epoch                        |
+| ---------------------- | ----------------------- | --------------------------------- | --------------------------------- |
+| Message bound to       | The genesis message     | The certificate's message         | The certificate's message         |
+| Genesis signature      | Enforced                | Skipped                           | Skipped                           |
+| Current commitment     | Set to zero             | Must equal the previous current   | Must equal the previous announced |
+| Current parameter hash | Set to zero             | The previous current              | The previous announced            |
+| Announced values       | Taken from the preimage | Must equal the previous announced | Taken from the preimage           |
 
 The next-epoch column is where the chain actually advances: what the previous step announced becomes current, and the certificate announces something new. The same-epoch column is where it stands still, and the announced values are required to repeat rather than change.
 
 **One further rule.** If the previous step counter is one — that is, if this is the first ordinary certificate after the internal genesis step — the epoch must be the next epoch. A chain cannot linger in the genesis epoch.
 
-**What this constrains.** The circuit's next-epoch branch takes the previous announcement as the new current value without requiring the certificate to announce the same thing again, so an announced parameter hash differing from the current one satisfies the circuit at an epoch boundary. The host stops the chain at the following boundary, when that differing hash would be promoted, as *What the host checks before proving* records. Nothing in the circuit stops it at either point, so an implementation relying on the circuit alone would carry a parameter change across an epoch boundary.
+**What this constrains.** The circuit's next-epoch branch takes the previous announcement as the new current value without requiring the certificate to announce the same thing again, so an announced parameter hash differing from the current one satisfies the circuit at an epoch boundary. The host stops the chain at the following boundary, when that differing hash would be promoted, as _What the host checks before proving_ records. Nothing in the circuit stops it at either point, so an implementation relying on the circuit alone would carry a parameter change across an epoch boundary.
 
 ## The accumulation constraint
 
@@ -898,19 +898,19 @@ The circuit stops part-way through the third stage, and the division is by base 
 
 **What makes one valid.** Evaluating the two sides gives two curve points, and the accumulator holds when those points satisfy the pairing equation the proof system's setup defines. That one condition is the whole of what an accumulator asserts, which is what makes deferred work addable: however many obligations have been folded in, the question at the end is still whether a single pair of points satisfies the equation. The proof system's documentation names this the accumulator invariant and states that folding preserves it in both directions, the forward direction unconditionally and the reverse computationally.
 
-**Three operations, not one.** *Preparing* a proof turns it into an opening claim. *Accumulating* combines claims with the accumulator carried in. *Collapsing* rewrites the result into a smaller form. None of the three is a check.
+**Three operations, not one.** _Preparing_ a proof turns it into an opening claim. _Accumulating_ combines claims with the accumulator carried in. _Collapsing_ rewrites the result into a smaller form. None of the three is a check.
 
-*Preparing* ties each proof to the statement it is supposed to be about. A step prepares the certificate proof against the certificate's commitment and message, and the previous recursive proof against the public inputs that proof's own step published: the global anchor, the previous state and the previous accumulator. That second choice is what carries the earlier state and its obligation into this step's statement.
+_Preparing_ ties each proof to the statement it is supposed to be about. A step prepares the certificate proof against the certificate's commitment and message, and the previous recursive proof against the public inputs that proof's own step published: the global anchor, the previous state and the previous accumulator. That second choice is what carries the earlier state and its obligation into this step's statement.
 
-*Accumulating* is a random linear combination, and the randomness is what prevents cancellation. The three inputs — the accumulator carried in and the claims prepared from the two proofs — are hashed together with Poseidon into a challenge, and the fold is the first plus the challenge times the second plus its square times the third. Because the challenge is derived from all three, an input cannot be chosen to cancel another without predicting that challenge, which the scheme's assumptions make infeasible rather than impossible. Under those assumptions a fold satisfies the invariant only when every input does, so a step that folds in an invalid obligation publishes an accumulator that fails the final check, and no later step repairs it.
+_Accumulating_ is a random linear combination, and the randomness is what prevents cancellation. The three inputs — the accumulator carried in and the claims prepared from the two proofs — are hashed together with Poseidon into a challenge, and the fold is the first plus the challenge times the second plus its square times the third. Because the challenge is derived from all three, an input cannot be chosen to cancel another without predicting that challenge, which the scheme's assumptions make infeasible rather than impossible. Under those assumptions a fold satisfies the invariant only when every input does, so a step that folds in an invalid obligation publishes an accumulator that fails the final check, and no later step repairs it.
 
-*Collapsing* is why the object stops growing. Each side's variable-base part is evaluated down to a single point with scalar one, while the fixed-base scalars stay unevaluated, keyed by name, and merge when two contributions name the same base. Those names come from the two circuits' verifier metadata, so every step draws on the same set and none adds a new entry: a thousand folded steps leave an accumulator the size of one.
+_Collapsing_ is why the object stops growing. Each side's variable-base part is evaluated down to a single point with scalar one, while the fixed-base scalars stay unevaluated, keyed by name, and merge when two contributions name the same base. Those names come from the two circuits' verifier metadata, so every step draws on the same set and none adds a new entry: a thousand folded steps leave an accumulator the size of one.
 
 **At genesis** there is no previous proof. Both prepared contributions are scaled away by the non-genesis bit and the incoming accumulator is folded on its own. An honest bootstrap supplies a trivial accumulator there — identity points and zero fixed-base scalars, so both sides evaluate to the identity and the invariant holds by construction. The circuit folds whatever incoming accumulator it is given rather than substituting one itself.
 
 **What the circuit establishes** is that the accumulator it publishes is the correct fold of the accumulator it was given and the claims prepared from the two proofs. It does not establish that any of that deferred work passes: both in-circuit verifications can succeed while the folded accumulator fails its check, and the step is invalid in that case.
 
-**What discharges it.** A verifier holds the published proof and its accumulator, derives a challenge from both, and settles them together in one pairing check. That challenge is a second combination, separate from the folds performed inside the chain: it binds the proof to the accumulator at verification time, where the in-chain folds bound each step's inputs to each other. *The verifier contract* gives the client's side of it.
+**What discharges it.** A verifier holds the published proof and its accumulator, derives a challenge from both, and settles them together in one pairing check. That challenge is a second combination, separate from the folds performed inside the chain: it binds the proof to the accumulator at verification time, where the in-chain folds bound each step's inputs to each other. _The verifier contract_ gives the client's side of it.
 
 **What this constrains.** A recursive proof and its accumulator have to travel together and be checked together; a proof separated from its accumulator establishes nothing about the chain. What the arrangement buys is the verifier's cost: every deferred check from genesis onward folds into one accumulator, so the work left at the end does not grow with the chain.
 
@@ -918,12 +918,12 @@ The circuit stops part-way through the third stage, and the division is by base 
 
 The rolling state is what one step hands the next. It holds four values.
 
-| Field | Contents |
-| --- | --- |
-| Chain state | The seven state values the step published. |
-| Continuation proof | The step's Poseidon-transcript proof, as bytes. |
-| Accumulator | The folded obligation the step published. |
-| Genesis signature | The chain's genesis Schnorr signature, carried unchanged. |
+| Field              | Contents                                                  |
+| ------------------ | --------------------------------------------------------- |
+| Chain state        | The seven state values the step published.                |
+| Continuation proof | The step's Poseidon-transcript proof, as bytes.           |
+| Accumulator        | The folded obligation the step published.                 |
+| Genesis signature  | The chain's genesis Schnorr signature, carried unchanged. |
 
 The genesis signature travels in the rolling state because every step witnesses it, not only the genesis step: the circuit computes the signature check at every step and discards the result unless the genesis bit is set.
 
@@ -931,11 +931,11 @@ The genesis signature travels in the rolling state because every step witnesses 
 
 **The encoding.** The accumulator is the substantial part. It serializes as its left multi-scalar multiplication followed by its right one, and each of those as three length-prefixed sequences.
 
-| Sequence | Encoding |
-| --- | --- |
-| Bases | A little-endian `u32` count, then each base in Midnight's `RawBytes` format. That is the checked reader: it returns an error on bytes that are not a curve point, and rejects points outside the prime-order subgroup. |
-| Scalars | A little-endian `u32` count, then each scalar in raw form. |
-| Fixed-base scalars | A little-endian `u32` count, then per entry a little-endian `u32` name length, the name's UTF-8 bytes, and the value in raw form. |
+| Sequence           | Encoding                                                                                                                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bases              | A little-endian `u32` count, then each base in Midnight's `RawBytes` format. That is the checked reader: it returns an error on bytes that are not a curve point, and rejects points outside the prime-order subgroup. |
+| Scalars            | A little-endian `u32` count, then each scalar in raw form.                                                                                                                                                             |
+| Fixed-base scalars | A little-endian `u32` count, then per entry a little-endian `u32` name length, the name's UTF-8 bytes, and the value in raw form.                                                                                      |
 
 Fixed-base entries are written in the key order of the map that holds them, so the encoding is deterministic: the same accumulator always produces the same bytes.
 
@@ -945,11 +945,11 @@ Fixed-base entries are written in the key order of the map that holds them, so t
 
 A client verifying a recursive certificate needs three things it already trusts, and takes the rest from the certificate.
 
-| Independent trust requirements | Taken from the certificate |
-| --- | --- |
-| The genesis verification key, from a trusted bundle | The published proof, its state and its accumulator |
+| Independent trust requirements                          | Taken from the certificate                                           |
+| ------------------------------------------------------- | -------------------------------------------------------------------- |
+| The genesis verification key, from a trusted bundle     | The published proof, its state and its accumulator                   |
 | Authorization of the supplied circuit verification keys | The genesis message hash and circuit keys in ancillary verifier data |
-| The verifier parameters for the proof system | |
+| The verifier parameters for the proof system            |                                                                      |
 
 Receiving a key in ancillary verifier data is not the same as trusting it. Part 6 covers how a circuit key becomes approved; the contract here assumes it already is.
 
@@ -989,13 +989,13 @@ This part describes where a circuit verification key comes from, what makes it t
 
 A key passes through five stages, and the sections follow them.
 
-| Stage | The question | Section |
-| --- | --- | --- |
-| Made | A ceremony produced a public string; a circuit and that string yield a key pair | *Where key material comes from* |
-| Named | A digest says which circuit a key belongs to | *Circuit identity and key encoding* |
-| Held | A prover gets large material into memory without deriving it again | *Key caching and prover setup* |
-| Permitted | A verifier decides whether the key it was handed may be used | *The registry of trusted keys*, *Registry retrieval and enforcement* |
-| Replaced | Changing a circuit changes its key | *Key changes and chain continuity* |
+| Stage     | The question                                                                    | Section                                                              |
+| --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Made      | A ceremony produced a public string; a circuit and that string yield a key pair | _Where key material comes from_                                      |
+| Named     | A digest says which circuit a key belongs to                                    | _Circuit identity and key encoding_                                  |
+| Held      | A prover gets large material into memory without deriving it again              | _Key caching and prover setup_                                       |
+| Permitted | A verifier decides whether the key it was handed may be used                    | _The registry of trusted keys_, _Registry retrieval and enforcement_ |
+| Replaced  | Changing a circuit changes its key                                              | _Key changes and chain continuity_                                   |
 
 The two sides have opposite runtime problems. A prover's material is large — the structured reference string runs to hundreds of megabytes and a proving key is larger — so its question is how not to derive it twice. A verifier's material is small: the KZG verifier parameters are a compile-time constant and the committed verifying keys are a few kilobytes each. Its question is whether the key may be used. Possession and permission are separate, and the middle sections keep them apart.
 
@@ -1039,17 +1039,17 @@ One string serves both circuits. The recursive circuit is the dependent one: it 
 
 A verifier is handed a key and has to decide whether it is the key for the circuit it expects.
 
-**The digest.** A circuit verification key digest is a domain-separated Poseidon hash of the key's *transcript representation*, the single field element the proof system derives from a key to seed its transcript. It is 32 bytes, serialized as lowercase hex. It therefore covers the constraint system, the evaluation domain and the commitments rather than the parameter triple. Identical transcript representations give identical digests; identical gates alone do not, because the commitments depend on the string the key was derived from.
+**The digest.** A circuit verification key digest is a domain-separated Poseidon hash of the key's _transcript representation_, the single field element the proof system derives from a key to seed its transcript. It is 32 bytes, serialized as lowercase hex. It therefore covers the constraint system, the evaluation domain and the commitments rather than the parameter triple. Identical transcript representations give identical digests; identical gates alone do not, because the commitments depend on the string the key was derived from.
 
 **The encoding.** Keys serialize in Midnight's `RawBytes` format, and a key carries its own architecture and degree in those bytes. Checking them is what makes a key position typed: the architecture separates the two positions, the recursive key's degree is pinned, and the certificate key's degree is bounded by the setup. Without the check, any Midnight circuit's key would decode in the certificate position, including the recursive circuit's, which this crate encodes the same way.
 
 **Three identifiers.** Easy to confuse, and they serve different purposes.
 
-| Identifier | What it is | What it is for |
-| --- | --- | --- |
-| Serialized key bytes | The key itself, in `RawBytes` | Transport and storage |
-| Circuit digest | Poseidon over the transcript representation | Naming a circuit in a registry |
-| Cache fingerprint | SHA-256 over a configuration | Choosing a directory on disk |
+| Identifier           | What it is                                  | What it is for                 |
+| -------------------- | ------------------------------------------- | ------------------------------ |
+| Serialized key bytes | The key itself, in `RawBytes`               | Transport and storage          |
+| Circuit digest       | Poseidon over the transcript representation | Naming a circuit in a registry |
+| Cache fingerprint    | SHA-256 over a configuration                | Choosing a directory on disk   |
 
 **Decoding and approval are separate steps.** A key that decodes cleanly and declares the expected architecture is structurally acceptable. Nothing in that establishes that anyone authorized it.
 
@@ -1081,15 +1081,15 @@ A verifier uses the circuit keys a certificate carries, and decoding checks only
 
 **The document.** A registry is a version and a list of entries, signed as a whole. Each entry is one statement about one digest.
 
-| Field | Contents |
-| --- | --- |
-| `digest` | The circuit verification key digest the statement is about |
-| `name` | A human-readable circuit label, for the audit trail |
-| `status` | `allowed` or `revoked` |
-| `start_epoch` | First epoch covered, inclusive |
-| `end_epoch` | Last epoch covered, inclusive; absent means open-ended |
-| `comment` | Free text, typically the reason for a revocation |
-| `version` | On the registry rather than the entry: monotonically increasing, for rollback protection |
+| Field         | Contents                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `digest`      | The circuit verification key digest the statement is about                               |
+| `name`        | A human-readable circuit label, for the audit trail                                      |
+| `status`      | `allowed` or `revoked`                                                                   |
+| `start_epoch` | First epoch covered, inclusive                                                           |
+| `end_epoch`   | Last epoch covered, inclusive; absent means open-ended                                   |
+| `comment`     | Free text, typically the reason for a revocation                                         |
+| `version`     | On the registry rather than the entry: monotonically increasing, for rollback protection |
 
 **The rules.** A digest absent from the registry is rejected, so the list is a whitelist. An allowed entry accepts the epochs its range covers. A revoked entry rejects, and wins where an allowed entry covers the same epoch.
 
@@ -1115,7 +1115,7 @@ flowchart TD
 
 The decision above is the baseline's.
 
-> **In review** in PR #3541, the rules change. The registry is meant to hold **one entry per digest**, which its publication tooling enforces, and a revoked entry rejects at **every** epoch rather than within its range — the revocation epoch becomes an audit fact rather than a bound, so the middle decision above loses its epoch qualifier. A digest listed more than once is rejected as soon as one of its entries is revoked, so a malformed registry cannot certify a revoked key. What revoking a key does to certificates already produced changes with it; *Key changes and chain continuity* returns to that.
+> **In review** in PR #3541, the rules change. The registry is meant to hold **one entry per digest**, which its publication tooling enforces, and a revoked entry rejects at **every** epoch rather than within its range — the revocation epoch becomes an audit fact rather than a bound, so the middle decision above loses its epoch qualifier. A digest listed more than once is rejected as soon as one of its entries is revoked, so a malformed registry cannot certify a revoked key. What revoking a key does to certificates already produced changes with it; _Key changes and chain continuity_ returns to that.
 
 **The signature.** The registry travels as the exact JSON of the registry value, kept verbatim, with an Ed25519 signature over a domain separator followed by exactly those bytes — the nested registry, not the envelope carrying it. Signing the retained bytes rather than a re-serialization lets a verifier tolerate fields a later schema adds: unknown fields survive in the signed bytes and are ignored at parse time. It does not mean older code understands what they express.
 
@@ -1151,11 +1151,11 @@ This is the path the in-review stack implements, in PR #3514. At the baseline th
 
 **Where the check runs.** Enforcement is implemented in PR #3514, whose base is #3541.
 
-| Flavor | Digests checked | Epoch used |
-| --- | --- | --- |
-| [Concatenation](#term-aggregation-flavor) | None; the registry does not apply | — |
-| Non-recursive SNARK | The certificate circuit's | The certificate's own |
-| Recursive SNARK | The certificate circuit's, then the recursive circuit's | The certificate's own |
+| Flavor                                    | Digests checked                                         | Epoch used            |
+| ----------------------------------------- | ------------------------------------------------------- | --------------------- |
+| [Concatenation](#term-aggregation-flavor) | None; the registry does not apply                       | —                     |
+| Non-recursive SNARK                       | The certificate circuit's                               | The certificate's own |
+| Recursive SNARK                           | The certificate circuit's, then the recursive circuit's | The certificate's own |
 
 Which flavors require certification is a property of the aggregate signature type, pinned by a golden test: concatenation uses no circuit and is exempt. The check runs in the certificate verifier on both the standard path and the full-chain shortcut. A client resolves its network's registry through the published networks file by matching its aggregator endpoint; an aggregator is configured with a registry URL, where `file://` reads a local file. That routing decides which document is offered, not whether it is trusted: a wrong entry affects availability and which version is seen, while the genesis signature decides acceptance.
 
@@ -1167,15 +1167,15 @@ Which flavors require certification is a property of the aggregate signature typ
 
 Changing a circuit changes its verifying key, its digest, and therefore its identity to every mechanism in this part. What that costs depends on what the change touches.
 
-| The change | What it requires |
-| --- | --- |
-| [`k`](#symbol-k), [`m`](#symbol-m) or the Merkle tree depth | A new certificate key and digest, and a recursive setup rebuilt against it. Whether the recursive key itself changes depends on whether the certificate key's domain and constraint system moved, since those are what the recursive relation fixes |
-| A change confined to the recursive relation | A new recursive key and digest; the certificate key is unaffected |
-| An enabled chip, or a dependency change reaching verifier metadata | New keys for whichever circuits' constraint systems move |
-| A different trusted setup | New keys for both circuits, a new pinned artifact hash, and a matching embedded KZG verifier parameter, which verification reads rather than deriving. Selecting a larger artifact from the same setup is a separate case: reduced to the same degree it need not change the derived keys, their digests or the verifier parameter, but it is a different download, so it needs its own pinned hash and source |
-| A registry entry expiring or being revoked | No new key; the same key stops being permitted |
+| The change                                                         | What it requires                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`k`](#symbol-k), [`m`](#symbol-m) or the Merkle tree depth        | A new certificate key and digest, and a recursive setup rebuilt against it. Whether the recursive key itself changes depends on whether the certificate key's domain and constraint system moved, since those are what the recursive relation fixes                                                                                                                                                            |
+| A change confined to the recursive relation                        | A new recursive key and digest; the certificate key is unaffected                                                                                                                                                                                                                                                                                                                                              |
+| An enabled chip, or a dependency change reaching verifier metadata | New keys for whichever circuits' constraint systems move                                                                                                                                                                                                                                                                                                                                                       |
+| A different trusted setup                                          | New keys for both circuits, a new pinned artifact hash, and a matching embedded KZG verifier parameter, which verification reads rather than deriving. Selecting a larger artifact from the same setup is a separate case: reduced to the same degree it need not change the derived keys, their digests or the verifier parameter, but it is a different download, so it needs its own pinned hash and source |
+| A registry entry expiring or being revoked                         | No new key; the same key stops being permitted                                                                                                                                                                                                                                                                                                                                                                 |
 
-**Four separate conditions.** A key may decode and be rejected by the registry. A key may be permitted and produce a proof that fails verification. A proof already made does not stop being valid under the context it was made against merely because a newer circuit exists. And a proof may be valid and permitted while still being unusable as the *predecessor* of a new step. Only the fourth is specific to recursion.
+**Four separate conditions.** A key may decode and be rejected by the registry. A key may be permitted and produce a proof that fails verification. A proof already made does not stop being valid under the context it was made against merely because a newer circuit exists. And a proof may be valid and permitted while still being unusable as the _predecessor_ of a new step. Only the fourth is specific to recursion.
 
 **Why recursion is stricter.** A recursive step's global anchor carries the transcript representations of both verifying keys, and a step prepares the previous proof against the public inputs that proof's own step published, including that anchor. A chain is bound to the certificate and recursive verifying keys it started under. Adding a replacement key to the registry does not convert an existing continuation proof, and the circuit has no key-transition relation letting a chain link to a predecessor made under different keys.
 
@@ -1191,12 +1191,12 @@ This part describes what the SNARK tests check, what they cost, and the choices 
 
 Each module has a **principal check**: the mechanism that decides whether behaviour is accepted, with cheaper layers arranged around it. The first three sections take them in turn, each stating what a check demonstrates and the configuration it demonstrates it for.
 
-| Module | Principal checks | What surrounds them |
-| --- | --- | --- |
-| Certificate circuit | Real proving and verification over the assembled relation; typed validation during synthesis and at setup | A focused test per gadget, through a harness of its own |
-| Recursive circuit | `MockProver` at the recursive degree; verification of committed proof assets | Four layers of its own |
-| Certificate proof system | The real prover; a committed proof reused by the negative cases | Pure logic, codecs and fixed vectors among the ordinary tests |
-| Recursive proof system | The real recursive prover; committed assets | Behaviour tests for wiring; property tests for pure helpers |
+| Module                   | Principal checks                                                                                          | What surrounds them                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Certificate circuit      | Real proving and verification over the assembled relation; typed validation during synthesis and at setup | A focused test per gadget, through a harness of its own       |
+| Recursive circuit        | `MockProver` at the recursive degree; verification of committed proof assets                              | Four layers of its own                                        |
+| Certificate proof system | The real prover; a committed proof reused by the negative cases                                           | Pure logic, codecs and fixed vectors among the ordinary tests |
+| Recursive proof system   | The real recursive prover; committed assets                                                               | Behaviour tests for wiring; property tests for pure helpers   |
 
 These checks are regression evidence. `MockProver` decides whether an assignment satisfies the constraints the circuit implements, not whether those constraints express the intended protocol. A proving test exercises generation and verification for the inputs it is given. Neither establishes that no accepting proof exists for a false statement; Part 9 covers what the security argument rests on.
 
@@ -1208,19 +1208,19 @@ Two levels, and the division gives the coverage its shape. Both use real setup, 
 
 **The assembled relation is checked against selected mutations**, and the outcome they assert differs.
 
-| What is mutated | Cases | Rejected by |
-| --- | --- | --- |
-| The public message or the tree commitment | 2 | The verifier, after proving |
-| A path sibling or a position bit | 2 | The verifier, after proving |
-| The path length, short or long | 2 | Typed validation during synthesis; no proof produced |
-| The leaf: swapped, mismatched, or built from the wrong key | 3 | The verifier, after proving |
-| The signature: other message, wrong key, bad challenge, response or commitment point | 5 | The verifier, after proving |
-| The lottery target, set below the evaluation | 1 | The verifier, after proving |
-| Index order, a repeated index | 1 | The verifier, after proving |
-| Index bounds and comparison range | 2 | Typed validation during synthesis; no proof produced |
-| Witness length, short or long | 2 | Typed validation during synthesis; no proof produced |
-| A duplicated witness entry | 1 | The verifier, after proving |
-| Parameters: `k` not below `m`; `m` above the lottery bit bound | 2 | Typed validation, at setup |
+| What is mutated                                                                      | Cases | Rejected by                                          |
+| ------------------------------------------------------------------------------------ | ----- | ---------------------------------------------------- |
+| The public message or the tree commitment                                            | 2     | The verifier, after proving                          |
+| A path sibling or a position bit                                                     | 2     | The verifier, after proving                          |
+| The path length, short or long                                                       | 2     | Typed validation during synthesis; no proof produced |
+| The leaf: swapped, mismatched, or built from the wrong key                           | 3     | The verifier, after proving                          |
+| The signature: other message, wrong key, bad challenge, response or commitment point | 5     | The verifier, after proving                          |
+| The lottery target, set below the evaluation                                         | 1     | The verifier, after proving                          |
+| Index order, a repeated index                                                        | 1     | The verifier, after proving                          |
+| Index bounds and comparison range                                                    | 2     | Typed validation during synthesis; no proof produced |
+| Witness length, short or long                                                        | 2     | Typed validation during synthesis; no proof produced |
+| A duplicated witness entry                                                           | 1     | The verifier, after proving                          |
+| Parameters: `k` not below `m`; `m` above the lottery bit bound                       | 2     | Typed validation, at setup                           |
 
 Fifteen require the verifier to reject a proof that was successfully generated. Six abort the proving attempt with a typed validation error during synthesis, and two reject the parameters at setup. The distinction matters to an auditor: those eight show the host refused the input, not that the relation's constraints would have rejected it.
 
@@ -1236,12 +1236,12 @@ None of this exercises production parameters. The production key integrity tests
 
 Its tests name four layers of their own, beside a `golden/` module holding the recursive golden key test and positive checks of the committed proof assets, the genesis base case and replay. Each demonstrates something different, and the inference each supports is narrower than the directory name suggests.
 
-| Layer | Demonstrated | Scope |
-| --- | --- | --- |
-| A, `encoding/` | Representation and layout rules; selected witness-preimage byte mutations synthesized with `MockProver` and checked by their failure rows | Selected byte windows and the message binding, not every constraint that consumes them |
-| B, `transitions/` | Stored transition proofs verify; the current circuit accepts expected fixtures; changed public state rows are rejected | Public-row mutation does not independently isolate the chain-link rules |
-| C1, `in_circuit/` | Stored-proof and public-input checks, genesis gating, and binding of the accumulator the circuit publishes | A tampered previous proof is rejected off-circuit, either during preparation or by the final pairing check, so this case does not exercise in-circuit rejection; there is no malformed-certificate negative inside the circuit |
-| C2, `off_circuit/` | Host accumulator construction, folding, collapse, fixed-base resolution, combined proof and accumulator checks, typed validation | Host behaviour alone; agreement with the in-circuit computation is a separate check |
+| Layer              | Demonstrated                                                                                                                              | Scope                                                                                                                                                                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A, `encoding/`     | Representation and layout rules; selected witness-preimage byte mutations synthesized with `MockProver` and checked by their failure rows | Selected byte windows and the message binding, not every constraint that consumes them                                                                                                                                         |
+| B, `transitions/`  | Stored transition proofs verify; the current circuit accepts expected fixtures; changed public state rows are rejected                    | Public-row mutation does not independently isolate the chain-link rules                                                                                                                                                        |
+| C1, `in_circuit/`  | Stored-proof and public-input checks, genesis gating, and binding of the accumulator the circuit publishes                                | A tampered previous proof is rejected off-circuit, either during preparation or by the final pairing check, so this case does not exercise in-circuit rejection; there is no malformed-certificate negative inside the circuit |
+| C2, `off_circuit/` | Host accumulator construction, folding, collapse, fixed-base resolution, combined proof and accumulator checks, typed validation          | Host behaviour alone; agreement with the in-circuit computation is a separate check                                                                                                                                            |
 
 C2 exists because the recursive circuit defers work. The accumulator is prepared by the host, folded inside the circuit and discharged by a final verifier, so three computations must agree. One case demonstrates that agreement directly: it builds a fresh certificate proof, computes the expected accumulator on the host, checks the circuit accepts it, then changes the accumulator's public rows and checks rejection. A separate replay check compares a stored next state and folded accumulator with recomputed ones.
 
@@ -1273,12 +1273,12 @@ Three kinds of compatibility check, each protecting a different boundary.
 
 Tests fall into four cost classes, and the gap between the cheapest and the dearest is several orders of magnitude. These classes describe work performed; they are separate from the fast and slow execution categories of the next section but one.
 
-| Class | What it runs | Cost |
-| --- | --- | --- |
-| Pure | Functions, no circuit | milliseconds |
+| Class           | What it runs                                                                  | Cost                    |
+| --------------- | ----------------------------------------------------------------------------- | ----------------------- |
+| Pure            | Functions, no circuit                                                         | milliseconds            |
 | Verify-on-asset | The KZG verifier against committed proofs, using embedded verifier parameters | milliseconds to seconds |
-| Synthesis | `MockProver` at the recursive degree, keys loaded from assets | a minute or two |
-| Proving | String generation, key derivation and real proving | minutes |
+| Synthesis       | `MockProver` at the recursive degree, keys loaded from assets                 | a minute or two         |
+| Proving         | String generation, key derivation and real proving                            | minutes                 |
 
 The distribution is the reason the rest of this part exists. In the nightly run of 2026-09-23, the `mithril-stm` unit-test binary accounted for 4,272.7 seconds of summed test time across 706 cases; its two integration binaries add four more. The 58 tests in `slow` modules took 4,082.9 seconds of that, or 95.6 percent; the remaining 648 took 189.8 seconds between them. Half the slow time sat in seven tests, the longest of them 761 seconds.
 
@@ -1359,15 +1359,15 @@ The recursive proof-system slow tests run in a group capped at one thread. The c
 
 Benchmarks measure time and size. Some assert that a proving or verification step succeeded, but those assertions do not replace the regression suite. Seven targets exist.
 
-| Target | Measures | Features required |
-| --- | --- | --- |
-| `multi_sig` | BLS signing, verification, batch operations | `benchmark-internals` |
-| `schnorr_sig` | Schnorr operations and Poseidon hashing | `future_snark`, `benchmark-internals` |
-| `halo2_snark` | Certificate setup, prove and verify across parameter tiers | both |
-| `halo2_prover_modes` | Mock against real prover, with extrapolated end-to-end totals | both |
-| `halo2_ivc_snark` | Recursive prove, verify and fold; proof size; cold and warm setup | both |
-| `stm` | Registration, lotteries, concatenation aggregation, batch verification | none declared |
-| `size_benches` | Serialized concatenation aggregate sizes | none declared |
+| Target               | Measures                                                               | Features required                     |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| `multi_sig`          | BLS signing, verification, batch operations                            | `benchmark-internals`                 |
+| `schnorr_sig`        | Schnorr operations and Poseidon hashing                                | `future_snark`, `benchmark-internals` |
+| `halo2_snark`        | Certificate setup, prove and verify across parameter tiers             | both                                  |
+| `halo2_prover_modes` | Mock against real prover, with extrapolated end-to-end totals          | both                                  |
+| `halo2_ivc_snark`    | Recursive prove, verify and fold; proof size; cold and warm setup      | both                                  |
+| `stm`                | Registration, lotteries, concatenation aggregation, batch verification | none declared                         |
+| `size_benches`       | Serialized concatenation aggregate sizes                               | none declared                         |
 
 **The methods differ**, and a reader comparing numbers across targets needs to know how. `halo2_snark` combines Criterion sampling with single-run tiers. `halo2_ivc_snark` takes manual single observations. `halo2_prover_modes` extrapolates a total from an assumed certificate count, which is a projection rather than a measured run. "None declared" describes the target's own gate, not a promise that optional features never reach the code.
 
@@ -1385,11 +1385,11 @@ Where a mechanism is implemented in an open pull request and not at the baseline
 
 Three separate controls decide whether a certificate is a SNARK certificate.
 
-| Control | Scope | What it decides |
-| --- | --- | --- |
-| The era marker | The network | Which protocol rules are in force, including whether a protocol message is rigid |
+| Control                | Scope          | What it decides                                                                        |
+| ---------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| The era marker         | The network    | Which protocol rules are in force, including whether a protocol message is rigid       |
 | The aggregation flavor | The aggregator | Whether it produces concatenation, non-recursive SNARK or recursive SNARK certificates |
-| The compiled feature | The binary | Whether the SNARK code is present at all |
+| The compiled feature   | The binary     | Whether the SNARK code is present at all                                               |
 
 **The era marker** is published on the Cardano chain, signed, and read by nodes from a configured address using a configured era-marker verification key — an authority separate from both genesis keys. A node applies the latest marker whose activation epoch the network has reached, so a switch can be scheduled ahead of time. The Mithril website describes the [mechanism](https://mithril.network/doc/dev-blog/2023/03/02/era-switch-feature) and the [switch to Pythagoras](https://mithril.network/doc/dev-blog/2024/12/17/era-switch-pythagoras). Two eras exist: Pythagoras and Lagrange. Lagrange is the era in which a protocol message takes the rigid four-slot form Part 3 specifies.
 
@@ -1409,12 +1409,12 @@ That is why the two SNARK flavors differ in what they need. A non-recursive SNAR
 
 The prerequisites divide by who is responsible for them.
 
-| Who | What they need |
-| --- | --- |
-| The operator | A genesis signing bundle with both halves, and a signed genesis certificate for the era |
-| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key |
-| A node verifying recursive certificates | Both genesis verification halves |
-| Provers only | The trusted setup, the derived proving keys, and somewhere to cache them |
+| Who                                                                | What they need                                                                          |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era |
+| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                    |
+| A node verifying recursive certificates                            | Both genesis verification halves                                                        |
+| Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                |
 
 A node needs the material for every path it can reach, not the flavor it starts from: a chain walk that begins at a concatenation certificate can meet a recursive one, and that branch fails without the Schnorr half.
 
@@ -1449,12 +1449,12 @@ flowchart LR
     C --> CC
 ```
 
-*The cross-epoch case.*
+_The cross-epoch case._
 
-| Certificate under verification | Predecessor in the same epoch | Predecessor in the previous epoch |
-| --- | --- | --- |
-| Concatenation | The two current keys must be equal | The predecessor's announced next key must decode and equal the current key |
-| Non-recursive SNARK | Both SNARK keys must be present and equal | The predecessor's announced next SNARK key must decode and equal the current SNARK key |
+| Certificate under verification | Predecessor in the same epoch             | Predecessor in the previous epoch                                                      |
+| ------------------------------ | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| Concatenation                  | The two current keys must be equal        | The predecessor's announced next key must decode and equal the current key             |
+| Non-recursive SNARK            | Both SNARK keys must be present and equal | The predecessor's announced next SNARK key must decode and equal the current SNARK key |
 
 A value a rule needs and does not find is a rejection. The dispatch is on the flavor of the certificate under verification, not its predecessor's. Different next-epoch announcements do not fail this same-epoch check: the announcement is read only at the boundary.
 
@@ -1466,12 +1466,12 @@ A recursive certificate does not reach this check. Verification of one stops aft
 
 Four operations act on circuit keys, with different actors, inputs and effects.
 
-| Operation | Who | Effect |
-| --- | --- | --- |
-| Publish a registry | The holder of the network's genesis Ed25519 key | A newer signed list of permitted digests |
-| Revoke an entry | The same | A digest stops being permitted |
-| Replace circuit material | Circuit authors, then the release manager | New keys, new digests, a new distribution |
-| Establish a new genesis | The operator | A chain with no predecessor |
+| Operation                | Who                                             | Effect                                    |
+| ------------------------ | ----------------------------------------------- | ----------------------------------------- |
+| Publish a registry       | The holder of the network's genesis Ed25519 key | A newer signed list of permitted digests  |
+| Revoke an entry          | The same                                        | A digest stops being permitted            |
+| Replace circuit material | Circuit authors, then the release manager       | New keys, new digests, a new distribution |
+| Establish a new genesis  | The operator                                    | A chain with no predecessor               |
 
 **Publishing.** A registry is published per network, where that network's nodes can reach it. It takes effect once a distribution carries the enforcement implementation and nodes are configured to resolve a source. Under the in-review enforcement, an aggregator with no registry source configured fails closed and rejects every SNARK certificate it verifies.
 
@@ -1496,13 +1496,13 @@ Using a certificate takes two checks: the certificate is verified, and the data 
 
 **What changes with the flavor.** Each column is what verifying one certificate of that flavor requires.
 
-| | Concatenation | Non-recursive SNARK | Recursive SNARK |
-| --- | --- | --- | --- |
-| Verification work | Grows with the signature set | One proof | One proof and its accumulator |
-| Predecessors fetched | Walks predecessors to genesis | The same | None, after its own checks |
-| Circuit verification keys | None | The certificate circuit's, carried by the certificate | Both circuits', carried by the certificate |
-| Genesis chain anchor | Ed25519, verifying the genesis certificate | The same | Schnorr, verified inside the proof |
-| Registry consulted | No | Yes, in review | Yes, in review |
+|                           | Concatenation                              | Non-recursive SNARK                                   | Recursive SNARK                            |
+| ------------------------- | ------------------------------------------ | ----------------------------------------------------- | ------------------------------------------ |
+| Verification work         | Grows with the signature set               | One proof                                             | One proof and its accumulator              |
+| Predecessors fetched      | Walks predecessors to genesis              | The same                                              | None, after its own checks                 |
+| Circuit verification keys | None                                       | The certificate circuit's, carried by the certificate | Both circuits', carried by the certificate |
+| Genesis chain anchor      | Ed25519, verifying the genesis certificate | The same                                              | Schnorr, verified inside the proof         |
+| Registry consulted        | No                                         | Yes, in review                                        | Yes, in review                             |
 
 A chain can mix flavors, and a client's requirements follow every certificate the walk reaches, not the one it starts from: walking back from a concatenation certificate can land on a recursive one, which stops the walk there and needs the Schnorr half and, under enforcement, certified circuit keys.
 
@@ -1593,18 +1593,18 @@ Part 3 establishes that for a fixed registration, signing context and pool of ca
 
 **The target approximation.** Part 3 derives the target through truncated series. Two quantities follow from it.
 
-*Fairness* is how far a signer's real per-index probability, `(T + 1) / p` with the comparison inclusive, sits from the `q` its stake calls for. The implementation documents about 69 bits of series precision at `phi_f = 0.2`. That figure covers the series at that parameter. It is not a fairness bound across the parameters the protocol permits.
+_Fairness_ is how far a signer's real per-index probability, `(T + 1) / p` with the comparison inclusive, sits from the `q` its stake calls for. The implementation documents about 69 bits of series precision at `phi_f = 0.2`. That figure covers the series at that parameter. It is not a fairness bound across the parameters the protocol permits.
 
-*Splitting* is how far the implemented probabilities depart from factorizing. Under the ideal probability formula, splitting a stake across identities gains nothing, because the failure probability factorizes exactly. The departure was measured at `phi_f = 0.2` with thirty terms, over four stake fractions and splits into two and into a hundred, giving residues of roughly `9 × 10⁻⁷⁸` to `2 × 10⁻⁵⁶`. That measurement used `T / p` rather than the inclusive `(T + 1) / p`, and the inclusive correction can change the sign of the smallest of them, so the historical sign pattern does not transfer unchanged. The magnitudes support only that the departure is small at those parameters. They bound nothing over other parameters or partitions, say nothing about key grinding, and need repeating if `phi_f` or the series length changes.
+_Splitting_ is how far the implemented probabilities depart from factorizing. Under the ideal probability formula, splitting a stake across identities gains nothing, because the failure probability factorizes exactly. The departure was measured at `phi_f = 0.2` with thirty terms, over four stake fractions and splits into two and into a hundred, giving residues of roughly `9 × 10⁻⁷⁸` to `2 × 10⁻⁵⁶`. That measurement used `T / p` rather than the inclusive `(T + 1) / p`, and the inclusive correction can change the sign of the smallest of them, so the historical sign pattern does not transfer unchanged. The magnitudes support only that the departure is small at those parameters. They bound nothing over other parameters or partitions, say nothing about key grinding, and need repeating if `phi_f` or the series length changes.
 
 **The concatenation lottery.** A signer produces a signature only on a message for which it wins at least one concatenation index, so its SNARK wins count only on those messages (Part 3). Modelling the two lotteries as independent, a signer's effective per-index SNARK probability is its ungated probability `(T + 1) / p` multiplied by `1 - (1 - q_concat)^m`, its chance of at least one concatenation win, where `q_concat` is its per-index probability in the concatenation lottery. Both per-index probabilities approximate `q`; with that approximation, at the parameters of the committed circuit key, `phi_f = 0.2` and `m = 16948`:
 
 | Stake, as a share of the total | Chance of at least one concatenation win |
-| --- | --- |
-| 1 % | 1.000 |
-| 0.1 % | 0.977 |
-| 0.03 % | 0.678 |
-| 0.01 % | 0.315 |
+| ------------------------------ | ---------------------------------------- |
+| 1 %                            | 1.000                                    |
+| 0.1 %                          | 0.977                                    |
+| 0.03 %                         | 0.678                                    |
+| 0.01 %                         | 0.315                                    |
 
 The factor is close to one above about 0.1 percent of stake, so the reduction falls on small signers, and how much it affects reaching the quorum depends on the stake distribution. It also makes splitting a stake into small identities lower its SNARK participation: a 1 percent stake split into a hundred identities of 0.01 percent keeps about a third of its per-index SNARK probability.
 
@@ -1612,14 +1612,14 @@ The factor is close to one above about 0.1 percent of stake, so the reduction fa
 
 The table separates dated audit confirmations from the dependency versions pinned at this baseline.
 
-| | Reported status, 16 June 2026 |
-| --- | --- |
-| Who audited | ZkSecurity, three rounds covering the core circuit gadgets and the proving system; Veridise, covering the SHA-512 and RIPEMD-160 chips added later |
-| Where the work is visible | The audit branches in the [midnight-zk repository](https://github.com/midnightntwrk/midnight-zk) |
-| Are the reports public | No |
-| What Mithril uses | Non-recursive: Jubjub, Poseidon, the range-check columns. Recursive: those plus the native, core-decomposition, BLS12-381 and SHA-256 configurations |
-| What was confirmed | [8 January](https://github.com/IntersectMBO/mithril/issues/2802#issuecomment-3722491282): the components the non-recursive circuit uses are audited and fixed. [16 June](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4715686613): the auditors and their scope, and that the recursive part is also audited. The release tracks are addressed below |
-| Pinned at this baseline | `midnight-circuits 7.2.2`, `midnight-curves 0.3.1`, `midnight-proofs 0.8.1`, `midnight-zk-stdlib 2.3.3`, all exact-version pins |
+|                           | Reported status, 16 June 2026                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Who audited               | ZkSecurity, three rounds covering the core circuit gadgets and the proving system; Veridise, covering the SHA-512 and RIPEMD-160 chips added later                                                                                                                                                                                                                       |
+| Where the work is visible | The audit branches in the [midnight-zk repository](https://github.com/midnightntwrk/midnight-zk)                                                                                                                                                                                                                                                                         |
+| Are the reports public    | No                                                                                                                                                                                                                                                                                                                                                                       |
+| What Mithril uses         | Non-recursive: Jubjub, Poseidon, the range-check columns. Recursive: those plus the native, core-decomposition, BLS12-381 and SHA-256 configurations                                                                                                                                                                                                                     |
+| What was confirmed        | [8 January](https://github.com/IntersectMBO/mithril/issues/2802#issuecomment-3722491282): the components the non-recursive circuit uses are audited and fixed. [16 June](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4715686613): the auditors and their scope, and that the recursive part is also audited. The release tracks are addressed below |
+| Pinned at this baseline   | `midnight-circuits 7.2.2`, `midnight-curves 0.3.1`, `midnight-proofs 0.8.1`, `midnight-zk-stdlib 2.3.3`, all exact-version pins                                                                                                                                                                                                                                          |
 
 The confirmation is at release-track granularity. The June discussion names standard-library versions 1.2.0 and 2.3.0, and this baseline pins 2.3.3. For the 2.x track the maintainers [stated](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4715891520) that it is a minor release adding standard-library gadgets, with the proving system unchanged and still audited; the optimization work that would change it was [reported](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4716425091) as not yet released. No audit status was stated for the gadgets 2.x adds, nor for the patch releases after 2.3.0. Two checks remain open: whether Mithril uses any gadget introduced on the 2.x track, and whether the pinned versions correspond to the audited code. These are statements from the auditors and the library's maintainers; the reports themselves are not public, and their scope is the library, not the circuits Mithril builds on it.
 
