@@ -2,7 +2,7 @@
 
 ## What this book is for
 
-Mithril combines individual signatures into an [aggregate signature](#protocol-terms) that clients verify. It supports three [aggregation flavors](#protocol-terms): [concatenation](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/concatenation), [non-recursive SNARK](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/non-recursive-snark) and [recursive SNARK](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/recursive-snark). Concatenation bundles selected signatures; the two [SNARK](https://mithril.network/doc/next/glossary#snark) flavors replace that bundle with a [proof](#proof-system-terms). Concatenation is stable; both SNARK flavors are unstable.
+Mithril combines individual signatures into an [aggregate signature](#term-aggregate-signature) that clients verify. It supports three [aggregation flavors](#term-aggregation-flavor): [concatenation](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/concatenation), [non-recursive SNARK](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/non-recursive-snark) and [recursive SNARK](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/recursive-snark). Concatenation bundles selected signatures; the two [SNARK](https://mithril.network/doc/next/glossary#snark) flavors replace that bundle with a [proof](#term-proof). Concatenation is stable; both SNARK flavors are unstable.
 
 This book covers the two SNARK flavors: how they are built, what they cost, what constrains them, and what their security rests on.
 
@@ -59,6 +59,8 @@ Where something is built but nothing calls it yet, the page says so. A feature g
 
 The baseline records the revision checked for this edition. Later changes on `main` may not yet be reflected here, so when a statement does not match the code, check the baseline first.
 
+Links to files in the repository are relative to this book's location in `mithril-stm/`, so they open those files at the revision being read, which can be later than the baseline.
+
 # Part 1 — Glossary and notation
 
 Terms are grouped by what they belong to, and pages link here on first use.
@@ -67,12 +69,12 @@ Terms are grouped by what they belong to, and pages link here on first use.
 
 | Symbol | Meaning |
 | --- | --- |
-| `k` | The quorum: the required number of distinct winning lottery indices for the signed message. One signer may contribute several winning indices. |
-| `m` | The number of lottery indices evaluated for each signed message. Indices range from `0` to `m - 1`. |
-| `phi_f` | The protocol parameter in the ideal winning probability `1 - (1 - phi_f)^w`. |
-| `w` | A signer's stake as a fraction of the total stake of all registered signers. |
-| `K` | The base-2 logarithm of the evaluation-domain size: `2^K` rows. The circuit must fit in the usable rows of that domain. Not the degree of a polynomial, and not the number of constraints. Written `K_certificate` and `K_recursive` where both appear on one page. |
-| `lambda` | The target approximation precision in bits, written `epsilon = 2^-lambda` in the lottery error analysis. It does not state the security level of the protocol. |
+| <a id="symbol-k"></a>`k` | The quorum: the required number of distinct winning lottery indices for the signed message. One signer may contribute several winning indices. |
+| <a id="symbol-m"></a>`m` | The number of lottery indices evaluated for each signed message. Indices range from `0` to `m - 1`. |
+| <a id="symbol-phi-f"></a>`phi_f` | The protocol parameter in the ideal winning probability `1 - (1 - phi_f)^w`. |
+| <a id="symbol-w"></a>`w` | A signer's stake as a fraction of the total stake of all registered signers. |
+| <a id="symbol-capital-k"></a>`K` | The base-2 logarithm of the evaluation-domain size: `2^K` rows. The circuit must fit in the usable rows of that domain. Not the degree of a polynomial, and not the number of constraints. Written `K_certificate` and `K_recursive` where both appear on one page. |
+| <a id="symbol-lambda"></a>`lambda` | The target approximation precision in bits, written `epsilon = 2^-lambda` in the lottery error analysis. It does not state the security level of the protocol. |
 
 `k` and `K` are different quantities and are always written with the case shown here.
 
@@ -80,43 +82,43 @@ Terms are grouped by what they belong to, and pages link here on first use.
 
 | Term | Meaning |
 | --- | --- |
-| Lottery index | An integer in `0..m` identifying one lottery for a signed message. Different signers can win the same index; that index counts once toward the quorum. |
-| Aggregation flavor | One of the three ways Mithril builds an aggregate signature: concatenation, non-recursive SNARK, recursive SNARK. |
-| Aggregate signature | The artifact a flavor produces for clients to verify: a bundle of selected signatures, or a SNARK proof, together with the data that format requires. |
-| Certificate chain | See the [website](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates). |
-| Aggregate verification key | The membership-tree commitment and total registered stake that a proof system verifies an aggregate against. Distinct from a circuit verification key. |
-| Lottery target | The threshold derived from a signer's stake fraction and `phi_f` against which lottery evaluations are compared. |
-| Continuation data | Data carried forward to produce later recursive steps, including the previous recursive proof, the chain state and the [accumulator](#proof-system-terms). |
-| Proof of possession | Evidence submitted with a verification key that the submitter holds the matching signing key. |
-| Proof of bound possession | A proof of possession whose signed value also covers the signer's stake, epoch and pool identifier, so it holds for one identity at one epoch only. Part 9 gives the construction. |
-| KES signature | A key-evolving signature, made under a scheme whose signing key is advanced each period so that compromising it does not forge earlier signatures. Registration uses one to tie a submitted verification key to a stake pool operator. |
-| Operational certificate | The Cardano certificate authorizing a KES verification key under a stake pool's cold key, from which the pool identity is derived. |
-| Ancillary verifier data | Additional data carried with a certificate for its proof system's verifier. For the SNARK types it includes circuit verification keys; for the recursive type it also includes the genesis message hash. Receiving it does not establish trust in its contents. |
+| <a id="term-lottery-index"></a>Lottery index | An integer in `0..m` identifying one lottery for a signed message. Different signers can win the same index; that index counts once toward the quorum. |
+| <a id="term-aggregation-flavor"></a>Aggregation flavor | One of the three ways Mithril builds an aggregate signature: concatenation, non-recursive SNARK, recursive SNARK. |
+| <a id="term-aggregate-signature"></a>Aggregate signature | The artifact a flavor produces for clients to verify: a bundle of selected signatures, or a SNARK proof, together with the data that format requires. |
+| <a id="term-certificate-chain"></a>Certificate chain | See the [website](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates). |
+| <a id="term-aggregate-verification-key"></a>Aggregate verification key | The membership-tree commitment and total registered stake that a proof system verifies an aggregate against. Distinct from a circuit verification key. |
+| <a id="term-lottery-target"></a>Lottery target | The threshold derived from a signer's stake fraction and `phi_f` against which lottery evaluations are compared. |
+| <a id="term-continuation-data"></a>Continuation data | Data carried forward to produce later recursive steps, including the previous recursive proof, the chain state and the [accumulator](#term-accumulator). |
+| <a id="term-proof-of-possession"></a>Proof of possession | Evidence submitted with a verification key that the submitter holds the matching signing key. |
+| <a id="term-proof-of-bound-possession"></a>Proof of bound possession | A proof of possession whose signed value also covers the signer's stake, epoch and pool identifier, so it holds for one identity at one epoch only. Part 9 gives the construction. |
+| <a id="term-kes-signature"></a>KES signature | A key-evolving signature, made under a scheme whose signing key is advanced each period so that compromising it does not forge earlier signatures. Registration uses one to tie a submitted verification key to a stake pool operator. |
+| <a id="term-operational-certificate"></a>Operational certificate | The Cardano certificate authorizing a KES verification key under a stake pool's cold key, from which the pool identity is derived. |
+| <a id="term-ancillary-verifier-data"></a>Ancillary verifier data | Additional data carried with a certificate for its proof system's verifier. For the SNARK types it includes circuit verification keys; for the recursive type it also includes the genesis message hash. Receiving it does not establish trust in its contents. |
 
 ## Proof system terms
 
 | Term | Meaning |
 | --- | --- |
-| Relation | A condition connecting a public input to a witness. |
-| Circuit | A relation expressed as arithmetic constraints. |
-| Constraint | A condition the circuit enforces. |
-| Public input | Values supplied to the prover and the verifier that specify the claim being proved. |
-| Witness | Data the prover supplies to satisfy the relation. The verifier does not need it to check the proof, and it need not be secret. |
-| Proof | An artifact that lets a verifier check a claim about a public input without receiving the witness used to establish it. |
-| Prover | The party that produces a proof. |
-| Verifier | The party that checks a proof. |
-| Proving | Producing a proof. |
-| Verification | Checking a proof. |
-| Soundness | The property that a verifier accepts a false claim only with negligible probability. Here it holds against computationally bounded provers, under the proof system's assumptions. |
-| Knowledge soundness | The stronger property that a prover producing an accepting proof must hold a witness satisfying the relation. Reading a certificate as evidence that the individual signatures exist relies on this. |
-| Transcript | The ordered record of a proof's public data, from which the verification challenges are derived. |
-| Recursive proof | A proof whose circuit checks other proofs; here these include proofs of the same recursive relation. |
-| Accumulator | Proof-verification checks deferred and carried across recursive steps in folded form, so that they are checked once instead of at every step. Part 5 describes the mechanism. |
-| Trusted setup | The procedure that produces a structured reference string. In the multiparty setup used here, security relies on at least one participant contributing secret randomness that remains unknown to others and is securely erased after use, together with verification of the ceremony's updates. |
-| Structured reference string | Abbreviated SRS. Public parameters produced by a trusted setup, reusable across circuits within the size the setup supports. |
-| Proving key | Derived from the structured reference string and a configured circuit; needed to produce a proof. |
-| Verifying key | Derived from the structured reference string and a configured circuit; needed to check a proof. Distinct from a signer's verification key. |
-| Circuit verification key | Another name for the proof system's verifying key, distinguishing it from a signer's verification key. Part 6 explains its role in identifying a configured circuit. |
+| <a id="term-relation"></a>Relation | A condition connecting a public input to a witness. |
+| <a id="term-circuit"></a>Circuit | A relation expressed as arithmetic constraints. |
+| <a id="term-constraint"></a>Constraint | A condition the circuit enforces. |
+| <a id="term-public-input"></a>Public input | Values supplied to the prover and the verifier that specify the claim being proved. |
+| <a id="term-witness"></a>Witness | Data the prover supplies to satisfy the relation. The verifier does not need it to check the proof, and it need not be secret. |
+| <a id="term-proof"></a>Proof | An artifact that lets a verifier check a claim about a public input without receiving the witness used to establish it. |
+| <a id="term-prover"></a>Prover | The party that produces a proof. |
+| <a id="term-verifier"></a>Verifier | The party that checks a proof. |
+| <a id="term-proving"></a>Proving | Producing a proof. |
+| <a id="term-verification"></a>Verification | Checking a proof. |
+| <a id="term-soundness"></a>Soundness | The property that a verifier accepts a false claim only with negligible probability. Here it holds against computationally bounded provers, under the proof system's assumptions. |
+| <a id="term-knowledge-soundness"></a>Knowledge soundness | The stronger property that a prover producing an accepting proof must hold a witness satisfying the relation. Reading a certificate as evidence that the individual signatures exist relies on this. |
+| <a id="term-transcript"></a>Transcript | The ordered record of a proof's public data, from which the verification challenges are derived. |
+| <a id="term-recursive-proof"></a>Recursive proof | A proof whose circuit checks other proofs; here these include proofs of the same recursive relation. |
+| <a id="term-accumulator"></a>Accumulator | Proof-verification checks deferred and carried across recursive steps in folded form, so that they are checked once instead of at every step. Part 5 describes the mechanism. |
+| <a id="term-trusted-setup"></a>Trusted setup | The procedure that produces a structured reference string. In the multiparty setup used here, security relies on at least one participant contributing secret randomness that remains unknown to others and is securely erased after use, together with verification of the ceremony's updates. |
+| <a id="term-structured-reference-string"></a>Structured reference string | Abbreviated SRS. Public parameters produced by a trusted setup, reusable across circuits within the size the setup supports. |
+| <a id="term-proving-key"></a>Proving key | Derived from the structured reference string and a configured circuit; needed to produce a proof. |
+| <a id="term-verifying-key"></a>Verifying key | Derived from the structured reference string and a configured circuit; needed to check a proof. Distinct from a signer's verification key. |
+| <a id="term-circuit-verification-key"></a>Circuit verification key | Another name for the proof system's verifying key, distinguishing it from a signer's verification key. Part 6 explains its role in identifying a configured circuit. |
 
 ## Testing terms
 
@@ -159,25 +161,25 @@ This part gives the shape of the system before the specification does: why the S
 
 ## Why Mithril needs SNARKs
 
-To trust a Mithril certificate, a client must authenticate the stake distribution its [aggregate signature](#protocol-terms) was verified against. For concatenation and non-recursive [SNARK](https://mithril.network/doc/next/glossary#snark) that means following certificate links back to genesis: a later certificate in an epoch links to that epoch's first certificate, whose predecessors lead through earlier epochs. The genesis signature is checked against the client's trusted genesis verification key. The [certificate-chain design](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates#the-certificate-chain-design) describes the structure.
+To trust a Mithril certificate, a client must authenticate the stake distribution its [aggregate signature](#term-aggregate-signature) was verified against. For concatenation and non-recursive [SNARK](https://mithril.network/doc/next/glossary#snark) that means following certificate links back to genesis: a later certificate in an epoch links to that epoch's first certificate, whose predecessors lead through earlier epochs. The genesis signature is checked against the client's trusted genesis verification key. The [certificate-chain design](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/certificates#the-certificate-chain-design) describes the structure.
 
 Two costs follow: the size of each aggregate signature, and the work of verifying the certificate chain. A concatenation aggregate contains the selected signatures and their membership evidence. Chain-verification work grows with the epochs spanned, and without locally cached certificates, retrieval grows too. Both costs matter to verifiers with fixed payload and computation budgets, including those running on another chain.
 
-The certificate [circuit](#proof-system-terms) expresses the conditions for registered signatures on the message to meet the [lottery quorum](#notation). The prover produces a [proof](#proof-system-terms) that those conditions hold: valid signatures, Merkle tree membership, and distinct winning lottery indices. A client verifies that proof instead of receiving the individual signatures and their membership evidence.
+The certificate [circuit](#term-circuit) expresses the conditions for registered signatures on the message to meet the [lottery quorum](#symbol-k). The prover produces a [proof](#term-proof) that those conditions hold: valid signatures, Merkle tree membership, and distinct winning lottery indices. A client verifies that proof instead of receiving the individual signatures and their membership evidence.
 
-The recursive circuit checks the chain transition using the new certificate's proof and the previous [recursive proof](#proof-system-terms). Given trusted [circuit verification keys](#proof-system-terms) and the genesis trust anchor, the resulting aggregate authenticates the chain back to genesis. For a fixed circuit configuration, verification work does not grow with the number of epochs, and the client need not fetch predecessor certificates.
+The recursive circuit checks the chain transition using the new certificate's proof and the previous [recursive proof](#term-recursive-proof). Given trusted [circuit verification keys](#term-circuit-verification-key) and the genesis trust anchor, the resulting aggregate authenticates the chain back to genesis. For a fixed circuit configuration, verification work does not grow with the number of epochs, and the client need not fetch predecessor certificates.
 
 The [website comparison](https://mithril.network/doc/next/mithril/advanced/mithril-protocol/aggregation/) gives indicative aggregate-signature sizes of about 150 kB for concatenation, 4 kB for non-recursive SNARK and 13 kB for recursive SNARK. These are not complete certificate sizes. For a fixed circuit configuration the proof does not contain a growing list of individual signatures; changing that configuration can change its size.
 
-Both SNARK flavors require substantially more computation to produce an aggregate signature than concatenation does; Part 7 describes how that is measured. Both use public parameters from a [trusted setup](#proof-system-terms), and both bind the protocol to a specific circuit whose identity has to be managed, which Part 6 covers.
+Both SNARK flavors require substantially more computation to produce an aggregate signature than concatenation does; Part 7 describes how that is measured. Both use public parameters from a [trusted setup](#term-trusted-setup), and both bind the protocol to a specific circuit whose identity has to be managed, which Part 6 covers.
 
 ## The three aggregate signature types
 
-`AggregateSignatureType` names the three formats an [aggregate signature](#protocol-terms) can take. `Concatenation` is the default and is always compiled. Enabling `future_snark` adds `Snark` and `IvcSnark`; without it, only concatenation aggregate signatures are supported.
+`AggregateSignatureType` names the three formats an [aggregate signature](#term-aggregate-signature) can take. `Concatenation` is the default and is always compiled. Enabling `future_snark` adds `Snark` and `IvcSnark`; without it, only concatenation aggregate signatures are supported.
 
-Given trusted [circuit verification keys](#proof-system-terms) and the genesis trust anchor, only `IvcSnark` authenticates the full chain without fetching predecessor certificates. Chain verification therefore stops at the first valid certificate of that type.
+Given trusted [circuit verification keys](#term-circuit-verification-key) and the genesis trust anchor, only `IvcSnark` authenticates the full chain without fetching predecessor certificates. Chain verification therefore stops at the first valid certificate of that type.
 
-Both SNARK types use circuit verification keys carried in [ancillary verifier data](#protocol-terms), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. At this baseline the registry and certification primitives exist, but the standard certificate verifier does not yet invoke that certification check. Concatenation uses no circuit verification key.
+Both SNARK types use circuit verification keys carried in [ancillary verifier data](#term-ancillary-verifier-data), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. At this baseline the registry and certification primitives exist, but the standard certificate verifier does not yet invoke that certification check. Concatenation uses no circuit verification key.
 
 | Type | Flavor | Compiled | Tag | Certifies the full chain | Requires externally certified circuit keys |
 | --- | --- | --- | --- | --- | --- |
@@ -193,13 +195,13 @@ A build with `future_snark` supports all three types, and the aggregator configu
 
 A Mithril network runs the same sequence for every aggregation flavor. The flavor changes what aggregation produces and what a verifier needs, not the order of the steps.
 
-**Registration.** Signers submit verification keys and the material needed to authenticate them. The registration process associates each signer with stake from the network's stake distribution; the registration message carries no stake value. SNARK participation additionally requires a Schnorr verification key. When registration closes the total registered stake is fixed, which is when each signer's [lottery target](#protocol-terms) can be computed. The closed registration determines the membership trees and the [aggregate verification keys](#protocol-terms) used for signing and aggregation.
+**Registration.** Signers submit verification keys and the material needed to authenticate them. The registration process associates each signer with stake from the network's stake distribution; the registration message carries no stake value. SNARK participation additionally requires a Schnorr verification key. When registration closes the total registered stake is fixed, which is when each signer's [lottery target](#term-lottery-target) can be computed. The closed registration determines the membership trees and the [aggregate verification keys](#term-aggregate-verification-key) used for signing and aggregation.
 
 **Signing.** A signer signs the message bound to the closed registration and checks its lottery eligibility. For concatenation the individual signature carries the winning indices. For SNARK the signer checks that it has a win; the winning indices are recomputed and attached during aggregation. A signer produces a signature only when it wins at least one concatenation index, so its SNARK part depends on that lottery too.
 
-**Aggregation.** The aggregator verifies the signatures it received and selects distinct winning indices until the quorum is met. Concatenation packages the selected signatures together with their membership paths. For SNARK the aggregator recomputes the winning indices, selects exactly `k`, and prepares the signatures, registration leaves and membership paths the certificate [circuit](#proof-system-terms) needs. For non-recursive SNARK the resulting certificate-circuit [proof](#proof-system-terms) becomes the [aggregate signature](#protocol-terms). For recursive SNARK the prover uses that proof together with the previous [continuation data](#protocol-terms) to prove the next chain transition, bootstrapping from genesis at the first step. It produces the recursive aggregate for clients, and updates the continuation data when the rolling state advances; a same-epoch certificate reuses the existing rolling state.
+**Aggregation.** The aggregator verifies the signatures it received and selects distinct winning indices until the quorum is met. Concatenation packages the selected signatures together with their membership paths. For SNARK the aggregator recomputes the winning indices, selects exactly `k`, and prepares the signatures, registration leaves and membership paths the certificate [circuit](#term-circuit) needs. For non-recursive SNARK the resulting certificate-circuit [proof](#term-proof) becomes the [aggregate signature](#term-aggregate-signature). For recursive SNARK the prover uses that proof together with the previous [continuation data](#term-continuation-data) to prove the next chain transition, bootstrapping from genesis at the first step. It produces the recursive aggregate for clients, and updates the continuation data when the rolling state advances; a same-epoch certificate reuses the existing rolling state.
 
-**Certificate assembly.** The aggregator places the aggregate signature and its ancillary data in a certificate. SNARK [ancillary verifier data](#protocol-terms) carries the circuit verification keys and, for the recursive flavor, the genesis message hash. A recursive certificate can also carry prover continuation data for later aggregation.
+**Certificate assembly.** The aggregator places the aggregate signature and its ancillary data in a certificate. SNARK [ancillary verifier data](#term-ancillary-verifier-data) carries the circuit verification keys and, for the recursive flavor, the genesis message hash. A recursive certificate can also carry prover continuation data for later aggregation.
 
 **Verification.** Concatenation and non-recursive SNARK verification use the message and the aggregate verification key, then follow the certificate chain. Recursive verification checks the message and the chain state the aggregate authenticates, without fetching predecessor certificates. It reconstructs the circuit's global inputs from the genesis verification key bundle, which the verifier holds independently of the certificate, and from the ancillary verifier data, then verifies the recursive aggregate including its accumulator check. Authenticating the circuit verification keys themselves remains the separate prerequisite described above.
 
@@ -255,7 +257,7 @@ Parts 4 and 5 describe what each circuit proves. Part 3 specifies the registrati
 
 ## The cryptographic building blocks
 
-The SNARK flavors are built from primitives chosen to be cheap to express as circuit [constraints](#proof-system-terms), which is why they differ from the ones the concatenation flavor uses.
+The SNARK flavors are built from primitives chosen to be cheap to express as circuit [constraints](#term-constraint), which is why they differ from the ones the concatenation flavor uses.
 
 | Role | Concatenation | SNARK flavors |
 | --- | --- | --- |
@@ -267,7 +269,7 @@ Schnorr over Jubjub and Poseidon make signature and membership checks efficient 
 
 Poseidon is the membership-tree hash for the SNARK flavors. Other hashes remain in use elsewhere: the published recursive verification proof uses a Blake2b transcript, continuation proofs use Poseidon, and lottery index selection uses SHA-256. The table is a comparison of these three roles, not an inventory of every hash in the system.
 
-The SNARK backend and circuit gadgets come from four pinned Midnight crates: `midnight-circuits`, `midnight-curves`, `midnight-proofs` and `midnight-zk-stdlib`. Their versions are fixed in [`mithril-stm/Cargo.toml`](https://github.com/IntersectMBO/mithril/blob/main/mithril-stm/Cargo.toml). Mithril defines its own relations and orchestration on top of them. Updating one can change the constraint system and the [circuit verification keys](#proof-system-terms); the [circuit-key update runbook](https://github.com/IntersectMBO/mithril/blob/main/docs/runbook/update-circuit-keys/README.md) covers the procedure and Part 6 the compatibility consequences.
+The SNARK backend and circuit gadgets come from four pinned Midnight crates: `midnight-circuits`, `midnight-curves`, `midnight-proofs` and `midnight-zk-stdlib`. Their versions are fixed in [`mithril-stm/Cargo.toml`](Cargo.toml). Mithril defines its own relations and orchestration on top of them. Updating one can change the constraint system and the [circuit verification keys](#term-circuit-verification-key); the [circuit-key update runbook](../docs/runbook/update-circuit-keys/README.md) covers the procedure and Part 6 the compatibility consequences.
 
 ## The module map
 
@@ -309,9 +311,9 @@ Registration fixes a signer set, and that set signs later. A round opened during
 | Field | Contents |
 | --- | --- |
 | `epoch` | The round's recording label, which the submission must match. |
-| `party_id` | The signer's pool identity. Certified from the [operational certificate](#protocol-terms); an uncertified value is accepted only in test configurations. |
-| `verification_key_for_concatenation` | The BLS verification key with its [proof of possession](#protocol-terms). Serialized as `verification_key`. |
-| `verification_key_signature_for_concatenation` | A [KES signature](#protocol-terms) over that key. Serialized as `verification_key_signature`. |
+| `party_id` | The signer's pool identity. Certified from the [operational certificate](#term-operational-certificate); an uncertified value is accepted only in test configurations. |
+| `verification_key_for_concatenation` | The BLS verification key with its [proof of possession](#term-proof-of-possession). Serialized as `verification_key`. |
+| `verification_key_signature_for_concatenation` | A [KES signature](#term-kes-signature) over that key. Serialized as `verification_key_signature`. |
 | `operational_certificate` | The stake pool operator's operational certificate. |
 | `kes_evolutions` | KES evolutions since the operational certificate's start period. Serialized as `kes_period`. At submission the aggregator authenticates with the value it derives from the chain's current KES period. |
 | `verification_key_for_snark` | The Schnorr verification key. Optional. |
@@ -321,7 +323,7 @@ The two SNARK fields are everything the SNARK flavors add to a submission. A sig
 
 Authentication happens in two layers. The operational certificate and the KES signatures tie each verification key to a [stake pool operator](https://mithril.network/doc/next/glossary#stake-pool-operator-spo), which is what gives `party_id` its meaning. The library then verifies the concatenation key's proof of possession and checks that the Schnorr key is a prime-order point on its curve. Each submission is authenticated on its own, against no other signer's keys.
 
-Stake never travels with the message. The aggregator associates each registered signer with the stake recorded for it in the [stake distribution](https://mithril.network/doc/next/glossary#stake-distribution) used for that registration round, which is what stops a signer from influencing its own [lottery target](#protocol-terms) through what it sends.
+Stake never travels with the message. The aggregator associates each registered signer with the stake recorded for it in the [stake distribution](https://mithril.network/doc/next/glossary#stake-distribution) used for that registration round, which is what stops a signer from influencing its own [lottery target](#term-lottery-target) through what it sends.
 
 **In review: proof of bound possession.** Signers will also submit a proof of bound possession for the Schnorr verification key, binding it to the signer's stake and epoch as well as to its pool operator. At the baseline nothing in the crate implements it and the Schnorr key is authenticated by its KES signature alone; PR #3539 adds it. Part 9 gives the construction and what it defends against. The same pull request maps each signer's registration position to its position in the SNARK tree, which aggregation uses when some registered signers carry no Schnorr key.
 
@@ -333,7 +335,7 @@ Closing freezes a registration set and produces the fixed objects that signing a
 
 Entries enter one shared registration set as they are added, and that set rejects an entry whose concatenation verification key, or whose Schnorr verification key when present, is already in it. Two signers cannot share a verification key in one set. The aggregator applies this check when it builds an epoch's signer set from the stored registrations, and a duplicate fails that build; Part 9 describes the collision resolution PR #3539 adds for Schnorr keys.
 
-Closing sums the stake of every entry, rejecting both an overflow and a total of zero. It then converts each entry into a closed entry, computing that signer's [lottery target value](#protocol-terms) from its stake, the total stake and [`phi_f`](#notation); the lottery page gives the derivation. Entries are held in a sorted set, so their order follows the entries themselves and not their arrival. A closed entry holds the concatenation verification key and the stake, plus the Schnorr verification key and the lottery target value when the signer registered one.
+Closing sums the stake of every entry, rejecting both an overflow and a total of zero. It then converts each entry into a closed entry, computing that signer's [lottery target value](#term-lottery-target) from its stake, the total stake and [`phi_f`](#symbol-phi-f); the lottery page gives the derivation. Entries are held in a sorted set, so their order follows the entries themselves and not their arrival. A closed entry holds the concatenation verification key and the stake, plus the Schnorr verification key and the lottery target value when the signer registered one.
 
 Each proof system then commits its own leaf form over those entries, in a [Merkle tree](https://mithril.network/doc/next/glossary#merkle-tree) of its own.
 
@@ -344,13 +346,13 @@ Each proof system then commits its own leaf form over those entries, in a [Merkl
 | Membership hash | Blake2b | Poseidon |
 | Leaf order | By stake, then concatenation verification key | The same sequence, filtered to entries with a Schnorr key |
 
-The concatenation leaf commits the stake; the SNARK leaf commits the target value derived from it. Performing that conversion once at closing keeps the stake arithmetic out of the [circuit](#proof-system-terms), which compares a lottery evaluation against a value it reads from the leaf. Part 4 shows the comparison. The proof therefore rests on the authenticated root for the target's correctness: the circuit does not recompute the target from stake and total stake.
+The concatenation leaf commits the stake; the SNARK leaf commits the target value derived from it. Performing that conversion once at closing keeps the stake arithmetic out of the [circuit](#term-circuit), which compares a lottery evaluation against a value it reads from the leaf. Part 4 shows the comparison. The proof therefore rests on the authenticated root for the target's correctness: the circuit does not recompute the target from stake and total stake.
 
 Neither tree sorts by its own leaf contents: the SNARK tree is the registration sequence with the entries carrying no Schnorr key removed. Grouping higher-stake signers together is intended to make selected paths overlap more often, reducing the authentication data a concatenation batch opening needs, that being one membership proof covering several leaves. The SNARK witness carries a separate fixed-length path per signer and does not gain from the grouping.
 
 One tree implementation serves both flavors, parameterized by the hash and the leaf form. It digests each leaf and combines pairs upward, substituting a fixed digest of a single zero byte where a node has no child. The SNARK circuit verifies paths of one fixed length, `MERKLE_TREE_DEPTH_FOR_SNARK`, which is 13, and shorter paths are padded to it. That depth gives the circuit room for 8192 leaves; it is a circuit capacity, not a limit registration enforces.
 
-The [aggregate verification key](#protocol-terms) names the committed set a proof is checked against. Concatenation carries a Merkle tree batch commitment, SNARK a Merkle tree commitment, and both carry the total registered stake, so that a verifier holds the committed set together with the quantity the targets were derived from.
+The [aggregate verification key](#term-aggregate-verification-key) names the committed set a proof is checked against. Concatenation carries a Merkle tree batch commitment, SNARK a Merkle tree commitment, and both carry the total registered stake, so that a verifier holds the committed set together with the quantity the targets were derived from.
 
 The protocol message carries the next SNARK aggregate verification key in a fixed-width form. The rigid slot, under [certificate assembly](#certificate-assembly) below, specifies that layout.
 
@@ -358,7 +360,7 @@ The protocol message carries the next SNARK aggregate verification key in a fixe
 
 ## Signing
 
-Signing is specified in two halves: the message a signature is taken over, which a fixed-layout preimage determines, and the lottery that decides which of a signer's [`m`](#notation) indices win.
+Signing is specified in two halves: the message a signature is taken over, which a fixed-layout preimage determines, and the lottery that decides which of a signer's [`m`](#symbol-m) indices win.
 
 ### The message and its preimage
 
@@ -369,7 +371,7 @@ A signer signs two things bound together: the message a [certificate](https://mi
 | Slot label | Width | Value |
 | --- | --- | --- |
 | `digest` | 32 bytes | Legacy SHA-256 hash of the message's remaining parts, once the three source parts below are removed. |
-| `next_aggregate_verification_key` | 44 bytes | The next SNARK [aggregate verification key](#protocol-terms), in its rigid encoding. The rigid slot, under [certificate assembly](#certificate-assembly), gives the layout of those bytes. |
+| `next_aggregate_verification_key` | 44 bytes | The next SNARK [aggregate verification key](#term-aggregate-verification-key), in its rigid encoding. The rigid slot, under [certificate assembly](#certificate-assembly), gives the layout of those bytes. |
 | `next_protocol_parameters` | 32 bytes | The hash of the next protocol parameters, not the parameters themselves. |
 | `current_epoch` | 8 bytes | The epoch, read from its decimal value and written little-endian. |
 
@@ -377,7 +379,7 @@ That is 74 bytes of labels and 116 of values: 190 in total, hashed with SHA-256 
 
 Slot labels are not the names of the message parts that feed them. The aggregate verification key slot is fed by the `NextSnarkAggregateVerificationKey` part; a `NextAggregateVerificationKey` part is a different entry and stays inside `digest`. A producer can check the layout before signing, through `check_rigid_integrity`, which reports a missing part, a value of the wrong width, or an epoch that is not decimal. The hashing helpers themselves substitute zeros instead of failing.
 
-Fixed widths give the recursive [circuit](#proof-system-terms) a preimage of known size with the three transition fields at known offsets, so it reads them from fixed byte ranges. Everything variable is folded into `digest`.
+Fixed widths give the recursive [circuit](#term-circuit) a preimage of known size with the three transition fields at known offsets, so it reads them from fixed byte ranges. Everything variable is folded into `digest`.
 
 The older scheme, which the earlier Pythagoras era uses throughout, takes SHA-256 over each part's key and then its value, in part-key enumeration order. Its preimage is variable-length. Part 8 covers the era switch.
 
@@ -401,13 +403,13 @@ The certificate circuit assigns the signature and lottery tags as fixed values, 
 
 ### The lottery and the target value
 
-Each signer holds a [lottery target](#protocol-terms) fixed when registration closed. Signing evaluates [`m`](#notation) lotteries against it, and each win is a [lottery index](#protocol-terms).
+Each signer holds a [lottery target](#term-lottery-target) fixed when registration closed. Signing evaluates [`m`](#symbol-m) lotteries against it, and each win is a [lottery index](#term-lottery-index).
 
 **The evaluation.** A prefix is derived once per message, as the Poseidon hash of the lottery domain separation tag together with the signed message. For each index below `m`, the evaluation is the Poseidon hash of that prefix, the two coordinates of the signature's commitment point, and the index. The index wins when its evaluation is at most the target. An index at or above `m` is rejected, and a signer whose indices all lose returns no SNARK signature.
 
 Because the commitment point is determined by the signing key and the message, and is computed before the signature's nonce is sampled, the winning indices are already fixed before the signature exists. For one key and one signing context, re-running signature generation with fresh randomness cannot change them. Part 9 covers what a signer might still influence by other means.
 
-**The target.** A signer of stake fraction [`w`](#notation) should win a given index with a probability set by the protocol parameter [`phi_f`](#notation):
+**The target.** A signer of stake fraction [`w`](#symbol-w) should win a given index with a probability set by the protocol parameter [`phi_f`](#symbol-phi-f):
 
 $$q = 1 - (1 - \phi_f)^{w}$$
 
@@ -429,21 +431,21 @@ Thirty terms give about 69 bits of precision at `phi_f = 0.2`. That accuracy gov
 
 Some inputs never reach the series. A total stake of zero is rejected, as is any `phi_f` outside `]0, 1]`. A `phi_f` within one double-precision epsilon of 1, which covers 1 itself and `0.9999999999999999`, returns the largest representable target, so every index wins regardless of stake.
 
-**Bounds.** The [circuit](#proof-system-terms) compares indices with 16-bit [constraints](#proof-system-terms) and requires [`k`](#notation) `< m <= 2^16 - 1`. This is a circuit bound; the host's own lottery loop does not impose it.
+**Bounds.** The [circuit](#term-circuit) compares indices with 16-bit [constraints](#term-constraint) and requires [`k`](#symbol-k) `< m <= 2^16 - 1`. This is a circuit bound; the host's own lottery loop does not impose it.
 
-**What this constrains.** An implementation deriving targets differently can produce different committed targets, and so a different [aggregate verification key](#protocol-terms) and a different set of winning indices. Implementations must agree on the derivation, including the series lengths and the conversion of `phi_f` to a rational.
+**What this constrains.** An implementation deriving targets differently can produce different committed targets, and so a different [aggregate verification key](#term-aggregate-verification-key) and a different set of winning indices. Implementations must agree on the derivation, including the series lengths and the conversion of `phi_f` to a rational.
 
 ## Aggregation
 
 Which signatures enter the proof is specified here. Proving the statement they satisfy belongs to the circuits: Part 4 for the certificate circuit, Part 5 for the recursive one.
 
-The aggregator turns the signatures it received into exactly [`k`](#notation) index-signature pairs, in three stages. Every input to the choice is public and fixed before aggregation starts.
+The aggregator turns the signatures it received into exactly [`k`](#symbol-k) index-signature pairs, in three stages. Every input to the choice is public and fixed before aggregation starts.
 
 **Validate and recompute.** A single signature always carries a concatenation part, which exists only when the signer won at least one concatenation index, and may also carry a SNARK part when the signer registered a Schnorr key and its SNARK signing attempt succeeded. That SNARK part holds the signer's unique Schnorr signature over the signed message together with a list of winning indices, empty until aggregation fills it in. It holds no proof of any kind; none exists until the aggregator builds one.
 
-A received signature survives only if it has that SNARK part, its signer has a SNARK registration entry, its Schnorr signature verifies against the signed message, and it wins at least one index. The aggregator recomputes the winning indices itself, from [`m`](#notation), the signed message, the signature and the signer's committed target; it does not trust indices a signer supplied. A signature failing any of these is dropped without an error, because the aggregator collects what it can and judges the total afterwards.
+A received signature survives only if it has that SNARK part, its signer has a SNARK registration entry, its Schnorr signature verifies against the signed message, and it wins at least one index. The aggregator recomputes the winning indices itself, from [`m`](#symbol-m), the signed message, the signature and the signer's committed target; it does not trust indices a signer supplied. A signature failing any of these is dropped without an error, because the aggregator collects what it can and judges the total afterwards.
 
-**Select `k` indices.** The survivors are grouped by the [lottery indices](#protocol-terms) they win. If fewer than `k` distinct indices appear across all of them, aggregation fails and reports both the count and the requirement. Otherwise a seed is derived from the signed message alone:
+**Select `k` indices.** The survivors are grouped by the [lottery indices](#term-lottery-index) they win. If fewer than `k` distinct indices appear across all of them, aggregation fails and reports both the count and the requirement. Otherwise a seed is derived from the signed message alone:
 
 `seed = SHA-256("MITHRIL_SNARK_SELECTION_SEED" || commitment || message)`
 
@@ -451,9 +453,9 @@ Both operands are the canonical 32-byte little-endian encodings of the two signe
 
 Each distinct index is then ranked by `SHA-256("MITHRIL_SNARK_SELECTION_INDEX" || seed || index)`, and the `k` smallest are kept. The ranking is independent of who signed.
 
-**Deduplicate.** Several signers can win the same index. For each selected index the aggregator keeps the signer minimising `SHA-256("MITHRIL_SNARK_SELECTION_DEDUP" || seed || index || signer index)`. Equal hashes break on the lottery index when selecting and on the signer index when deduplicating, so both orderings are total.
+**Deduplicate.** Several signers can win the same index. For each selected index the aggregator keeps the signer minimizing `SHA-256("MITHRIL_SNARK_SELECTION_DEDUP" || seed || index || signer index)`. Equal hashes break on the lottery index when selecting and on the signer index when deduplicating, so both orderings are total.
 
-Lottery indices and signer positions enter these hashes as 8-byte little-endian integers; the 16-bit bound on an index constrains the [circuit](#proof-system-terms), not these inputs. The result is a map from lottery index to one signature, in increasing index order, holding exactly `k` entries, and the circuit's [witness](#proof-system-terms) is built from it.
+Lottery indices and signer positions enter these hashes as 8-byte little-endian integers; the 16-bit bound on an index constrains the [circuit](#term-circuit), not these inputs. The result is a map from lottery index to one signature, in increasing index order, holding exactly `k` entries, and the circuit's [witness](#term-witness) is built from it.
 
 **Why ranking rather than arrival order.** The seed comes from the message, the ranks from public indices, the tie-breaks from registration positions. For one message, registration, parameter set and pool of candidates, the order an aggregator works through them changes neither the selected indices nor the winning signer for each. Signature randomness enters no rank, so a signer cannot improve its position by signing again. Part 9 covers influence over the inputs themselves.
 
@@ -461,7 +463,7 @@ Lottery indices and signer positions enter these hashes as 8-byte little-endian 
 
 ## Certificate assembly
 
-Assembly puts the [aggregate signature](#protocol-terms) and its [ancillary verifier data](#protocol-terms) into a certificate. Each has a binary encoding, and each travels in a certificate field as hex.
+Assembly puts the [aggregate signature](#term-aggregate-signature) and its [ancillary verifier data](#term-ancillary-verifier-data) into a certificate. Each has a binary encoding, and each travels in a certificate field as hex.
 
 **What a certificate carries.** Four fields hold the material specified here, each a hex string.
 
@@ -520,11 +522,11 @@ The pages follow the circuit from the outside in: what goes in and what comes ou
 
 ## Public inputs and witness
 
-The [circuit](#proof-system-terms)'s [public input](#proof-system-terms) is the pair a signer signed: the closed registration's Merkle tree commitment, then the protocol message hash. Two field elements, and nothing else.
+The [circuit](#term-circuit)'s [public input](#term-public-input) is the pair a signer signed: the closed registration's Merkle tree commitment, then the protocol message hash. Two field elements, and nothing else.
 
-What is absent matters as much. Total stake never appears, because each signer's [lottery target](#protocol-terms) is already committed in its leaf. Neither [`k`](#notation), [`m`](#notation) nor the tree depth appears, because those fix the constraint system rather than travelling with a proof. A verifier therefore needs the message, the commitment, and a trusted circuit verification key.
+What is absent matters as much. Total stake never appears, because each signer's [lottery target](#term-lottery-target) is already committed in its leaf. Neither [`k`](#symbol-k), [`m`](#symbol-m) nor the tree depth appears, because those fix the constraint system rather than travelling with a proof. A verifier therefore needs the message, the commitment, and a trusted circuit verification key.
 
-The [witness](#proof-system-terms) is exactly `k` entries, one per selected [lottery index](#protocol-terms), in strictly increasing index order.
+The [witness](#term-witness) is exactly `k` entries, one per selected [lottery index](#term-lottery-index), in strictly increasing index order.
 
 | Entry field | Contents |
 | --- | --- |
@@ -585,7 +587,7 @@ flowchart TD
     LOT --> BND
 ```
 
-**Setup, once.** Both [public inputs](#proof-system-terms) are assigned. They are hashed to a curve point that every signature check reuses. The Jubjub generator and the signature and lottery domain separation tags are assigned as fixed values, so a proof cannot vary them. The lottery prefix is then derived by Poseidon over the lottery tag and both public inputs, which is what binds every evaluation to this message and this registration set.
+**Setup, once.** Both [public inputs](#term-public-input) are assigned. They are hashed to a curve point that every signature check reuses. The Jubjub generator and the signature and lottery domain separation tags are assigned as fixed values, so a proof cannot vary them. The lottery prefix is then derived by Poseidon over the lottery tag and both public inputs, which is what binds every evaluation to this message and this registration set.
 
 **Per entry.** Each of the `k` entries contributes four kinds of check.
 
@@ -604,7 +606,7 @@ The lottery comparison is written as its negation: the circuit derives the evalu
 
 ## The membership constraint
 
-The [circuit](#proof-system-terms) rebuilds the leaf rather than reading one. It takes the two coordinates of the signer's verification key and the [lottery target value](#protocol-terms) from the entry, and hashes those three values with Poseidon. A signer therefore cannot present a target it was not registered with: the target is an input to the hash that has to open to the public commitment.
+The [circuit](#term-circuit) rebuilds the leaf rather than reading one. It takes the two coordinates of the signer's verification key and the [lottery target value](#term-lottery-target) from the entry, and hashes those three values with Poseidon. A signer therefore cannot present a target it was not registered with: the target is an input to the hash that has to open to the public commitment.
 
 From that leaf the circuit walks upward. At each level the position bit decides which of the accumulator and the sibling goes left, and Poseidon combines the pair.
 
@@ -627,7 +629,7 @@ One equation carries this check. The circuit computes two multi-scalar multiplic
 | `R1` | The curve point hashed from the two public inputs, and the signature's commitment point |
 | `R2` | The Jubjub generator, and the signer's verification key |
 
-It then hashes eleven field elements with Poseidon: the signature domain separation tag, then the coordinate pairs of the hashed point, the verification key, the commitment point, `R1` and `R2`. The constraint is that this equals the challenge the [witness](#proof-system-terms) supplied.
+It then hashes eleven field elements with Poseidon: the signature domain separation tag, then the coordinate pairs of the hashed point, the verification key, the commitment point, `R1` and `R2`. The constraint is that this equals the challenge the [witness](#term-witness) supplied.
 
 `R2` is the ordinary Schnorr verification equation, taken against the generator. `R1` is the same equation taken against the hashed point instead. Satisfying both forces the commitment point to be the signing key applied to that hashed point, rather than a point the signer chose. That is what makes the commitment point deterministic, and so what makes the lottery of Part 3 impossible to grind by re-signing.
 
@@ -637,7 +639,7 @@ The challenge appears twice, as a scalar in the multiplications and as a base-fi
 
 ## What fixes the constraint system
 
-`CertificateCircuit` holds three values and nothing from any single execution: [`k`](#notation), [`m`](#notation) and the Merkle tree depth. Those three decide the shape of every constraint the circuit emits.
+`CertificateCircuit` holds three values and nothing from any single execution: [`k`](#symbol-k), [`m`](#symbol-m) and the Merkle tree depth. Those three decide the shape of every constraint the circuit emits.
 
 The relation's serialized form is exactly those three values, little-endian. Circuit identity is a separate matter, decided by the verification key digest and not by this triple. Part 6 owns it.
 
@@ -651,7 +653,7 @@ The verification key committed in the crate is generated for `m` 16948, `k` 1944
 
 ## Degree and capacity
 
-The degree is [`K`](#notation) in the book's notation: the circuit occupies `2^K` rows of the evaluation domain, and every constraint it emits has to fit in them.
+The degree is [`K`](#symbol-capital-k) in the book's notation: the circuit occupies `2^K` rows of the evaluation domain, and every constraint it emits has to fit in them.
 
 The certificate circuit's degree is not pinned to a constant. It follows from the configuration — `k`, `m` and the depth — and is bounded above by the trusted setup, whose structured reference string supports degree 22. Different configurations legitimately reach different degrees, which is why a key declares its own degree in its bytes rather than matching a constant. The recursive circuit is the opposite case: Part 5 covers its pinned degree.
 
@@ -660,7 +662,7 @@ The certificate circuit's degree is not pinned to a constant. It follows from th
 | Witness entries | Exactly `k`, 1944 in production | The circuit, which rejects any other count |
 | Lottery indices | `m` at most `2^16 - 1` | The 16-bit comparison used for index checks |
 | Tree leaves | 8192 | The fixed path length of 13 |
-| Degree | At most 22; the production circuit is at 22 | The [trusted setup](#proof-system-terms) |
+| Degree | At most 22; the production circuit is at 22 | The [trusted setup](#term-trusted-setup) |
 
 **What this constrains.** The bounds are not alike in what it takes to move them. Depth is a configuration value, so serving more than 8192 signers means generating the circuit at a greater depth and issuing a new key. The production circuit already sits at degree 22, so a greater depth also has to fit within that degree or come with a larger setup artifact. An `m` above 65535 is not reachable that way at all: it needs the 16-bit comparison and its validation changed, which is an implementation change. Raising `k` raises the row count directly, since each entry contributes its own membership, signature and lottery constraints, so a large enough quorum pushes the degree past what the trusted setup supports.
 
@@ -676,7 +678,7 @@ Recursion changes what a client does to trust a certificate.
 
 Under concatenation and non-recursive SNARK, a certificate establishes that a quorum signed one message under one registration. Establishing that the registration is the one the chain reached requires following certificate links back to genesis, so a client's work grows with the length of the chain.
 
-The recursive [circuit](#proof-system-terms) consumes two proofs at each step: the certificate proof for the new certificate, and the recursive proof carried in the previous committed rolling state. A proof together with its accumulator covers the ancestry that rolling state represents, so a client checks one proof instead of following links back to genesis.
+The recursive [circuit](#term-circuit) consumes two proofs at each step: the certificate proof for the new certificate, and the recursive proof carried in the previous committed rolling state. A proof together with its accumulator covers the ancestry that rolling state represents, so a client checks one proof instead of following links back to genesis.
 
 That ancestry is not a step count. Only some publications commit a new rolling state, so two certificates can share an ancestry without either covering the other. *The rolling state and its encoding* gives the rule.
 
@@ -746,7 +748,7 @@ The previous state and the previous accumulator are witnessed; the next ones are
 
 **How the values become public.** The circuit ignores the instance argument its relation is handed, and instead constrains each derived value as public at the point of derivation. The prover still supplies an explicit public-input vector when the proof is created, and the verifier reconstructs the same vector, so those constraints are what bind the derived values to it.
 
-The [witness](#proof-system-terms) is one structure holding six parts.
+The [witness](#term-witness) is one structure holding six parts.
 
 | Part | Contents |
 | --- | --- |
@@ -1001,7 +1003,7 @@ The two sides have opposite runtime problems. A prover's material is large — t
 
 ## Where key material comes from
 
-Producing a proof needs public parameters that no single party chose. Mithril takes them from Midnight's [trusted setup](#proof-system-terms) rather than running its own.
+Producing a proof needs public parameters that no single party chose. Mithril takes them from Midnight's [trusted setup](#term-trusted-setup) rather than running its own.
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": false, "wrappingWidth": 400}}}%%
@@ -1021,7 +1023,7 @@ flowchart TD
 
 One string serves both circuits. The recursive circuit is the dependent one: it is built from the certificate circuit's verifying key, so its pair can only be derived once that key exists.
 
-**The ceremony and the artifact.** The [structured reference string](#proof-system-terms) comes from Midnight's multiparty ceremony, published with a [catalog](https://github.com/midnightntwrk/midnight-trusted-setup/blob/main/MIDNIGHT_SRS_CATALOG.md) of derived artifacts. Mithril selects the one supporting degree 22. The trust assumption is the one Part 1 states: at least one participant's randomness stayed secret and was erased.
+**The ceremony and the artifact.** The [structured reference string](#term-structured-reference-string) comes from Midnight's multiparty ceremony, published with a [catalog](https://github.com/midnightntwrk/midnight-trusted-setup/blob/main/MIDNIGHT_SRS_CATALOG.md) of derived artifacts. Mithril selects the one supporting degree 22. The trust assumption is the one Part 1 states: at least one participant's randomness stayed secret and was erased.
 
 **Retrieval.** The crate pins the artifact's SHA-256 hash and download URL, and stores it as `srs-parameters` under an `srs` folder. The hash is checked each time the string is loaded: a cached file is hashed against the pinned value, and one that does not match is removed. A missing file is fetched through a downloader the caller supplies, hashed, and written only if the hashes agree. The crate makes no network request itself; its default provider reads the cache only.
 
@@ -1051,7 +1053,7 @@ A verifier is handed a key and has to decide whether it is the key for the circu
 
 **Decoding and approval are separate steps.** A key that decodes cleanly and declares the expected architecture is structurally acceptable. Nothing in that establishes that anyone authorized it.
 
-**Where the digests come from.** A certificate carries its circuit keys in [ancillary verifier data](#protocol-terms). The digests checked are computed from those carried keys, in a fixed order: the certificate circuit's, then the recursive circuit's when the flavor has one. They are the keys the proof is verified against, so certifying them certifies the circuits the aggregate signature was produced with.
+**Where the digests come from.** A certificate carries its circuit keys in [ancillary verifier data](#term-ancillary-verifier-data). The digests checked are computed from those carried keys, in a fixed order: the certificate circuit's, then the recursive circuit's when the flavor has one. They are the keys the proof is verified against, so certifying them certifies the circuits the aggregate signature was produced with.
 
 **What this constrains.** A digest names a verifying key's transcript representation, its encoding included: a dependency release that changes how that representation is built can move the digest while the gates stand still. The other direction is the dependable one — any change reaching the constraint system, the evaluation domain or the commitments produces a new name, which needs its own registry entry. A trusted setup whose material differs moves the commitments and so the digest; selecting a larger compatible artifact from the same setup does not, once reduced to the same degree.
 
@@ -1151,7 +1153,7 @@ This is the path the in-review stack implements, in PR #3514. At the baseline th
 
 | Flavor | Digests checked | Epoch used |
 | --- | --- | --- |
-| [Concatenation](#protocol-terms) | None; the registry does not apply | — |
+| [Concatenation](#term-aggregation-flavor) | None; the registry does not apply | — |
 | Non-recursive SNARK | The certificate circuit's | The certificate's own |
 | Recursive SNARK | The certificate circuit's, then the recursive circuit's | The certificate's own |
 
@@ -1167,7 +1169,7 @@ Changing a circuit changes its verifying key, its digest, and therefore its iden
 
 | The change | What it requires |
 | --- | --- |
-| [`k`](#notation), [`m`](#notation) or the Merkle tree depth | A new certificate key and digest, and a recursive setup rebuilt against it. Whether the recursive key itself changes depends on whether the certificate key's domain and constraint system moved, since those are what the recursive relation fixes |
+| [`k`](#symbol-k), [`m`](#symbol-m) or the Merkle tree depth | A new certificate key and digest, and a recursive setup rebuilt against it. Whether the recursive key itself changes depends on whether the certificate key's domain and constraint system moved, since those are what the recursive relation fixes |
 | A change confined to the recursive relation | A new recursive key and digest; the certificate key is unaffected |
 | An enabled chip, or a dependency change reaching verifier metadata | New keys for whichever circuits' constraint systems move |
 | A different trusted setup | New keys for both circuits, a new pinned artifact hash, and a matching embedded KZG verifier parameter, which verification reads rather than deriving. Selecting a larger artifact from the same setup is a separate case: reduced to the same degree it need not change the derived keys, their digests or the verifier parameter, but it is a different download, so it needs its own pinned hash and source |
@@ -1371,7 +1373,7 @@ Benchmarks measure time and size. Some assert that a proving or verification ste
 
 Criterion can reuse setup across benchmark cases in one process; nextest cannot share process-local setup across separate test processes.
 
-The benchmarks' own [README](https://github.com/IntersectMBO/mithril/blob/main/mithril-stm/benches/README.md) holds the invocations, the selection syntax and the resource requirements, including which tiers need a server and which filters avoid starting one by accident. The dated measurements this book retains are there to explain the testing strategy and the security analysis. For a performance number at another revision or configuration, run the benchmarks: a number is comparable only alongside the revision, circuit parameters, machine, build profile and cache state it was taken under.
+The benchmarks' own [README](benches/README.md) holds the invocations, the selection syntax and the resource requirements, including which tiers need a server and which filters avoid starting one by accident. The dated measurements this book retains are there to explain the testing strategy and the security analysis. For a performance number at another revision or configuration, run the benchmarks: a number is comparable only alongside the revision, circuit parameters, machine, build profile and cache state it was taken under.
 
 # Part 8 — Rollout, compatibility, and operations
 
@@ -1486,7 +1488,7 @@ Four operations act on circuit keys, with different actors, inputs and effects.
 
 Where the registry is enforced, the replacement keys also have to be permitted before certificates carrying them are accepted, so these steps are coordinated with stage 3 and not left until after it: export the digests for the target protocol parameters, authorize them and revoke the superseded ones in a newer signed registry, publish it, and point aggregators and clients at it. Revoking the superseded digests is what stops certificates of the abandoned chain from verifying, since under the same genesis keys verification does not pin a particular genesis certificate. They belong to the in-review stack.
 
-The [key-update runbook](https://github.com/IntersectMBO/mithril/blob/cf1bb36edd5536d80d73943691ebf2029cf66fc8/docs/runbook/update-circuit-keys/README.md) and the [manual-genesis runbook](https://github.com/IntersectMBO/mithril/blob/cf1bb36edd5536d80d73943691ebf2029cf66fc8/docs/runbook/genesis-manually/README.md) hold the commands and the environment ordering.
+The [key-update runbook](../docs/runbook/update-circuit-keys/README.md) and the [manual-genesis runbook](../docs/runbook/genesis-manually/README.md) hold the commands and the environment ordering.
 
 ## Certificate consumption and client compatibility
 
@@ -1528,7 +1530,7 @@ A SNARK certificate inherits what the existing model assumes about authenticated
 
 **The proof system is sound.** Both flavors use Halo2 with KZG commitments over BLS12-381. Soundness is computational: an efficient adversary succeeds only with negligible probability under the construction's assumptions, which is not the same as no accepting proof for a false statement existing. Reading an accepted certificate as evidence that the prover held the signatures needs the argument-of-knowledge property too. The recursive flavor adds the accumulation scheme, whose guarantee Part 5 states in the same terms.
 
-**The trusted setup is honest, and the setup in use is the intended one.** The structured reference string comes from the Midnight ceremony at degree 22, and its SHA-256 hash is pinned in the crate. Knowledge of the ceremony's trapdoor breaks [soundness](#proof-system-terms) for every key derived from that setup, so the ceremony's condition — at least one honest participant, with verified updates — is the assumption being made here. The ceremony's own guarantees are outside this repository.
+**The trusted setup is honest, and the setup in use is the intended one.** The structured reference string comes from the Midnight ceremony at degree 22, and its SHA-256 hash is pinned in the crate. Knowledge of the ceremony's trapdoor breaks [soundness](#term-soundness) for every key derived from that setup, so the ceremony's condition — at least one honest participant, with verified updates — is the assumption being made here. The ceremony's own guarantees are outside this repository.
 
 A prover checks the string against the pinned hash each time it loads it, and for the production configuration compares a cached verifying key with the embedded one, deriving the pair again from the checked string on a mismatch. Verification needs neither: it uses the KZG parameters embedded in the crate.
 
@@ -1583,9 +1585,9 @@ flowchart LR
 
 ## What a signer can influence
 
-Part 3 establishes that for a fixed registration, signing context and pool of candidate signatures, selection and deduplication are deterministic, and that re-randomising a signature changes neither its winning indices nor its ranking.
+Part 3 establishes that for a fixed registration, signing context and pool of candidate signatures, selection and deduplication are deterministic, and that re-randomizing a signature changes neither its winning indices nor its ranking.
 
-**The choice of key.** A signer's winning indices follow from its signing key and its committed target. Before registration closes it can compare candidate keys against any signing context it can predict, which includes the membership commitment, since a different candidate changes the registration tree. What the comparison is worth depends on how much of that context the signer can predict or influence before it commits. That the implementation resists re-randomising a nonce is a separate property and does not bound it.
+**The choice of key.** A signer's winning indices follow from its signing key and its committed target. Before registration closes it can compare candidate keys against any signing context it can predict, which includes the membership commitment, since a different candidate changes the registration tree. What the comparison is worth depends on how much of that context the signer can predict or influence before it commits. That the implementation resists re-randomizing a nonce is a separate property and does not bound it.
 
 **Withholding.** A signer can decline to submit its signature, which removes its contribution from the candidate pool. It cannot submit one and have only part of its wins counted: the aggregator recomputes every winning index from the signature it receives. Withholding need not change the selected set, since another signer may win the same index, but it reduces the pool the quorum is drawn from. Registration positions, which break the deduplication tie, are ordered by stake and then the concatenation key, so they are not freely chosen and not beyond influence either.
 
@@ -1593,7 +1595,18 @@ Part 3 establishes that for a fixed registration, signing context and pool of ca
 
 *Fairness* is how far a signer's real per-index probability, `(T + 1) / p` with the comparison inclusive, sits from the `q` its stake calls for. The implementation documents about 69 bits of series precision at `phi_f = 0.2`. That figure covers the series at that parameter. It is not a fairness bound across the parameters the protocol permits.
 
-*Splitting* is how far the implemented probabilities depart from factorising. Under the ideal probability formula, splitting a stake across identities gains nothing, because the failure probability factorises exactly. The departure was measured at `phi_f = 0.2` with thirty terms, over four stake fractions and splits into two and into a hundred, giving residues of roughly `9 × 10⁻⁷⁸` to `2 × 10⁻⁵⁶`. That measurement used `T / p` rather than the inclusive `(T + 1) / p`, and the inclusive correction can change the sign of the smallest of them, so the historical sign pattern does not transfer unchanged. The magnitudes support only that the departure is small at those parameters. They bound nothing over other parameters or partitions, say nothing about key grinding, and need repeating if `phi_f` or the series length changes.
+*Splitting* is how far the implemented probabilities depart from factorizing. Under the ideal probability formula, splitting a stake across identities gains nothing, because the failure probability factorizes exactly. The departure was measured at `phi_f = 0.2` with thirty terms, over four stake fractions and splits into two and into a hundred, giving residues of roughly `9 × 10⁻⁷⁸` to `2 × 10⁻⁵⁶`. That measurement used `T / p` rather than the inclusive `(T + 1) / p`, and the inclusive correction can change the sign of the smallest of them, so the historical sign pattern does not transfer unchanged. The magnitudes support only that the departure is small at those parameters. They bound nothing over other parameters or partitions, say nothing about key grinding, and need repeating if `phi_f` or the series length changes.
+
+**The concatenation lottery.** A signer produces a signature only on a message for which it wins at least one concatenation index, so its SNARK wins count only on those messages (Part 3). Modelling the two lotteries as independent, a signer's effective per-index SNARK probability is `q` multiplied by `1 - (1 - q)^m`, its chance of at least one concatenation win. At the parameters of the committed circuit key, `phi_f = 0.2` and `m = 16948`:
+
+| Stake, as a share of the total | Chance of at least one concatenation win |
+| --- | --- |
+| 1 % | 1.000 |
+| 0.1 % | 0.977 |
+| 0.03 % | 0.678 |
+| 0.01 % | 0.315 |
+
+The factor is close to one above about 0.1 percent of stake, so the effect falls on small signers. It also makes splitting a stake into small identities lower its SNARK participation: a 1 percent stake split into a hundred identities of 0.01 percent keeps about a third of its per-index SNARK probability.
 
 ## Dependency audit status
 

@@ -9,6 +9,7 @@
   - a [_non-recursive SNARK_](https://mithril.network/doc/mithril/advanced/mithril-protocol/aggregation/non-recursive-snark) proof system, in which the aggregate signature consists in a single succinct proof that the quorum was met, so a verifier checks one proof rather than every individual signature.
   - a [_recursive SNARK_](https://mithril.network/doc/mithril/advanced/mithril-protocol/aggregation/recursive-snark) proof system, in which each aggregate signature proves the whole chain behind it, so a verifier checks one proof rather than every aggregate signature since genesis.
 - The two SNARK proof systems are **experimental**. They are gated behind the `future_snark` feature.
+- The [Mithril SNARK book](SNARK.md) describes the two SNARK proof systems: the protocol rules they share, their circuits, keys and trusted setup, testing, rollout and security.
 - We implemented the concatenation proof system as batch proofs:
   - Individual signatures do not contain the Merkle path to prove membership of the avk. Instead, it is the role of the aggregator to generate such proofs. This allows for a more efficient implementation of batched membership proofs (or batched Merkle paths).
 - Protocol documentation is given in [Mithril Protocol in depth](https://mithril.network/doc/mithril/mithril-protocol/protocol/).
