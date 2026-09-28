@@ -539,8 +539,16 @@ mod tests {
         }
     }
 
+    /// Bytes the fake key refuses to decode, standing for a corrupt cache file.
+    const UNDECODABLE_KEY: &[u8] = b"undecodable";
+
+    const UNDECODABLE_KEY_ERROR: &str = "the fake key does not decode these bytes";
+
     impl TryFromBytes for ByteKey {
         fn try_from_bytes(bytes: &[u8]) -> StmResult<Self> {
+            if bytes == UNDECODABLE_KEY {
+                return Err(anyhow::anyhow!(UNDECODABLE_KEY_ERROR));
+            }
             Ok(Self(bytes.to_vec()))
         }
     }
@@ -714,6 +722,107 @@ mod tests {
             1,
             "a stale cache must be recomputed once"
         );
+        fs::remove_dir_all(&base_dir).ok();
+    }
+
+    // The staleness check compares bytes before anything is decoded, so a corrupt cached key that is
+    // not the expected one is a miss.
+    #[test]
+    fn an_undecodable_cached_key_differing_from_the_expected_one_is_regenerated() {
+        let (base_dir, provider) = counting_provider(current_function!(), b"vk", b"vk", b"pk");
+        fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
+        fs::write(provider.verification_key_path(), UNDECODABLE_KEY).unwrap();
+        fs::write(provider.proving_key_path(), b"pk").unwrap();
+
+        let (verification_key, proving_key) = provider.key_pair(&negligible_srs()).unwrap();
+
+        assert_eq!(verification_key, ByteKey(b"vk".to_vec()));
+        assert_eq!(proving_key, ByteKey(b"pk".to_vec()));
+        assert_eq!(
+            provider.generator().calls.get(),
+            1,
+            "a corrupt cached key that is not the expected one must be regenerated"
+        );
+        fs::remove_dir_all(&base_dir).ok();
+    }
+
+    #[test]
+    fn an_undecodable_cached_key_without_an_expected_key_is_an_error() {
+        let (base_dir, provider) = counting_provider(current_function!(), b"", b"vk", b"pk");
+        fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
+        fs::write(provider.verification_key_path(), UNDECODABLE_KEY).unwrap();
+        fs::write(provider.proving_key_path(), b"pk").unwrap();
+
+        let key_pair_error = provider
+            .key_pair(&negligible_srs())
+            .expect_err("a trusted but corrupt cached key must surface its decoding error");
+        let verification_key_error = provider
+            .verification_key(&negligible_srs())
+            .expect_err("a trusted but corrupt cached key must surface its decoding error");
+
+        assert!(key_pair_error.to_string().contains(UNDECODABLE_KEY_ERROR));
+        assert!(verification_key_error.to_string().contains(UNDECODABLE_KEY_ERROR));
+        assert_eq!(provider.generator().calls.get(), 0);
+        fs::remove_dir_all(&base_dir).ok();
+    }
+
+    // The proving key is looked up before the verifying key is decoded, so an incomplete pair is a
+    // miss whatever its verifying key holds.
+    #[test]
+    fn an_undecodable_cached_key_without_its_proving_key_is_regenerated() {
+        let (base_dir, provider) = counting_provider(current_function!(), b"", b"vk", b"pk");
+        fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
+        fs::write(provider.verification_key_path(), UNDECODABLE_KEY).unwrap();
+
+        let (verification_key, proving_key) = provider.key_pair(&negligible_srs()).unwrap();
+
+        assert_eq!(verification_key, ByteKey(b"vk".to_vec()));
+        assert_eq!(proving_key, ByteKey(b"pk".to_vec()));
+        assert_eq!(
+            provider.generator().calls.get(),
+            1,
+            "an incomplete pair must be regenerated"
+        );
+        fs::remove_dir_all(&base_dir).ok();
+    }
+
+    #[test]
+    fn an_undecodable_cached_proving_key_is_an_error() {
+        let (base_dir, provider) = counting_provider(current_function!(), b"vk", b"vk", b"pk");
+        fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
+        fs::write(provider.verification_key_path(), b"vk").unwrap();
+        fs::write(provider.proving_key_path(), UNDECODABLE_KEY).unwrap();
+
+        let error = provider
+            .key_pair(&negligible_srs())
+            .expect_err("a corrupt cached proving key must surface its decoding error");
+        let verification_key = provider.verification_key(&negligible_srs()).unwrap();
+
+        assert!(error.to_string().contains(UNDECODABLE_KEY_ERROR));
+        assert_eq!(
+            verification_key,
+            ByteKey(b"vk".to_vec()),
+            "the verifying key alone is served without decoding the proving key"
+        );
+        assert_eq!(provider.generator().calls.get(), 0);
+        fs::remove_dir_all(&base_dir).ok();
+    }
+
+    // Only a missing file is a miss; any other read failure surfaces.
+    #[test]
+    fn an_unreadable_cached_verification_key_is_an_error() {
+        let (base_dir, provider) = counting_provider(current_function!(), b"vk", b"vk", b"pk");
+        fs::create_dir_all(provider.verification_key_path()).unwrap();
+
+        let error = provider
+            .key_pair(&negligible_srs())
+            .expect_err("a verifying key path that cannot be read must surface the read error");
+
+        assert!(
+            error.downcast_ref::<std::io::Error>().is_some(),
+            "expected the read error, got: {error}"
+        );
+        assert_eq!(provider.generator().calls.get(), 0);
         fs::remove_dir_all(&base_dir).ok();
     }
 
