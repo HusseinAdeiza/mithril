@@ -45,7 +45,7 @@ Three things worth knowing before choosing a route.
 
 Statements about the code are checked against one revision of `main`, named here.
 
-**Baseline: `cf1bb36ed`, 2026-09-25.**
+**Baseline: `6b60db68b`, 2026-09-28.**
 
 A page describes what exists at that baseline unless it carries the **In review** marker: implemented in a named open pull request and not on `main` at the baseline. The marker does not mean approved, nor certain to ship as written. Open pull requests are rebased, so each was read at the head below, on the date given; a later head can carry the same change under another hash.
 
@@ -1409,12 +1409,12 @@ That is why the two SNARK flavors differ in what they need. A non-recursive SNAR
 
 The prerequisites divide by who is responsible for them.
 
-| Who                                                                | What they need                                                                          |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era |
-| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                    |
+| Who                                                                | What they need                                                                                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era                                  |
+| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                                                     |
 | A node verifying recursive certificates                            | The Schnorr genesis verification key; with **In review** registry enforcement, also the Ed25519 genesis verification key |
-| Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                |
+| Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                                                 |
 
 A node needs the material for every path it can reach, not the flavor it starts from: a chain walk that begins at a concatenation certificate can meet a recursive one, and that branch fails without the Schnorr half.
 
@@ -1424,7 +1424,7 @@ Circuit verification keys are not a separate installation: a SNARK certificate c
 
 **Upgrading the key bundle** reads the legacy secret, generates a fresh Schnorr keypair, and writes a dual signing bundle and a matching verification bundle. The Ed25519 half is preserved, so the network's existing genesis authority is unchanged. The operation refuses to overwrite existing files. It produces no certificate.
 
-**The genesis ceremony** is separate. The payload is exported, signed offline, and imported, and the import verifies both signatures before the certificate is stored. Nodes that will verify recursive certificates need the new verification bundle: upgrading a secret-key file does not give a distributed legacy verification key a Schnorr half.
+**The genesis ceremony** is separate. The payload is exported, signed offline, and imported, and the import verifies both signatures before the certificate is stored. Nodes that will verify recursive certificates need the new verification bundle: upgrading a secret-key file does not give a distributed legacy verification key a Schnorr half. The networks listed in `networks.json` publish that bundle as `genesis.dual-verification-key`, beside the Ed25519-only key.
 
 **Runtime material.** A prover keeps its material under the system temporary directory, in a `mithril-circuit` root. The trusted setup is a single shared file at `srs/srs-parameters`, which the aggregator downloads; the derived verifying and proving keys sit beside it, in a directory per circuit and configuration. Losing the keys costs the time to derive them again; losing the setup costs a re-download, so recovery there also needs the ceremony source reachable and the storage writable. Part 6 covers how a cached entry is validated, and Part 7 covers the separate cache the tests use.
 
@@ -1459,6 +1459,8 @@ _The cross-epoch case._
 A value a rule needs and does not find is a rejection. The dispatch is on the flavor of the certificate under verification, not its predecessor's. Different next-epoch announcements do not fail this same-epoch check: the announcement is read only at the boundary.
 
 A recursive certificate does not reach this check. Verification of one stops after its own integrity and proof checks and fetches no predecessor, because the verified recursive statement already covers the chain behind it; Part 5 states that contract. A chain walk that meets such a certificate stops there, whatever flavor it started from.
+
+**Choosing the predecessor.** When an aggregator chains a new certificate, it takes the most recent master certificate whose flavor allows it. A recursive certificate can chain only to a recursive certificate or to a genesis certificate carrying the dual signature, since its recursion starts from the genesis Schnorr signature; a genesis certificate signed with Ed25519 alone cannot start one. Concatenation and non-recursive SNARK certificates can chain to any flavor.
 
 **Migration.** The announcement has to exist before it is needed, and in Pythagoras the production seed builder returns no next SNARK key. Switching era does not add one to a signed predecessor retroactively, so the first certificate needing a predecessor's SNARK announcement finds none unless it was already being produced. Once the signer data supports it, a Lagrange concatenation certificate can carry a next SNARK announcement and a non-recursive SNARK certificate in the following epoch can chain to it, so the flavor need not change in the same epoch as the era. Crossing an epoch, changing an era, changing aggregation flavor and establishing a new genesis are four different operations, and only the last creates a chain with no predecessor to satisfy.
 
@@ -1505,6 +1507,8 @@ Using a certificate takes two checks: the certificate is verified, and the data 
 | Registry consulted        | No                                         | Yes, in review                                        | Yes, in review                             |
 
 A chain can mix flavors, and a client's requirements follow every certificate the walk reaches, not the one it starts from: walking back from a concatenation certificate can land on a recursive one, which stops the walk there and needs the Schnorr half and, under enforcement, certified circuit keys.
+
+Behind the client library's `unstable` feature, a certificate cache can shorten repeated walks. By default it only saves downloads, and the certificates it returns are verified again. In its early-stop mode the walk ends at the first cached certificate, which is trusted because it was committed after a full verification of its chain, so the cache has to be protected against tampering.
 
 A client built without the SNARK feature cannot verify either SNARK flavor, and the rigid message variant is itself behind that feature. Backward compatibility of unchanged fields does not extend to a client understanding a rigid message or a proof, so a deployment plan needs the client versions in use, not only the aggregator's.
 
