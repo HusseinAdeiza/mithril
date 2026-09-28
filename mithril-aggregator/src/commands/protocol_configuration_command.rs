@@ -236,8 +236,11 @@ impl ExportProtocolConfigurationSubCommand {
         Ok(())
     }
 
-    pub fn extract_config(_parent: String) -> HashMap<String, StructDoc> {
-        HashMap::new()
+    pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
+        HashMap::from([(
+            command_path,
+            ProtocolConfigurationParametersConfiguration::extract(),
+        )])
     }
 }
 
@@ -427,8 +430,11 @@ impl ImportProtocolConfigurationSubCommand {
         Ok(())
     }
 
-    pub fn extract_config(_parent: String) -> HashMap<String, StructDoc> {
-        HashMap::new()
+    pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
+        HashMap::from([(
+            command_path,
+            ProtocolConfigurationParametersConfiguration::extract(),
+        )])
     }
 }
 
