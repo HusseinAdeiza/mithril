@@ -5,6 +5,7 @@ use midnight_proofs::poly::kzg::params::ParamsKZG;
 
 use crate::{
     StmResult,
+    circuits::CircuitVerificationKeyDigest,
     codec::{TryFromBytes, TryToBytes},
 };
 
@@ -22,4 +23,9 @@ pub(crate) trait KeyGenerator {
         &self,
         srs: &ParamsKZG<Bls12>,
     ) -> StmResult<(Self::VerifyingKey, Self::ProvingKey)>;
+
+    /// Digest identifying `verification_key`, by which the key cache compares a cached key.
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest;
 }

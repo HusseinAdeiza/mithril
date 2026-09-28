@@ -12,6 +12,7 @@ use midnight_zk_stdlib::{self as zk, MidnightPK, MidnightVK};
 use serde::{Deserialize, Serialize};
 
 use crate::StmResult;
+use crate::circuits::CircuitVerificationKeyDigest;
 use crate::circuits::halo2::circuit::CertificateCircuit;
 use crate::circuits::halo2::keys::NonRecursiveCircuitVerifyingKey;
 use crate::circuits::key_generator::KeyGenerator;
@@ -321,6 +322,12 @@ impl KeyGenerator for IvcCircuit {
             RecursiveCircuitProvingKey(proving_key),
         ))
     }
+
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest {
+        CircuitVerificationKeyDigest::from_verification_key(verification_key)
+    }
 }
 
 /// Generates the recursive (IVC) circuit's keys, wrapping the non-recursive key provider it needs. The
@@ -360,6 +367,12 @@ impl KeyGenerator for RecursiveCircuitKeyGenerator {
     ) -> StmResult<(Self::VerifyingKey, Self::ProvingKey)> {
         let certificate_verifying_key = self.non_recursive_key_provider.verification_key(srs)?;
         IvcCircuit::for_key_generation(&certificate_verifying_key).generate_key_pair(srs)
+    }
+
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest {
+        CircuitVerificationKeyDigest::from_verification_key(verification_key)
     }
 }
 

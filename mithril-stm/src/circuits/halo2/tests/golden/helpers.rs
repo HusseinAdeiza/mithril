@@ -715,7 +715,7 @@ fn get_or_build_circuit_keys(
     let key_provider = KeyProvider::new(
         key_cache.directory().to_path_buf(),
         "non-recursive",
-        &[],
+        None,
         relation.clone(),
     );
     let _key_cache_lock = key_cache.lock()?;

@@ -113,7 +113,7 @@ impl SnarkProverSetup {
         let trusted_setup_provider =
             TrustedSetupProvider::with_unsafe_srs(&cache_directory, unsafe_srs_degree);
         let circuit = CertificateCircuit::try_new(parameters, merkle_tree_depth)?;
-        let provider = KeyProvider::new(cache_directory, "non-recursive", &[], circuit);
+        let provider = KeyProvider::new(cache_directory, "non-recursive", None, circuit);
         Self::load(&trusted_setup_provider, &provider)
     }
 
@@ -215,6 +215,11 @@ mod test {
         hex::encode([seed; 32]).parse().unwrap()
     }
 
+    // A cached key never has this digest, so every load regenerates the pair.
+    fn digest_matching_no_key() -> CircuitVerificationKeyDigest {
+        circuit_digest(0)
+    }
+
     /// Exercises the test key cache address, so dropping an input from
     /// [`SnarkProverSetup::test_key_cache`] makes this fail rather than silently sharing an entry.
     #[test]
@@ -300,7 +305,12 @@ mod test {
         let base_dir = std::env::temp_dir().join(current_function!());
         fs::remove_dir_all(&base_dir).ok();
         let trusted_setup_provider = TrustedSetupProvider::with_unsafe_srs(&base_dir, degree);
-        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", b"test-vk", circuit);
+        let provider = KeyProvider::new(
+            base_dir.clone(),
+            "non-recursive",
+            Some(digest_matching_no_key()),
+            circuit,
+        );
         let result = SnarkProverSetup::load(&trusted_setup_provider, &provider);
         assert!(result.is_ok());
         fs::remove_dir_all(&base_dir).ok();
@@ -314,7 +324,12 @@ mod test {
         let base_dir = std::env::temp_dir().join(current_function!());
         fs::remove_dir_all(&base_dir).ok();
         let trusted_setup_provider = TrustedSetupProvider::with_unsafe_srs(&base_dir, degree);
-        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", b"test-vk", circuit);
+        let provider = KeyProvider::new(
+            base_dir.clone(),
+            "non-recursive",
+            Some(digest_matching_no_key()),
+            circuit,
+        );
         let setup1 = SnarkProverSetup::load(&trusted_setup_provider, &provider).unwrap();
         let setup2 = SnarkProverSetup::load(&trusted_setup_provider, &provider).unwrap();
 

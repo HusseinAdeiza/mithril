@@ -215,13 +215,13 @@ impl IvcProverSetup {
         let certificate_provider = KeyProvider::new(
             cache_directory.join("certificate"),
             "non-recursive",
-            &[],
+            None,
             CertificateCircuit::try_new(parameters, merkle_tree_depth)?,
         );
         let recursive_key_provider = KeyProvider::new(
             cache_directory.join("recursive"),
             "recursive",
-            &[],
+            None,
             RecursiveCircuitKeyGenerator::new(certificate_provider),
         );
         Self::load(&trusted_setup_provider, &recursive_key_provider)

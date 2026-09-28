@@ -186,13 +186,13 @@ fn recursive_key_provider(
     let certificate_provider = KeyProvider::new(
         cache_dir.join("certificate"),
         "non-recursive",
-        &[],
+        None,
         CertificateCircuit::try_new(&benchmark_parameters(), merkle_tree_depth())?,
     );
     Ok(KeyProvider::new(
         cache_dir.join("recursive"),
         "recursive",
-        &[],
+        None,
         RecursiveCircuitKeyGenerator::new(certificate_provider),
     ))
 }

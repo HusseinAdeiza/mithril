@@ -1,7 +1,7 @@
 //! Compute-on-miss verification key provider for one key generator.
 //!
 //! [`KeyProvider`] owns the on-disk key cache (the verifying/proving key file
-//! paths and the expected verifying-key bytes for staleness detection) together with a
+//! paths and the digest of the expected verifying key for staleness detection) together with a
 //! [`KeyGenerator`]. [`KeyProvider::key_pair`] inspects the cache
 //! through a single [`CacheState`] state machine: a fresh, complete pair is returned from disk,
 //! anything else (absent, stale, or partially written) is recomputed from the SRS and stored
@@ -27,8 +27,7 @@ use super::key_generator::KeyGenerator;
 use super::trusted_setup::MIDNIGHT_SRS_HASH_K22;
 use super::{
     CircuitVerificationKeyDigest, MITHRIL_CIRCUIT_CACHE_FOLDER,
-    halo2::{NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, STM_PARAMETERS_FOR_PRODUCTION},
-    halo2_ivc::RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+    halo2::STM_PARAMETERS_FOR_PRODUCTION,
 };
 
 /// Bumped whenever the cache layout or the fingerprint inputs change, so an entry written by an
@@ -36,12 +35,12 @@ use super::{
 const CACHE_SCHEMA_VERSION: &[u8] = b"v2";
 
 /// Outcome of inspecting the on-disk key cache for a complete, fresh key pair.
-enum CacheState {
-    /// Both key files are present and the verifying key matches the expected bytes; carries the raw
-    /// key-pair bytes ready for deserialization.
+enum CacheState<V> {
+    /// Both key files are present and the verifying key is fresh; carries the decoded verifying key
+    /// and the raw proving-key bytes, decoded only by the caller that needs them.
     Valid {
-        /// Raw verifying-key bytes read from the cache.
-        verification_key: Vec<u8>,
+        /// Verifying key decoded from the cache.
+        verification_key: V,
         /// Raw proving-key bytes read from the cache.
         proving_key: Vec<u8>,
     },
@@ -152,15 +151,15 @@ impl CircuitCacheIdentity {
         }
     }
 
-    /// Verifying key a cached entry is validated against: the embedded production key for the
-    /// production configuration, none for the others, which their own directory already isolates.
-    fn expected_verification_key(
+    /// Digest a cached entry is validated against: the embedded production key's for the production
+    /// configuration, none for the others, which their own directory already isolates.
+    fn expected_verification_key_digest(
         &self,
-        production_verification_key: &'static [u8],
-    ) -> &'static [u8] {
+        production_verification_key_digest: impl FnOnce() -> StmResult<CircuitVerificationKeyDigest>,
+    ) -> StmResult<Option<CircuitVerificationKeyDigest>> {
         match self {
-            Self::Production => production_verification_key,
-            Self::Fingerprinted(_) => &[],
+            Self::Production => Ok(Some(production_verification_key_digest()?)),
+            Self::Fingerprinted(_) => Ok(None),
         }
     }
 }
@@ -172,30 +171,30 @@ pub(crate) struct KeyProvider<G: KeyGenerator> {
     verification_key_path: PathBuf,
     /// Path to the on-disk proving key file.
     proving_key_path: PathBuf,
-    /// Expected verifying-key bytes for staleness detection; an empty slice skips the check and
+    /// Digest a cached verifying key must have, for staleness detection; `None` skips the check and
     /// trusts the cached key (used by the content-keyed test caches, which isolate configurations by
     /// directory).
-    expected_verification_key: Vec<u8>,
+    expected_verification_key_digest: Option<CircuitVerificationKeyDigest>,
     /// Key generator that derives the key pair on a cache miss.
     generator: G,
 }
 
 impl<G: KeyGenerator> KeyProvider<G> {
     /// Builds a provider rooted at `base_dir / MITHRIL_CIRCUIT_CACHE_FOLDER / circuit_name`. On read,
-    /// the cached verifying key is compared against `expected_verification_key` and recomputed on a
-    /// mismatch; an empty slice skips the comparison and trusts the cached key. Keys are computed from
-    /// `generator` on a miss.
+    /// the digest of the cached verifying key is compared with `expected_verification_key_digest` and
+    /// the pair recomputed on a mismatch; `None` skips the comparison and trusts the cached key. Keys
+    /// are computed from `generator` on a miss.
     pub(crate) fn new(
         base_dir: PathBuf,
         circuit_name: &str,
-        expected_verification_key: &[u8],
+        expected_verification_key_digest: Option<CircuitVerificationKeyDigest>,
         generator: G,
     ) -> Self {
         let circuit_dir = base_dir.join(MITHRIL_CIRCUIT_CACHE_FOLDER).join(circuit_name);
         Self {
             verification_key_path: circuit_dir.join("verification-key"),
             proving_key_path: circuit_dir.join("proving-key"),
-            expected_verification_key: expected_verification_key.to_vec(),
+            expected_verification_key_digest,
             generator,
         }
     }
@@ -215,7 +214,7 @@ impl<G: KeyGenerator> KeyProvider<G> {
                 verification_key,
                 proving_key,
             } => Ok((
-                G::VerifyingKey::try_from_bytes(&verification_key)?,
+                verification_key,
                 G::ProvingKey::try_from_bytes(&proving_key)?,
             )),
             CacheState::Empty => self.compute_and_store(srs),
@@ -231,25 +230,37 @@ impl<G: KeyGenerator> KeyProvider<G> {
         match self.cache_state()? {
             CacheState::Valid {
                 verification_key, ..
-            } => G::VerifyingKey::try_from_bytes(&verification_key),
+            } => Ok(verification_key),
             CacheState::Empty => Ok(self.compute_and_store(srs)?.0),
         }
     }
 
-    /// Reads the cache and returns the fresh key-pair bytes, or [`CacheState::Empty`] when nothing
-    /// usable is on disk (absent, partially written, or stale). A stale entry is left in place: the
-    /// next store overwrites both key files atomically. The proving key is read only once the
-    /// verifying key is present and fresh, so an orphan proving key left by an interrupted store is
-    /// reported as `Empty` rather than surfaced as a deserialization error.
-    fn cache_state(&self) -> StmResult<CacheState> {
-        let Some(verification_key) = Self::read_optional(&self.verification_key_path)? else {
+    /// Reads the cache and returns the fresh key pair, or [`CacheState::Empty`] when nothing usable is
+    /// on disk (absent, partially written, or stale). A stale entry is left in place: the next store
+    /// overwrites both key files atomically. The proving key is read only once the verifying key is
+    /// present and fresh, so an orphan proving key left by an interrupted store is reported as `Empty`
+    /// rather than surfaced as a deserialization error.
+    ///
+    /// With an expected digest, the verifying key is decoded and checked before the proving key is
+    /// looked up, so an undecodable or different key is a miss. A trusted key is decoded only once
+    /// the pair is complete, so an incomplete pair is a miss whatever its verifying key holds.
+    fn cache_state(&self) -> StmResult<CacheState<G::VerifyingKey>> {
+        let Some(verification_key_bytes) = Self::read_optional(&self.verification_key_path)? else {
             return Ok(CacheState::Empty);
         };
-        if self.is_stale(&verification_key) {
-            return Ok(CacheState::Empty);
-        }
+        let checked_verification_key = match self.expected_verification_key_digest {
+            Some(_) => match G::VerifyingKey::try_from_bytes(&verification_key_bytes) {
+                Ok(verification_key) if self.is_fresh(&verification_key) => Some(verification_key),
+                _ => return Ok(CacheState::Empty),
+            },
+            None => None,
+        };
         let Some(proving_key) = Self::read_optional(&self.proving_key_path)? else {
             return Ok(CacheState::Empty);
+        };
+        let verification_key = match checked_verification_key {
+            Some(verification_key) => verification_key,
+            None => G::VerifyingKey::try_from_bytes(&verification_key_bytes)?,
         };
         Ok(CacheState::Valid {
             verification_key,
@@ -270,10 +281,11 @@ impl<G: KeyGenerator> KeyProvider<G> {
         Ok((verification_key, proving_key))
     }
 
-    /// `true` when an expected verifying key is configured and the cached bytes do not match it.
-    fn is_stale(&self, verification_key: &[u8]) -> bool {
-        !self.expected_verification_key.is_empty()
-            && verification_key != self.expected_verification_key.as_slice()
+    /// `true` when no expected digest is configured, or `verification_key` has the expected digest.
+    fn is_fresh(&self, verification_key: &G::VerifyingKey) -> bool {
+        self.expected_verification_key_digest.is_none_or(|expected_digest| {
+            G::verification_key_digest(verification_key) == expected_digest
+        })
     }
 
     /// Writes the verifying and proving key bytes to disk as a pair: each to a per-writer-unique
@@ -370,8 +382,9 @@ impl KeyProvider<CertificateCircuit> {
         Ok(Self::new(
             std::env::temp_dir(),
             &identity.directory_name("non-recursive-keys"),
-            identity
-                .expected_verification_key(NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION),
+            identity.expected_verification_key_digest(
+                CircuitVerificationKeyDigest::for_production_certificate_circuit,
+            )?,
             circuit,
         ))
     }
@@ -393,7 +406,8 @@ impl KeyProvider<RecursiveCircuitKeyGenerator> {
         Ok(Self::new(
             std::env::temp_dir(),
             &identity.directory_name("recursive-keys"),
-            identity.expected_verification_key(RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION),
+            identity
+                .expected_verification_key_digest(CircuitVerificationKeyDigest::for_ivc_circuit)?,
             RecursiveCircuitKeyGenerator::new(non_recursive_key_provider),
         ))
     }
@@ -423,11 +437,14 @@ mod tests {
     use super::{
         CacheState, CircuitCacheIdentity, CircuitVerificationKeyDigest, KeyGenerator, KeyProvider,
     };
+    use sha2::{Digest, Sha256};
+
     use crate::StmResult;
     use crate::circuits::halo2::{
         NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, STM_PARAMETERS_FOR_PRODUCTION,
-        circuit::CertificateCircuit,
+        circuit::CertificateCircuit, keys::NonRecursiveCircuitVerifyingKey,
     };
+    use crate::circuits::halo2_ivc::tests::common::asset_readers::load_embedded_verification_context_asset;
     use crate::codec::{TryFromBytes, TryToBytes};
     use crate::{MERKLE_TREE_DEPTH_FOR_SNARK, Parameters};
 
@@ -581,6 +598,10 @@ mod tests {
                 ByteKey(self.proving_key.clone()),
             ))
         }
+
+        fn verification_key_digest(verification_key: &ByteKey) -> CircuitVerificationKeyDigest {
+            hex::encode(Sha256::digest(&verification_key.0)).parse().unwrap()
+        }
     }
 
     // The generator ignores the SRS, so the smallest constructible parameters are enough.
@@ -589,7 +610,8 @@ mod tests {
     }
 
     /// A provider over a fresh temporary directory with a counting generator, returning the base
-    /// directory for cleanup.
+    /// directory for cleanup. The provider expects the digest of `expected_verification_key`, or
+    /// trusts the cache when it is empty.
     fn counting_provider(
         name: &str,
         expected_verification_key: &[u8],
@@ -598,10 +620,13 @@ mod tests {
     ) -> (PathBuf, KeyProvider<CountingGenerator>) {
         let base_dir = env::temp_dir().join(name);
         fs::remove_dir_all(&base_dir).ok();
+        let expected_verification_key_digest = (!expected_verification_key.is_empty()).then(|| {
+            CountingGenerator::verification_key_digest(&ByteKey(expected_verification_key.to_vec()))
+        });
         let provider = KeyProvider::new(
             base_dir.clone(),
             "test-circuit",
-            expected_verification_key,
+            expected_verification_key_digest,
             CountingGenerator::new(verification_key, proving_key),
         );
         (base_dir, provider)
@@ -685,7 +710,7 @@ mod tests {
         assert_eq!(
             provider.generator().calls.get(),
             1,
-            "with empty expected bytes a warm cache must be trusted, not recomputed"
+            "with no expected digest a warm cache must be trusted, not recomputed"
         );
         fs::remove_dir_all(&base_dir).ok();
     }
@@ -725,8 +750,7 @@ mod tests {
         fs::remove_dir_all(&base_dir).ok();
     }
 
-    // The staleness check compares bytes before anything is decoded, so a corrupt cached key that is
-    // not the expected one is a miss.
+    // With an expected digest, an undecodable cached verification key is a cache miss.
     #[test]
     fn an_undecodable_cached_key_differing_from_the_expected_one_is_regenerated() {
         let (base_dir, provider) = counting_provider(current_function!(), b"vk", b"vk", b"pk");
@@ -838,7 +862,7 @@ mod tests {
         assert!(matches!(
             state,
             CacheState::Valid { verification_key, proving_key }
-                if verification_key == b"vk" && proving_key == b"pk"
+                if verification_key == ByteKey(b"vk".to_vec()) && proving_key == b"pk"
         ));
         fs::remove_dir_all(&base_dir).ok();
     }
@@ -933,7 +957,7 @@ mod tests {
         let circuit = CertificateCircuit::try_new(&parameters, 4).unwrap();
         let base_dir = env::temp_dir().join(current_function!());
         fs::remove_dir_all(&base_dir).ok();
-        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", b"corrupt-vk", circuit);
+        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", None, circuit);
         fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
         fs::write(provider.verification_key_path(), b"corrupt-vk").unwrap();
         fs::write(provider.proving_key_path(), b"corrupt-pk").unwrap();
@@ -942,7 +966,7 @@ mod tests {
 
         assert!(
             result.is_err(),
-            "a fresh but corrupt verifying key must surface a deserialization error"
+            "a trusted but corrupt verifying key must surface a deserialization error"
         );
         fs::remove_dir_all(&base_dir).ok();
     }
@@ -1000,12 +1024,20 @@ mod tests {
         let provider =
             certificate_key_provider(&STM_PARAMETERS_FOR_PRODUCTION, MERKLE_TREE_DEPTH_FOR_SNARK);
 
+        let production_key = NonRecursiveCircuitVerifyingKey::try_from_bytes(
+            NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+        )
+        .unwrap();
+        let another_key = load_embedded_verification_context_asset()
+            .unwrap()
+            .certificate_verifying_key;
+
         assert!(
-            !provider.is_stale(NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION),
+            provider.is_fresh(&production_key),
             "the embedded production verifying key must be accepted"
         );
         assert!(
-            provider.is_stale(b"another-verification-key"),
+            !provider.is_fresh(&another_key),
             "a cached key that is not the embedded production one must be recomputed"
         );
     }
@@ -1039,8 +1071,12 @@ mod tests {
             MERKLE_TREE_DEPTH_FOR_SNARK,
         );
 
+        let any_key = load_embedded_verification_context_asset()
+            .unwrap()
+            .certificate_verifying_key;
+
         assert!(
-            !provider.is_stale(b"any-cached-verification-key"),
+            provider.is_fresh(&any_key),
             "a fingerprinted directory isolates the configuration, so its entry must be trusted"
         );
     }
@@ -1106,8 +1142,12 @@ mod tests {
             outside_production.verification_key_path(),
             "the recursive keys of a configuration outside production must be isolated"
         );
+        let any_key = load_embedded_verification_context_asset()
+            .unwrap()
+            .recursive_verifying_key;
+
         assert!(
-            !outside_production.is_stale(b"any-cached-verification-key"),
+            outside_production.is_fresh(&any_key),
             "a fingerprinted directory isolates the configuration, so its entry must be trusted"
         );
     }

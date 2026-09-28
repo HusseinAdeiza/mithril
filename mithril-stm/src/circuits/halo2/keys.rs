@@ -14,6 +14,7 @@ use midnight_zk_stdlib::{
 use serde::{Deserialize, Serialize};
 
 use crate::StmResult;
+use crate::circuits::CircuitVerificationKeyDigest;
 use crate::circuits::halo2::errors::CertificateCircuitError;
 use crate::circuits::halo2_ivc::{
     ConstraintSystem, KZGCommitmentScheme, NativeField, PairingEngine, VerifyingKey,
@@ -261,6 +262,12 @@ impl KeyGenerator for CertificateCircuit {
             NonRecursiveCircuitVerifyingKey(verifying_key),
             NonRecursiveCircuitProvingKey(proving_key),
         ))
+    }
+
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest {
+        CircuitVerificationKeyDigest::from_verification_key(verification_key)
     }
 }
 
