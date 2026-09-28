@@ -1413,7 +1413,7 @@ The prerequisites divide by who is responsible for them.
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era |
 | A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                    |
-| A node verifying recursive certificates                            | Both genesis verification halves                                                        |
+| A node verifying recursive certificates                            | The Schnorr genesis verification key; with **In review** registry enforcement, also the Ed25519 genesis verification key |
 | Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                |
 
 A node needs the material for every path it can reach, not the flavor it starts from: a chain walk that begins at a concatenation certificate can meet a recursive one, and that branch fails without the Schnorr half.
