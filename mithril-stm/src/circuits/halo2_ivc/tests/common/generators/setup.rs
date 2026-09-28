@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
 
 use crate::AggregateVerificationKeyForSnark;
+use crate::circuits::CircuitVerificationKeyDigest;
 use crate::circuits::halo2::circuit::CertificateCircuit;
 use crate::circuits::halo2::keys::NonRecursiveCircuitVerifyingKey;
 use crate::circuits::halo2_ivc::RECURSIVE_CIRCUIT_DEGREE;
@@ -23,8 +24,7 @@ use crate::circuits::halo2_ivc::keys::{RecursiveCircuitProvingKey, RecursiveCirc
 use crate::circuits::halo2_ivc::types::MessageHash;
 use crate::circuits::halo2_ivc::{
     CERTIFICATE_FIXED_BASES_PREFIX, EmulatedCurve, IVC_FIXED_BASES_PREFIX, NativeField,
-    PairingEngine, RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, circuit::IvcCircuit,
-    state::Global,
+    PairingEngine, circuit::IvcCircuit, state::Global,
 };
 use crate::circuits::test_utils::file_mutex::FileMutex;
 use crate::circuits::trusted_setup::{TrustedSetupProvider, UNSAFE_SRS_SEED};
@@ -226,8 +226,8 @@ fn derive_recursive_verifying_key(
 /// Every input is a parameter, so the address is a pure function of them and a test can vary each
 /// one.
 fn recursive_verifying_key_cache(
-    certificate_verifying_key_bytes: &[u8],
-    production_recursive_verifying_key: &[u8],
+    certificate_circuit_digest: &CircuitVerificationKeyDigest,
+    recursive_circuit_digest: &CircuitVerificationKeyDigest,
     recursive_circuit_degree: u32,
     certificate_circuit_degree: u32,
     unsafe_srs_seed: u64,
@@ -235,8 +235,8 @@ fn recursive_verifying_key_cache(
     FileMutex::for_shared_cache(
         "ivc-recursive-verifying-key",
         &[
-            certificate_verifying_key_bytes,
-            production_recursive_verifying_key,
+            certificate_circuit_digest.as_bytes(),
+            recursive_circuit_digest.as_bytes(),
             &recursive_circuit_degree.to_le_bytes(),
             &certificate_circuit_degree.to_le_bytes(),
             &unsafe_srs_seed.to_le_bytes(),
@@ -358,8 +358,9 @@ fn build_shared_recursive_context_with(
         params_for(RECURSIVE_CIRCUIT_DEGREE),
     );
 
-    // Derived on every call: on the order of 100 milliseconds, so not worth caching, and its bytes
-    // are what make the recursive key's cache address sensitive to the certificate circuit.
+    // Derived on every call: on the order of 100 milliseconds, so not worth caching, and its digest
+    // is what makes the recursive key's cache address follow the certificate circuit, including the
+    // gates the recursive circuit synthesizes.
     let certificate_verifying_key = NonRecursiveCircuitVerifyingKey::new(zk_lib::setup_vk(
         &certificate_commitment_parameters,
         &setup.certificate_relation,
@@ -371,12 +372,10 @@ fn build_shared_recursive_context_with(
             &certificate_verifying_key,
         ),
         RecursiveVerifyingKeySource::Cached => {
-            let certificate_verifying_key_bytes = certificate_verifying_key
-                .to_bytes_vec()
-                .expect("the certificate verifying key should serialize");
             let key_cache = recursive_verifying_key_cache(
-                &certificate_verifying_key_bytes,
-                RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+                &CircuitVerificationKeyDigest::from_verification_key(&certificate_verifying_key),
+                &CircuitVerificationKeyDigest::for_ivc_circuit()
+                    .expect("the embedded recursive production key should decode"),
                 RECURSIVE_CIRCUIT_DEGREE,
                 CERTIFICATE_CIRCUIT_DEGREE,
                 UNSAFE_SRS_SEED,
@@ -837,14 +836,16 @@ mod tests {
     /// [`recursive_verifying_key_cache`] makes this fail rather than silently sharing an entry.
     #[test]
     fn every_recursive_verifying_key_cache_input_changes_the_address() {
-        let directory = |certificate_key: &[u8],
-                         production_key: &[u8],
+        let circuit_digest =
+            |seed: u8| -> CircuitVerificationKeyDigest { hex::encode([seed; 32]).parse().unwrap() };
+        let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
+                         recursive_circuit_digest: CircuitVerificationKeyDigest,
                          recursive_degree: u32,
                          certificate_degree: u32,
                          seed: u64| {
             recursive_verifying_key_cache(
-                certificate_key,
-                production_key,
+                &certificate_circuit_digest,
+                &recursive_circuit_digest,
                 recursive_degree,
                 certificate_degree,
                 seed,
@@ -852,28 +853,28 @@ mod tests {
             .directory()
             .to_path_buf()
         };
-        let baseline = directory(b"certificate-key", b"production-key", 19, 13, 42);
+        let baseline = directory(circuit_digest(1), circuit_digest(2), 19, 13, 42);
 
         for (label, varied) in [
             (
-                "certificate verifying key",
-                directory(b"another-certificate-key", b"production-key", 19, 13, 42),
+                "certificate circuit digest",
+                directory(circuit_digest(3), circuit_digest(2), 19, 13, 42),
             ),
             (
-                "production recursive key",
-                directory(b"certificate-key", b"another-production-key", 19, 13, 42),
+                "recursive circuit digest",
+                directory(circuit_digest(1), circuit_digest(3), 19, 13, 42),
             ),
             (
                 "recursive circuit degree",
-                directory(b"certificate-key", b"production-key", 20, 13, 42),
+                directory(circuit_digest(1), circuit_digest(2), 20, 13, 42),
             ),
             (
                 "certificate circuit degree",
-                directory(b"certificate-key", b"production-key", 19, 14, 42),
+                directory(circuit_digest(1), circuit_digest(2), 19, 14, 42),
             ),
             (
                 "unsafe srs seed",
-                directory(b"certificate-key", b"production-key", 19, 13, 43),
+                directory(circuit_digest(1), circuit_digest(2), 19, 13, 43),
             ),
         ] {
             assert_ne!(

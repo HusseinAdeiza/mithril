@@ -13,9 +13,8 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 use crate::circuits::{
-    halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-    halo2_ivc::RECURSIVE_CIRCUIT_DEGREE, test_utils::file_mutex::FileMutex,
-    trusted_setup::UNSAFE_SRS_SEED,
+    CircuitVerificationKeyDigest, halo2_ivc::RECURSIVE_CIRCUIT_DEGREE,
+    test_utils::file_mutex::FileMutex, trusted_setup::UNSAFE_SRS_SEED,
 };
 use crate::{
     Parameters, StmResult,
@@ -104,10 +103,12 @@ impl SnarkProverSetup {
         let parameters_bytes = parameters.to_bytes()?;
         let depth_bytes = merkle_tree_depth.to_le_bytes();
         let seed_bytes = UNSAFE_SRS_SEED.to_le_bytes();
+        let certificate_circuit_digest =
+            CircuitVerificationKeyDigest::for_production_certificate_circuit()?;
         let cache = FileMutex::for_shared_cache(
             "non-recursive",
             &[
-                NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+                certificate_circuit_digest.as_bytes(),
                 &parameters_bytes,
                 &depth_bytes,
                 &seed_bytes,

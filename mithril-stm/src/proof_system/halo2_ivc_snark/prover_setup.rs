@@ -12,10 +12,8 @@ use midnight_proofs::poly::kzg::{
 
 #[cfg(test)]
 use crate::circuits::{
-    halo2::{NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, circuit::CertificateCircuit},
-    halo2_ivc::RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-    test_utils::file_mutex::FileMutex,
-    trusted_setup::UNSAFE_SRS_SEED,
+    CircuitVerificationKeyDigest, halo2::circuit::CertificateCircuit,
+    test_utils::file_mutex::FileMutex, trusted_setup::UNSAFE_SRS_SEED,
 };
 use crate::{
     MERKLE_TREE_DEPTH_FOR_SNARK, Parameters, StmResult,
@@ -165,17 +163,21 @@ impl IvcProverSetup {
     /// Defined once so a test can locate the cache without restating the inputs its identity is
     /// built from.
     #[cfg(test)]
-    fn test_key_cache(parameters_bytes: &[u8], depth_bytes: &[u8], seed_bytes: &[u8]) -> FileMutex {
-        FileMutex::for_shared_cache(
+    fn test_key_cache(
+        parameters_bytes: &[u8],
+        depth_bytes: &[u8],
+        seed_bytes: &[u8],
+    ) -> StmResult<FileMutex> {
+        Ok(FileMutex::for_shared_cache(
             "ivc-setup",
             &[
-                NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-                RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+                CircuitVerificationKeyDigest::for_production_certificate_circuit()?.as_bytes(),
+                CircuitVerificationKeyDigest::for_ivc_circuit()?.as_bytes(),
                 parameters_bytes,
                 depth_bytes,
                 seed_bytes,
             ],
-        )
+        ))
     }
 
     /// Builds an [`IvcProverSetup`] from a deterministic unsafe SRS with degree determined by the input
@@ -199,7 +201,7 @@ impl IvcProverSetup {
         let trusted_setup_provider =
             TrustedSetupProvider::with_unsafe_srs(&srs_directory, unsafe_srs_degree);
 
-        let key_cache = Self::test_key_cache(&parameters_bytes, &depth_bytes, &seed_bytes);
+        let key_cache = Self::test_key_cache(&parameters_bytes, &depth_bytes, &seed_bytes)?;
         let cache_directory = key_cache.directory().to_path_buf();
         // Serialize cold-start keygen across the parallel slow-test processes.
         let _key_cache_lock = key_cache.lock()?;
@@ -435,7 +437,8 @@ mod tests {
                 &parameters.to_bytes().expect("parameters should encode"),
                 &merkle_tree_depth.to_le_bytes(),
                 &UNSAFE_SRS_SEED.to_le_bytes(),
-            );
+            )
+            .expect("the test key cache should resolve");
             let certificate_directory = key_cache.directory().join("certificate");
             let recursive_directory = key_cache.directory().join("recursive");
             drop(setup);
