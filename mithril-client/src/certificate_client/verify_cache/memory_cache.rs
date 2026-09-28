@@ -164,17 +164,6 @@ impl CertificateVerifierCache for MemoryCertificateVerifierCache {
             .await)
     }
 
-    async fn certificate_exist(
-        &self,
-        space: &CertificateVerifierCacheSpace,
-        certificate_hash: &str,
-    ) -> MithrilResult<bool> {
-        Ok(self
-            .get_unexpired_committed_certificate(space, certificate_hash)
-            .await
-            .is_some())
-    }
-
     async fn reset(&self) -> MithrilResult<()> {
         self.staged.write().await.clear();
         self.committed.write().await.clear();
@@ -762,46 +751,6 @@ mod tests {
         }
     }
 
-    mod certificate_exist {
-        use super::*;
-
-        #[tokio::test]
-        async fn returns_false_for_a_hash_never_committed() {
-            let cache = MemoryCertificateVerifierCache::new(TimeDelta::hours(1));
-            assert!(!cache.certificate_exist(&space(), "hash").await.unwrap());
-        }
-
-        #[tokio::test]
-        async fn returns_true_for_a_committed_hash() {
-            let cache = MemoryCertificateVerifierCache::new(TimeDelta::hours(1))
-                .with_items(&space(), [dummy_certificate("hash", "parent")]);
-
-            assert!(cache.certificate_exist(&space(), "hash").await.unwrap());
-        }
-
-        #[tokio::test]
-        async fn returns_false_for_an_expired_committed_entry() {
-            let cache = MemoryCertificateVerifierCache::new(TimeDelta::hours(1))
-                .with_items(&space(), [dummy_certificate("hash", "parent")]);
-            cache
-                .overwrite_expiration_date(&space(), "hash", Utc::now() - TimeDelta::days(1))
-                .await;
-
-            assert!(!cache.certificate_exist(&space(), "hash").await.unwrap());
-        }
-
-        #[tokio::test]
-        async fn returns_false_for_a_staged_but_uncommitted_hash() {
-            let cache = MemoryCertificateVerifierCache::new(TimeDelta::hours(1));
-            cache
-                .stage_certificate("id", dummy_certificate("hash", "parent"))
-                .await
-                .unwrap();
-
-            assert!(!cache.certificate_exist(&space(), "hash").await.unwrap());
-        }
-    }
-
     mod spaces {
         use super::*;
 
@@ -812,8 +761,20 @@ mod tests {
                 .with_items(&space(), [dummy_certificate("hash", "parent")])
                 .with_items(&other_space, [dummy_certificate("other_hash", "parent")]);
 
-            assert!(cache.certificate_exist(&space(), "hash").await.unwrap());
-            assert!(cache.certificate_exist(&other_space, "other_hash").await.unwrap());
+            assert!(
+                cache
+                    .get_certificate_by_hash(&space(), "hash")
+                    .await
+                    .unwrap()
+                    .is_some()
+            );
+            assert!(
+                cache
+                    .get_certificate_by_hash(&other_space, "other_hash")
+                    .await
+                    .unwrap()
+                    .is_some()
+            );
         }
 
         #[tokio::test]
@@ -832,7 +793,6 @@ mod tests {
                 None,
                 cache.get_certificate_by_hash(&other_space(), "hash").await.unwrap()
             );
-            assert!(!cache.certificate_exist(&other_space(), "hash").await.unwrap());
         }
 
         #[tokio::test]

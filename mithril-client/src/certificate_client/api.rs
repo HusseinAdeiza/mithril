@@ -150,13 +150,6 @@ pub trait CertificateVerifierCache: Sync + Send {
         certificate_hash: &str,
     ) -> MithrilResult<Option<MithrilCertificate>>;
 
-    /// Check that a certificate with the given hash is committed to the given space.
-    async fn certificate_exist(
-        &self,
-        space: &CertificateVerifierCacheSpace,
-        certificate_hash: &str,
-    ) -> MithrilResult<bool>;
-
     /// Reset the stored values of all the spaces
     async fn reset(&self) -> MithrilResult<()>;
 }
