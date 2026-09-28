@@ -26,14 +26,14 @@ use super::halo2_ivc::keys::RecursiveCircuitKeyGenerator;
 use super::key_generator::KeyGenerator;
 use super::trusted_setup::MIDNIGHT_SRS_HASH_K22;
 use super::{
-    MITHRIL_CIRCUIT_CACHE_FOLDER,
+    CircuitVerificationKeyDigest, MITHRIL_CIRCUIT_CACHE_FOLDER,
     halo2::{NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, STM_PARAMETERS_FOR_PRODUCTION},
     halo2_ivc::RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
 };
 
 /// Bumped whenever the cache layout or the fingerprint inputs change, so an entry written by an
 /// earlier scheme is never reused.
-const CACHE_SCHEMA_VERSION: &[u8] = b"v1";
+const CACHE_SCHEMA_VERSION: &[u8] = b"v2";
 
 /// Outcome of inspecting the on-disk key cache for a complete, fresh key pair.
 enum CacheState {
@@ -65,48 +65,68 @@ enum CircuitCacheIdentity {
 impl CircuitCacheIdentity {
     /// Identifies the configuration made of `parameters` and `merkle_tree_depth`.
     ///
-    /// The fingerprint also folds in the cache schema version, the embedded production verifying key
-    /// and the SRS the keys are derived from, so an entry is never reused across a layout change, a
-    /// circuit change or an SRS change. The production verifying key stands for the circuit itself:
-    /// it changes with the circuit and only with it, which no configuration outside production can
-    /// check against.
+    /// The fingerprint also folds in the cache schema version, the digest of the embedded production
+    /// verifying key and the SRS the keys are derived from, so an entry is never reused across a
+    /// layout change, a production key change or an SRS change. The digest stands for the circuit,
+    /// which a configuration outside production cannot check its keys against: it covers the
+    /// constraint system, which the serialized key omits, so it also changes when only the gates do.
     fn for_configuration(parameters: &Parameters, merkle_tree_depth: u32) -> StmResult<Self> {
-        Self::fingerprint(parameters, merkle_tree_depth, None)
+        if Self::is_production(parameters, merkle_tree_depth) {
+            return Ok(Self::Production);
+        }
+
+        Self::fingerprinted(
+            parameters,
+            merkle_tree_depth,
+            &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
+            None,
+        )
     }
 
     /// Identifies a configuration of the recursive circuit, additionally bound to that circuit's own
     /// identity.
     ///
-    /// The certificate production key alone does not stand for the recursive circuit: the recursive
+    /// The certificate circuit digest alone does not stand for the recursive circuit: the recursive
     /// circuit can change while the certificate circuit does not. A non-production entry is trusted
     /// without comparison, so without this an entry cached for an earlier recursive circuit would be
     /// selected and its fixed and permutation polynomials loaded against the new constraint system.
+    /// The certificate circuit digest stays in, as the recursive circuit synthesizes the certificate
+    /// circuit gates: a certificate gate change can change the recursive keys while leaving the
+    /// certificate key bytes unchanged.
     fn for_recursive_configuration(
         parameters: &Parameters,
         merkle_tree_depth: u32,
     ) -> StmResult<Self> {
-        Self::fingerprint(
-            parameters,
-            merkle_tree_depth,
-            Some(RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION),
-        )
-    }
-
-    fn fingerprint(
-        parameters: &Parameters,
-        merkle_tree_depth: u32,
-        recursive_circuit_identity: Option<&[u8]>,
-    ) -> StmResult<Self> {
-        if parameters == &STM_PARAMETERS_FOR_PRODUCTION
-            && merkle_tree_depth == MERKLE_TREE_DEPTH_FOR_SNARK
-        {
+        if Self::is_production(parameters, merkle_tree_depth) {
             return Ok(Self::Production);
         }
 
+        Self::fingerprinted(
+            parameters,
+            merkle_tree_depth,
+            &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
+            Some(&CircuitVerificationKeyDigest::for_ivc_circuit()?),
+        )
+    }
+
+    /// `true` for the configuration the embedded production verifying keys were derived from.
+    fn is_production(parameters: &Parameters, merkle_tree_depth: u32) -> bool {
+        parameters == &STM_PARAMETERS_FOR_PRODUCTION
+            && merkle_tree_depth == MERKLE_TREE_DEPTH_FOR_SNARK
+    }
+
+    /// Fingerprints a configuration outside production from the digests of the circuits its keys are
+    /// derived from, so a test can vary each digest.
+    fn fingerprinted(
+        parameters: &Parameters,
+        merkle_tree_depth: u32,
+        certificate_circuit_digest: &CircuitVerificationKeyDigest,
+        recursive_circuit_digest: Option<&CircuitVerificationKeyDigest>,
+    ) -> StmResult<Self> {
         let mut hasher = Sha256::new();
         for input in [
             CACHE_SCHEMA_VERSION,
-            NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+            certificate_circuit_digest.as_bytes(),
             MIDNIGHT_SRS_HASH_K22.as_bytes(),
             parameters.to_bytes()?.as_slice(),
             &merkle_tree_depth.to_le_bytes(),
@@ -115,9 +135,10 @@ impl CircuitCacheIdentity {
             hasher.update(input);
         }
         // Appended only for the recursive circuit, so certificate entries keep their identity.
-        if let Some(identity) = recursive_circuit_identity {
-            hasher.update((identity.len() as u64).to_le_bytes());
-            hasher.update(identity);
+        if let Some(digest) = recursive_circuit_digest {
+            let digest = digest.as_bytes();
+            hasher.update((digest.len() as u64).to_le_bytes());
+            hasher.update(digest);
         }
 
         Ok(Self::Fingerprinted(hex::encode(hasher.finalize())))
@@ -399,7 +420,9 @@ mod tests {
     use rand_chacha::ChaCha20Rng;
     use rand_core::SeedableRng;
 
-    use super::{CacheState, CircuitCacheIdentity, KeyGenerator, KeyProvider};
+    use super::{
+        CacheState, CircuitCacheIdentity, CircuitVerificationKeyDigest, KeyGenerator, KeyProvider,
+    };
     use crate::StmResult;
     use crate::circuits::halo2::{
         NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, STM_PARAMETERS_FOR_PRODUCTION,
@@ -448,8 +471,61 @@ mod tests {
 
         assert_eq!(
             certificate.directory_name("non-recursive-keys"),
-            "non-recursive-keys-ac5086eedf8c9015ea3b5f1b39f123e04d6105b89e17f45e731b3d80a2f91c27",
+            "non-recursive-keys-2042115e4247501bb372174b0eba7284e24bd90307d16ec3719b70723073caa1",
             "certificate cache identity must not move"
+        );
+    }
+
+    fn circuit_digest(seed: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([seed; 32]).parse().unwrap()
+    }
+
+    // The serialized key omits the gates, so the circuit enters the identity through its digest.
+    #[test]
+    fn certificate_cache_identity_follows_the_certificate_circuit_digest() {
+        let directory_name = |certificate_circuit_digest| {
+            CircuitCacheIdentity::fingerprinted(
+                &parameters_outside_production(),
+                MERKLE_TREE_DEPTH_FOR_SNARK,
+                &certificate_circuit_digest,
+                None,
+            )
+            .unwrap()
+            .directory_name("non-recursive-keys")
+        };
+
+        assert_ne!(
+            directory_name(circuit_digest(1)),
+            directory_name(circuit_digest(2)),
+            "a certificate circuit change must move the certificate cache directory"
+        );
+    }
+
+    // The recursive circuit synthesizes the certificate circuit gates, so its keys depend on both
+    // circuits.
+    #[test]
+    fn recursive_cache_identity_follows_both_circuit_digests() {
+        let directory_name = |certificate_circuit_digest, recursive_circuit_digest| {
+            CircuitCacheIdentity::fingerprinted(
+                &parameters_outside_production(),
+                MERKLE_TREE_DEPTH_FOR_SNARK,
+                &certificate_circuit_digest,
+                Some(&recursive_circuit_digest),
+            )
+            .unwrap()
+            .directory_name("recursive-keys")
+        };
+        let baseline = directory_name(circuit_digest(1), circuit_digest(3));
+
+        assert_ne!(
+            baseline,
+            directory_name(circuit_digest(2), circuit_digest(3)),
+            "a certificate circuit change must move the recursive cache directory"
+        );
+        assert_ne!(
+            baseline,
+            directory_name(circuit_digest(1), circuit_digest(4)),
+            "a recursive circuit change must move the recursive cache directory"
         );
     }
 
