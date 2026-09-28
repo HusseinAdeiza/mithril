@@ -135,6 +135,13 @@ pub enum CertificateCircuitError {
         "Certificate verification key fixed commitment count mismatch: expected {expected}, got {actual}"
     )]
     VerificationKeyCommitmentCountMismatch { expected: usize, actual: usize },
+
+    /// An encoded verification key declares a public input count that is not the certificate
+    /// circuit's, which verification checks the instance length against.
+    #[error(
+        "Certificate verification key public input count mismatch: expected {expected}, got {actual}"
+    )]
+    VerificationKeyPublicInputCountMismatch { expected: usize, actual: usize },
 }
 
 impl From<PlonkError> for CertificateCircuitError {

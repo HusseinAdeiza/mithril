@@ -72,6 +72,10 @@ type IvcNativeGadget =
 // Degree of the recursive circuit
 pub(crate) const RECURSIVE_CIRCUIT_DEGREE: u32 = 19;
 
+// Number of public inputs of the recursive circuit: the global root of trust, the next state and
+// the accumulator
+pub(crate) const RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT: usize = 120;
+
 pub const PREIMAGE_SIZE: usize = 190;
 /// Byte range of the next Merkle-tree commitment within the protocol message preimage.
 pub const PREIMAGE_NEXT_MERKLE_TREE_COMMITMENT_BYTES: std::ops::Range<usize> = 69..101;

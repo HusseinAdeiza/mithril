@@ -32,6 +32,11 @@ pub enum IvcCircuitError {
     #[error("The recursive verifying key declares {actual} fixed commitments, expected {expected}")]
     RecursiveVerificationKeyCommitmentCountMismatch { expected: usize, actual: usize },
 
+    /// A recursive verifying key declared a different number of public inputs than the recursive
+    /// circuit has.
+    #[error("The recursive verifying key declares {actual} public inputs, expected {expected}")]
+    RecursiveVerificationKeyPublicInputCountMismatch { expected: usize, actual: usize },
+
     /// A standalone recursive key encoding carried bytes beyond the key.
     #[error("The recursive key encoding carries {trailing} trailing bytes")]
     RecursiveKeyEncodingHasTrailingBytes { trailing: usize },

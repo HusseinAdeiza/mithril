@@ -23,6 +23,7 @@ use crate::circuits::key_serialization::KEY_SERDE_FORMAT;
 use crate::circuits::trusted_setup::MIDNIGHT_SRS_DEGREE;
 use crate::codec::{TryFromBytes, TryToBytes};
 
+use super::CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT;
 use super::circuit::{CertificateCircuit, certificate_circuit_architecture};
 
 /// Verifying key of the non-recursive certificate circuit.
@@ -78,6 +79,9 @@ impl NonRecursiveCircuitVerifyingKey {
     /// declares one twice, once in its Midnight envelope and once in the raw key it wraps, and the
     /// reader takes them independently: each reaches a `k - 1` subtraction on a byte, which
     /// underflows at zero, or a domain constructor that asserts.
+    ///
+    /// The public input count is checked as well, as the digest identifying a key does not cover
+    /// it and verification rejects an instance of any other length.
     pub(crate) fn validate_encoded_header(bytes: &[u8]) -> StmResult<()> {
         let mut reader = bytes;
         let architecture = ZkStdLibArch::read_from_serialized_vk(&mut reader)
@@ -97,6 +101,15 @@ impl NonRecursiveCircuitVerifyingKey {
         reader
             .read_exact(&mut public_input_count)
             .with_context(|| "Failed to read the certificate verifying key public input count")?;
+        let public_input_count = u32::from_le_bytes(public_input_count) as usize;
+        if public_input_count != CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT {
+            return Err(anyhow!(
+                CertificateCircuitError::VerificationKeyPublicInputCountMismatch {
+                    expected: CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT,
+                    actual: public_input_count,
+                }
+            ));
+        }
 
         // The wrapped raw key opens with its own version and degree.
         let mut raw_header = [0u8; 2];
@@ -263,11 +276,17 @@ mod tests {
     use midnight_proofs::utils::helpers::byte_length;
     use midnight_zk_stdlib::ZkStdLibArch;
 
+    use midnight_zk_stdlib::Relation;
+
     use super::{NonRecursiveCircuitProvingKey, NonRecursiveCircuitVerifyingKey};
     use crate::Parameters;
-    use crate::circuits::halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
     use crate::circuits::halo2::circuit::CertificateCircuit;
     use crate::circuits::halo2::errors::CertificateCircuitError;
+    use crate::circuits::halo2::types::CircuitBaseField;
+    use crate::circuits::halo2::{
+        CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT,
+        NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+    };
     use crate::circuits::halo2_ivc::{
         KZGCommitmentScheme, NativeField, PairingEngine,
         RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
@@ -449,6 +468,51 @@ mod tests {
                     if *actual == u32::from(other_degree)
             ),
             "expected a degree mismatch, got: {error}"
+        );
+    }
+
+    // The digest identifying a key does not cover its public input count, and verification rejects an
+    // instance of any other length.
+    #[test]
+    fn a_key_declaring_another_public_input_count_is_rejected() {
+        let mut bytes = NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION.to_vec();
+        // Past the architecture and the envelope degree lies the public input count.
+        let mut reader = NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
+        ZkStdLibArch::read_from_serialized_vk(&mut reader).expect("architecture should read");
+        let count_range = {
+            let start = bytes.len() - reader.len() + 1;
+            start..start + 4
+        };
+        assert_eq!(
+            u32::from_le_bytes(bytes[count_range.clone()].try_into().unwrap()) as usize,
+            CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT,
+            "the production key should declare the certificate count before it is mutated"
+        );
+        let other_count = CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT + 1;
+        bytes[count_range].copy_from_slice(&(other_count as u32).to_le_bytes());
+
+        let error = NonRecursiveCircuitVerifyingKey::try_from_bytes(&bytes)
+            .expect_err("a key declaring another public input count must be rejected");
+
+        assert!(
+            matches!(
+                error.downcast_ref::<CertificateCircuitError>(),
+                Some(CertificateCircuitError::VerificationKeyPublicInputCountMismatch { actual, .. })
+                    if *actual == other_count
+            ),
+            "expected a public input count mismatch, got: {error}"
+        );
+    }
+
+    #[test]
+    fn the_pinned_public_input_count_is_the_formatted_instance_length() {
+        let instance = (CircuitBaseField::default(), CircuitBaseField::default());
+
+        assert_eq!(
+            CertificateCircuit::format_instance(&instance)
+                .expect("the instance should format")
+                .len(),
+            CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT
         );
     }
 
