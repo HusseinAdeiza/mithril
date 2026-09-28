@@ -75,11 +75,8 @@ pub struct ProtocolConfigurationParametersConfiguration {
     #[example = "\
     - cardano-chain:<br/>`{ \"type\": \"cardano-chain\", \"address\": \"test_address\",  \"verification_key\": \"136372c3138312c3138382c3130352c3233312c3135\" }`<br/>\
     "]
-    #[serde(
-        default,
-        deserialize_with = "serde_deserialization::string_or_struct_optional"
-    )]
-    pub protocol_configuration_reader_adapter_config: Option<AdapterConfig>,
+    #[serde(deserialize_with = "serde_deserialization::string_or_struct")]
+    pub protocol_configuration_reader_adapter_config: AdapterConfig,
 }
 
 impl ConfigurationSource for ProtocolConfigurationParametersConfiguration {
@@ -104,7 +101,7 @@ impl ConfigurationSource for ProtocolConfigurationParametersConfiguration {
     }
 
     fn protocol_configuration_reader_adapter_config(&self) -> Option<AdapterConfig> {
-        self.protocol_configuration_reader_adapter_config.clone()
+        Some(self.protocol_configuration_reader_adapter_config.clone())
     }
 }
 
@@ -236,8 +233,11 @@ impl ExportProtocolConfigurationSubCommand {
         Ok(())
     }
 
-    pub fn extract_config(_parent: String) -> HashMap<String, StructDoc> {
-        HashMap::new()
+    pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
+        HashMap::from([(
+            command_path,
+            ProtocolConfigurationParametersConfiguration::extract(),
+        )])
     }
 }
 
@@ -427,8 +427,11 @@ impl ImportProtocolConfigurationSubCommand {
         Ok(())
     }
 
-    pub fn extract_config(_parent: String) -> HashMap<String, StructDoc> {
-        HashMap::new()
+    pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
+        HashMap::from([(
+            command_path,
+            ProtocolConfigurationParametersConfiguration::extract(),
+        )])
     }
 }
 
