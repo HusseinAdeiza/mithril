@@ -160,22 +160,24 @@ impl IvcProverSetup {
 
     /// The shared cache the test setup derives its keys in.
     ///
-    /// Defined once so a test can locate the cache without restating the inputs its identity is
-    /// built from.
+    /// Every input is a parameter, so the address is a pure function of them and a test can vary
+    /// each one.
     #[cfg(test)]
     fn test_key_cache(
-        parameters_bytes: &[u8],
-        depth_bytes: &[u8],
-        seed_bytes: &[u8],
+        certificate_circuit_digest: &CircuitVerificationKeyDigest,
+        recursive_circuit_digest: &CircuitVerificationKeyDigest,
+        parameters: &Parameters,
+        merkle_tree_depth: u32,
+        unsafe_srs_seed: u64,
     ) -> StmResult<FileMutex> {
         Ok(FileMutex::for_shared_cache(
             "ivc-setup",
             &[
-                CircuitVerificationKeyDigest::for_production_certificate_circuit()?.as_bytes(),
-                CircuitVerificationKeyDigest::for_ivc_circuit()?.as_bytes(),
-                parameters_bytes,
-                depth_bytes,
-                seed_bytes,
+                certificate_circuit_digest.as_bytes(),
+                recursive_circuit_digest.as_bytes(),
+                &parameters.to_bytes()?,
+                &merkle_tree_depth.to_le_bytes(),
+                &unsafe_srs_seed.to_le_bytes(),
             ],
         ))
     }
@@ -191,8 +193,6 @@ impl IvcProverSetup {
         unsafe_srs_degree: u32,
     ) -> StmResult<Self> {
         assert!(unsafe_srs_degree >= RECURSIVE_CIRCUIT_DEGREE);
-        let parameters_bytes = parameters.to_bytes()?;
-        let depth_bytes = merkle_tree_depth.to_le_bytes();
         let seed_bytes = UNSAFE_SRS_SEED.to_le_bytes();
 
         let srs_cache = FileMutex::for_shared_cache("unsafe-srs", &[&seed_bytes]);
@@ -201,7 +201,13 @@ impl IvcProverSetup {
         let trusted_setup_provider =
             TrustedSetupProvider::with_unsafe_srs(&srs_directory, unsafe_srs_degree);
 
-        let key_cache = Self::test_key_cache(&parameters_bytes, &depth_bytes, &seed_bytes)?;
+        let key_cache = Self::test_key_cache(
+            &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
+            &CircuitVerificationKeyDigest::for_ivc_circuit()?,
+            parameters,
+            merkle_tree_depth,
+            UNSAFE_SRS_SEED,
+        )?;
         let cache_directory = key_cache.directory().to_path_buf();
         // Serialize cold-start keygen across the parallel slow-test processes.
         let _key_cache_lock = key_cache.lock()?;
@@ -349,6 +355,96 @@ mod tests {
 
     use super::*;
 
+    /// Exercises the test key cache address, so dropping an input from
+    /// [`IvcProverSetup::test_key_cache`] makes this fail rather than silently sharing an entry.
+    #[test]
+    fn every_test_key_cache_input_changes_the_address() {
+        let circuit_digest =
+            |seed: u8| -> CircuitVerificationKeyDigest { hex::encode([seed; 32]).parse().unwrap() };
+        let parameters = Parameters {
+            k: 3,
+            m: 10,
+            phi_f: 0.2,
+        };
+        let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
+                         recursive_circuit_digest: CircuitVerificationKeyDigest,
+                         parameters: Parameters,
+                         merkle_tree_depth: u32,
+                         unsafe_srs_seed: u64| {
+            IvcProverSetup::test_key_cache(
+                &certificate_circuit_digest,
+                &recursive_circuit_digest,
+                &parameters,
+                merkle_tree_depth,
+                unsafe_srs_seed,
+            )
+            .expect("the test key cache should resolve")
+            .directory()
+            .to_path_buf()
+        };
+        let baseline = directory(circuit_digest(1), circuit_digest(2), parameters, 4, 42);
+
+        for (label, varied) in [
+            (
+                "certificate circuit digest",
+                directory(circuit_digest(3), circuit_digest(2), parameters, 4, 42),
+            ),
+            (
+                "recursive circuit digest",
+                directory(circuit_digest(1), circuit_digest(3), parameters, 4, 42),
+            ),
+            (
+                "quorum size",
+                directory(
+                    circuit_digest(1),
+                    circuit_digest(2),
+                    Parameters { k: 4, ..parameters },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "lottery count",
+                directory(
+                    circuit_digest(1),
+                    circuit_digest(2),
+                    Parameters {
+                        m: 11,
+                        ..parameters
+                    },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "phi_f",
+                directory(
+                    circuit_digest(1),
+                    circuit_digest(2),
+                    Parameters {
+                        phi_f: 0.3,
+                        ..parameters
+                    },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "merkle tree depth",
+                directory(circuit_digest(1), circuit_digest(2), parameters, 5, 42),
+            ),
+            (
+                "unsafe srs seed",
+                directory(circuit_digest(1), circuit_digest(2), parameters, 4, 43),
+            ),
+        ] {
+            assert_ne!(
+                baseline, varied,
+                "a change of {label} must resolve to a different cache entry"
+            );
+        }
+    }
+
     #[test]
     fn prover_input_verification_context_derives_fixed_bases_from_both_verifying_keys() {
         let asset = load_embedded_verification_context_asset()
@@ -434,9 +530,13 @@ mod tests {
             // the one key type with no valid-key round-trip test of its own. The generated keys are
             // dropped first so the recursive pair, a gigabyte on disk, is never held twice.
             let key_cache = IvcProverSetup::test_key_cache(
-                &parameters.to_bytes().expect("parameters should encode"),
-                &merkle_tree_depth.to_le_bytes(),
-                &UNSAFE_SRS_SEED.to_le_bytes(),
+                &CircuitVerificationKeyDigest::for_production_certificate_circuit()
+                    .expect("the embedded certificate production key should decode"),
+                &CircuitVerificationKeyDigest::for_ivc_circuit()
+                    .expect("the embedded recursive production key should decode"),
+                &parameters,
+                merkle_tree_depth,
+                UNSAFE_SRS_SEED,
             )
             .expect("the test key cache should resolve");
             let certificate_directory = key_cache.directory().join("certificate");

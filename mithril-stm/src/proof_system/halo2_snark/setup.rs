@@ -100,20 +100,12 @@ impl SnarkProverSetup {
         merkle_tree_depth: u32,
         unsafe_srs_degree: u32,
     ) -> StmResult<Self> {
-        let parameters_bytes = parameters.to_bytes()?;
-        let depth_bytes = merkle_tree_depth.to_le_bytes();
-        let seed_bytes = UNSAFE_SRS_SEED.to_le_bytes();
-        let certificate_circuit_digest =
-            CircuitVerificationKeyDigest::for_production_certificate_circuit()?;
-        let cache = FileMutex::for_shared_cache(
-            "non-recursive",
-            &[
-                certificate_circuit_digest.as_bytes(),
-                &parameters_bytes,
-                &depth_bytes,
-                &seed_bytes,
-            ],
-        );
+        let cache = Self::test_key_cache(
+            &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
+            parameters,
+            merkle_tree_depth,
+            UNSAFE_SRS_SEED,
+        )?;
         let cache_directory = cache.directory().to_path_buf();
         // Serialize cold-start keygen across the parallel slow-test processes.
         let _key_cache_lock = cache.lock()?;
@@ -123,6 +115,28 @@ impl SnarkProverSetup {
         let circuit = CertificateCircuit::try_new(parameters, merkle_tree_depth)?;
         let provider = KeyProvider::new(cache_directory, "non-recursive", &[], circuit);
         Self::load(&trusted_setup_provider, &provider)
+    }
+
+    /// The shared cache the test setup derives its keys in.
+    ///
+    /// Every input is a parameter, so the address is a pure function of them and a test can vary
+    /// each one.
+    #[cfg(test)]
+    fn test_key_cache(
+        certificate_circuit_digest: &CircuitVerificationKeyDigest,
+        parameters: &crate::Parameters,
+        merkle_tree_depth: u32,
+        unsafe_srs_seed: u64,
+    ) -> StmResult<FileMutex> {
+        Ok(FileMutex::for_shared_cache(
+            "non-recursive",
+            &[
+                certificate_circuit_digest.as_bytes(),
+                &parameters.to_bytes()?,
+                &merkle_tree_depth.to_le_bytes(),
+                &unsafe_srs_seed.to_le_bytes(),
+            ],
+        ))
     }
 }
 
@@ -182,8 +196,8 @@ mod test {
     use crate::{
         Parameters,
         circuits::{
-            halo2::circuit::CertificateCircuit, key_provider::KeyProvider,
-            trusted_setup::TrustedSetupProvider,
+            CircuitVerificationKeyDigest, halo2::circuit::CertificateCircuit,
+            key_provider::KeyProvider, trusted_setup::TrustedSetupProvider,
         },
         codec::TryToBytes,
         proof_system::halo2_snark::SnarkProverSetup,
@@ -194,6 +208,87 @@ mod test {
             k: 3,
             m: 10,
             phi_f: 0.2,
+        }
+    }
+
+    fn circuit_digest(seed: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([seed; 32]).parse().unwrap()
+    }
+
+    /// Exercises the test key cache address, so dropping an input from
+    /// [`SnarkProverSetup::test_key_cache`] makes this fail rather than silently sharing an entry.
+    #[test]
+    fn every_test_key_cache_input_changes_the_address() {
+        let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
+                         parameters: Parameters,
+                         merkle_tree_depth: u32,
+                         unsafe_srs_seed: u64| {
+            SnarkProverSetup::test_key_cache(
+                &certificate_circuit_digest,
+                &parameters,
+                merkle_tree_depth,
+                unsafe_srs_seed,
+            )
+            .expect("the test key cache should resolve")
+            .directory()
+            .to_path_buf()
+        };
+        let baseline = directory(circuit_digest(1), default_params(), 4, 42);
+
+        for (label, varied) in [
+            (
+                "certificate circuit digest",
+                directory(circuit_digest(2), default_params(), 4, 42),
+            ),
+            (
+                "quorum size",
+                directory(
+                    circuit_digest(1),
+                    Parameters {
+                        k: 4,
+                        ..default_params()
+                    },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "lottery count",
+                directory(
+                    circuit_digest(1),
+                    Parameters {
+                        m: 11,
+                        ..default_params()
+                    },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "phi_f",
+                directory(
+                    circuit_digest(1),
+                    Parameters {
+                        phi_f: 0.3,
+                        ..default_params()
+                    },
+                    4,
+                    42,
+                ),
+            ),
+            (
+                "merkle tree depth",
+                directory(circuit_digest(1), default_params(), 5, 42),
+            ),
+            (
+                "unsafe srs seed",
+                directory(circuit_digest(1), default_params(), 4, 43),
+            ),
+        ] {
+            assert_ne!(
+                baseline, varied,
+                "a change of {label} must resolve to a different cache entry"
+            );
         }
     }
 
