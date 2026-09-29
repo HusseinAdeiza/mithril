@@ -175,21 +175,21 @@ Both SNARK flavors require substantially more computation to produce an aggregat
 
 ## The three aggregate signature types
 
-`AggregateSignatureType` names the three formats an [aggregate signature](#term-aggregate-signature) can take. `Concatenation` is the default and is always compiled. Enabling `future_snark` adds `Snark` and `IvcSnark`; without it, only concatenation aggregate signatures are supported.
+`AggregateSignatureType` names the three formats an [aggregate signature](#term-aggregate-signature) can take. `Concatenation` is the default and is always compiled. Enabling `snark` adds `Snark` and `IvcSnark`; without it, only concatenation aggregate signatures are supported.
 
 Given trusted [circuit verification keys](#term-circuit-verification-key) and the genesis trust anchor, only `IvcSnark` authenticates the full chain without fetching predecessor certificates. Chain verification therefore stops at the first valid certificate of that type.
 
 Both SNARK types use circuit verification keys carried in [ancillary verifier data](#term-ancillary-verifier-data), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. At this baseline the registry and certification primitives exist, but the standard certificate verifier does not yet invoke that certification check. Concatenation uses no circuit verification key.
 
-| Type            | Flavor              | Compiled            | Tag | Certifies the full chain | Requires externally certified circuit keys |
-| --------------- | ------------------- | ------------------- | --- | ------------------------ | ------------------------------------------ |
-| `Concatenation` | Concatenation       | always              | `0` | No                       | No                                         |
-| `Snark`         | Non-recursive SNARK | with `future_snark` | `1` | No                       | Yes                                        |
-| `IvcSnark`      | Recursive SNARK     | with `future_snark` | `2` | Yes                      | Yes                                        |
+| Type            | Flavor              | Compiled     | Tag | Certifies the full chain | Requires externally certified circuit keys |
+| --------------- | ------------------- | ------------ | --- | ------------------------ | ------------------------------------------ |
+| `Concatenation` | Concatenation       | always       | `0` | No                       | No                                         |
+| `Snark`         | Non-recursive SNARK | with `snark` | `1` | No                       | Yes                                        |
+| `IvcSnark`      | Recursive SNARK     | with `snark` | `2` | Yes                      | Yes                                        |
 
 The current binary format stores the tag in a versioned CBOR envelope; the legacy format used it as a leading byte. Changing the tag mapping breaks compatibility with existing encoded data. Part 3 describes the encoding and decoding rules.
 
-A build with `future_snark` supports all three types, and the aggregator configuration selects which to produce. The concatenation path remains available. SNARK operation additionally requires the corresponding keys and protocol inputs; recursive operation requires genesis and continuation data.
+A build with `snark` supports all three types, and the aggregator configuration selects which to produce. The concatenation path remains available. SNARK operation additionally requires the corresponding keys and protocol inputs; recursive operation requires genesis and continuation data.
 
 ## The pipeline, end to end
 
@@ -283,7 +283,7 @@ The cryptographic core is in `mithril-stm`. The five areas below connect protoco
 | `proof_system/`          | One module per flavor: `concatenation/`, `halo2_snark/`, `halo2_ivc_snark/`. Each holds the prover, the verifier and the flavor's own types.                                                          |
 | `circuits/`              | The circuits themselves: `halo2/` for the certificate circuit, `halo2_ivc/` for the recursive one, plus the trusted setup, key generation, key serialization and the circuit verification key digest. |
 
-`circuits/` and the two SNARK proof-system modules are compiled with `future_snark`. `circuits/` defines the relations, their constraints and the circuit-key machinery. `proof_system/` prepares inputs and drives proving and verification; its runtime setup objects hold the circuit, the setup parameters and the keys obtained through that machinery.
+`circuits/` and the two SNARK proof-system modules are compiled with `snark`. `circuits/` defines the relations, their constraints and the circuit-key machinery. `proof_system/` prepares inputs and drives proving and verification; its runtime setup objects hold the circuit, the setup parameters and the keys obtained through that machinery.
 
 Later parts name the files they discuss.
 
@@ -1159,7 +1159,7 @@ This is the path the in-review stack implements, in PR #3514. At the baseline th
 
 Which flavors require certification is a property of the aggregate signature type, pinned by a golden test: concatenation uses no circuit and is exempt. The check runs in the certificate verifier on both the standard path and the full-chain shortcut. A client resolves its network's registry through the published networks file by matching its aggregator endpoint; an aggregator is configured with a registry URL, where `file://` reads a local file. That routing decides which document is offered, not whether it is trusted: a wrong entry affects availability and which version is seen, while the genesis signature decides acceptance.
 
-**The feature gate.** All of this sits behind the `future_snark` feature, which the distributions do not enable at the revisions described. A network enforces the registry once its distribution is built with the feature, a registry is published for it, and its nodes are configured with a source. Building with the feature is necessary and not sufficient.
+**The feature gate.** All of this sits behind the `snark` feature, which the distributions do not enable at the revisions described. A network enforces the registry once its distribution is built with the feature, a registry is published for it, and its nodes are configured with a source. Building with the feature is necessary and not sufficient.
 
 **What this constrains.** Signature verification establishes that a registry is authentic, not that it is the latest published. What a node does about updates is the refresh policy and the version rules above; neither establishes that the registry in hand is current. Part 8 covers publication and deployment.
 
@@ -1359,15 +1359,15 @@ The recursive proof-system slow tests run in a group capped at one thread. The c
 
 Benchmarks measure time and size. Some assert that a proving or verification step succeeded, but those assertions do not replace the regression suite. Seven targets exist.
 
-| Target               | Measures                                                               | Features required                     |
-| -------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
-| `multi_sig`          | BLS signing, verification, batch operations                            | `benchmark-internals`                 |
-| `schnorr_sig`        | Schnorr operations and Poseidon hashing                                | `future_snark`, `benchmark-internals` |
-| `halo2_snark`        | Certificate setup, prove and verify across parameter tiers             | both                                  |
-| `halo2_prover_modes` | Mock against real prover, with extrapolated end-to-end totals          | both                                  |
-| `halo2_ivc_snark`    | Recursive prove, verify and fold; proof size; cold and warm setup      | both                                  |
-| `stm`                | Registration, lotteries, concatenation aggregation, batch verification | none declared                         |
-| `size_benches`       | Serialized concatenation aggregate sizes                               | none declared                         |
+| Target               | Measures                                                               | Features required              |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------ |
+| `multi_sig`          | BLS signing, verification, batch operations                            | `benchmark-internals`          |
+| `schnorr_sig`        | Schnorr operations and Poseidon hashing                                | `snark`, `benchmark-internals` |
+| `halo2_snark`        | Certificate setup, prove and verify across parameter tiers             | both                           |
+| `halo2_prover_modes` | Mock against real prover, with extrapolated end-to-end totals          | both                           |
+| `halo2_ivc_snark`    | Recursive prove, verify and fold; proof size; cold and warm setup      | both                           |
+| `stm`                | Registration, lotteries, concatenation aggregation, batch verification | none declared                  |
+| `size_benches`       | Serialized concatenation aggregate sizes                               | none declared                  |
 
 **The methods differ**, and a reader comparing numbers across targets needs to know how. `halo2_snark` combines Criterion sampling with single-run tiers. `halo2_ivc_snark` takes manual single observations. `halo2_prover_modes` extrapolates a total from an assumed certificate count, which is a projection rather than a measured run. "None declared" describes the target's own gate, not a promise that optional features never reach the code.
 
@@ -1395,7 +1395,7 @@ Three separate controls decide whether a certificate is a SNARK certificate.
 
 **The aggregation flavor** is the aggregator's own configuration, and it defaults to concatenation. Lagrange does not select a SNARK flavor; it makes one possible. A network can be in Lagrange with every aggregator still producing concatenation certificates.
 
-**The compiled feature** is `future_snark`, which gates the SNARK code at build time. It exists while that code is under development and is expected to be removed once it ships on the default path, leaving the other two controls to decide. Until then, a binary built without it cannot produce or verify a SNARK certificate whatever the era says.
+**The compiled feature** is `snark`, which gates the SNARK code at build time. It exists while that code is under development and is expected to be removed once it ships on the default path, leaving the other two controls to decide. Until then, a binary built without it cannot produce or verify a SNARK certificate whatever the era says.
 
 Within a binary that carries the flavor, the certificate's own signature variant selects the verification path. A producer's current aggregation setting is not consulted when one of its earlier certificates is verified, so changing that setting does not affect what it has already issued.
 
@@ -1540,7 +1540,7 @@ A prover checks the string against the pinned hash each time it loads it, and fo
 
 **The circuit expresses the intended relation.** Soundness establishes that the circuit's constraints were satisfied. That those constraints express the protocol's rules is established by design, review and testing, which the next section covers.
 
-**The circuit keys a verifier accepts are the intended ones.** At the baseline nothing certifies them: the standard verifier takes the keys from the certificate and consults no registry. Decoding checks a key's structural compatibility with its position; it does not establish that the key represents Mithril's intended relation. Accepting a recursive certificate also ends the walk to its predecessors, so that walk adds no later check on the circuit it was proved with. Enforcement therefore has to be in place before a distribution enables `future_snark`. Under the in-review enforcement it checks their digests against the genesis-signed registry, and Part 8 gives the refresh behaviour that decides when a published revocation reaches a given node.
+**The circuit keys a verifier accepts are the intended ones.** At the baseline nothing certifies them: the standard verifier takes the keys from the certificate and consults no registry. Decoding checks a key's structural compatibility with its position; it does not establish that the key represents Mithril's intended relation. Accepting a recursive certificate also ends the walk to its predecessors, so that walk adds no later check on the circuit it was proved with. Enforcement therefore has to be in place before a distribution enables `snark`. Under the in-review enforcement it checks their digests against the genesis-signed registry, and Part 8 gives the refresh behaviour that decides when a published revocation reaches a given node.
 
 Before a revocation is published and applied, what an adversary gains follows from why the key is revoked. If the circuit permits a protocol-invalid witness, a prover can produce a proof that verifies while violating the protocol, and a verifier that has not yet applied the revocation still authorizes the key identifying that circuit, so the certificate passes the registry check. It must still pass the proof and integrity checks, so continued authorization is not acceptance by itself. Once applied, revocation blocks later verifications and does not undo what was decided from certificates already accepted. Not every revoked circuit is exploitable, and the window has no established upper bound.
 

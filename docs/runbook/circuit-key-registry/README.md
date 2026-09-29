@@ -32,7 +32,7 @@ version.
 > [!NOTE]
 > The `circuit-key-registry` command and the `circuit_verification_key_registry_url` parameter of
 > the aggregator, and the `--circuit-verification-key-registry-path` parameter of the client, only
-> exist in binaries built with the `future_snark` feature, which the distributions do not enable
+> exist in binaries built with the `snark` feature, which the distributions do not enable
 > yet: a deployed Mithril network enforces the registry once its distribution is built with it.
 
 > [!IMPORTANT]
@@ -104,10 +104,10 @@ verification keys, which binds the circuit gates. The two circuits behave differ
 
 - The genesis secret key of the Mithril network, on the air-gapped machine used for signing
 - The protocol parameters of the Mithril network
-- A `mithril-aggregator` binary built with the `future_snark` feature:
+- A `mithril-aggregator` binary built with the `snark` feature:
 
 ```bash
-cargo build --release -p mithril-aggregator --features future_snark
+cargo build --release -p mithril-aggregator --features snark
 ```
 
 ## Setup environment variables
