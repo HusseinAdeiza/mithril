@@ -58,9 +58,9 @@ impl SignerBuilder {
                         .verification_key_signature_for_concatenation,
                     kes_evolutions: signer.kes_evolutions,
                     verification_key_for_concatenation: signer.verification_key_for_concatenation,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: signer.verification_key_for_snark,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: signer
                         .verification_key_signature_for_snark,
                 })

@@ -85,7 +85,7 @@ mod tests {
             let entry = RegistrationEntry::new(
                 bls_vk,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk),
             )
             .unwrap();

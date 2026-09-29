@@ -4,7 +4,7 @@ use mithril_stm::{
     AggregateVerificationKeyForConcatenation, AncillaryProverData, AncillaryVerifierData,
     SingleSignature, VerificationKeyProofOfPossessionForConcatenation,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_stm::{AggregateVerificationKeyForSnark, VerificationKeyForSnark};
 
 use crate::StdResult;
@@ -24,12 +24,12 @@ pub type ProtocolSignerVerificationKeySignatureForConcatenation = ProtocolKey<Su
 
 /// Wrapper of [MithrilStm:VerificationKeyForSnark](type@VerificationKeyForSnark) to add serialization
 /// utilities.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub type ProtocolSignerVerificationKeyForSnark = ProtocolKey<VerificationKeyForSnark>;
 
 /// Wrapper of [KES:Sum6KesSig](https://github.com/input-output-hk/kes/blob/master/src/kes.rs) to add
 /// serialization utilities.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub type ProtocolSignerVerificationKeySignatureForSnark = ProtocolKey<Sum6KesSig>;
 
 /// Wrapper of [MithrilStm:SingleSignature](type@SingleSignature) to add serialization utilities.
@@ -49,7 +49,7 @@ pub type ProtocolAggregateVerificationKeyForConcatenation =
     ProtocolKey<AggregateVerificationKeyForConcatenation<ProtocolMembershipDigest>>;
 
 /// Wrapper of [MithrilStm:AggregateVerificationKeyForSnark](struct@AggregateVerificationKeyForSnark).
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub type ProtocolAggregateVerificationKeyForSnark =
     ProtocolKey<AggregateVerificationKeyForSnark<ProtocolMembershipDigest>>;
 
@@ -95,7 +95,7 @@ impl ProtocolKeyCodec<AggregateSignature<ProtocolMembershipDigest>>
         // under `bytes_hex_codec` and drop this custom codec.
         match AggregateSignatureType::from(key) {
             AggregateSignatureType::Concatenation => ProtocolKey::key_to_json_hex(key),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark | AggregateSignatureType::IvcSnark => {
                 ProtocolKey::key_to_bytes_hex(key)
             }
@@ -103,12 +103,12 @@ impl ProtocolKeyCodec<AggregateSignature<ProtocolMembershipDigest>>
     }
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 impl_codec_and_type_conversions_for_protocol_key!(
     json_hex_codec => VerificationKeyForSnark
 );
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 impl_codec_and_type_conversions_for_protocol_key!(
     bytes_hex_codec => AggregateVerificationKeyForSnark<ProtocolMembershipDigest>
 );

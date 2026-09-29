@@ -7,7 +7,7 @@ use super::{
     MerkleBatchPath, MerkleTreeBatchCommitment, MerkleTreeLeaf, left_child, parent, right_child,
     sibling,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use super::{MerklePath, MerkleTreeCommitment};
 
 /// Tree of hashes, providing a commitment of data and its ordering.
@@ -141,13 +141,13 @@ impl<D: Digest + FixedOutput, L: MerkleTreeLeaf> MerkleTree<D, L> {
         MerkleBatchPath::new(proof, indices)
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Convert merkle tree to a commitment. This function simply returns the root.
     pub(crate) fn to_merkle_tree_commitment(&self) -> MerkleTreeCommitment<D, L> {
         MerkleTreeCommitment::new(self.nodes[0].clone()) // Use private constructor
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Get a path (hashes of siblings of the path to the root node)
     /// for the `i`th value stored in the tree.
     /// Requires `i < self.n`
@@ -174,7 +174,7 @@ impl<D: Digest + FixedOutput, L: MerkleTreeLeaf> MerkleTree<D, L> {
         MerklePath::new(proof, i)
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Get a path (hashes of siblings of the path to the root node)
     /// for the `i`th value stored in the tree and pad it to reach the
     /// given length.
@@ -231,7 +231,7 @@ mod tests {
             // Test the relation that t.get_path(i) is a valid
             // proof for i
             #![proptest_config(ProptestConfig::with_cases(100))]
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_create_proof((t, values) in arb_tree(30)) {
                 values.iter().enumerate().for_each(|(i, _v)| {
@@ -240,7 +240,7 @@ mod tests {
                 })
             }
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_bytes_path((t, values) in arb_tree(30)) {
                 values.iter().enumerate().for_each(|(i, _v)| {
@@ -251,7 +251,7 @@ mod tests {
                 })
             }
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_bytes_tree_commitment((t, values) in arb_tree(5)) {
                 let encoded = t.to_merkle_tree_commitment().to_bytes().expect("MerkleTreeCommitment serialization should not fail");
@@ -261,7 +261,7 @@ mod tests {
                 assert_eq!(tree_commitment.root, decoded.root);
             }
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_bytes_tree_commitment_batch_compat((t, values) in arb_tree(5)) {
                 let encoded = t.to_merkle_tree_batch_commitment().to_bytes().expect("MerkleTreeBatchCommitment serialization should not fail");
@@ -287,7 +287,7 @@ mod tests {
         }
 
         proptest! {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_create_invalid_proof(
                 i in any::<usize>(),
@@ -358,7 +358,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod golden {
             use super::*;
 
@@ -406,7 +406,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod golden_json {
             use super::*;
             const GOLDEN_JSON: &str = r#"
@@ -449,7 +449,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark {
         use midnight_curves::Fq;
 
@@ -530,7 +530,7 @@ mod tests {
             // Test the relation that t.get_path(i) is a valid
             // proof for i
             #![proptest_config(ProptestConfig::with_cases(100))]
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_create_proof((t, values) in arb_tree_poseidon(30)) {
                 values.iter().enumerate().for_each(|(i, _v)| {
@@ -539,7 +539,7 @@ mod tests {
                 })
             }
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_bytes_path((t, values) in arb_tree_poseidon(30)) {
                 values.iter().enumerate().for_each(|(i, _v)| {
@@ -550,7 +550,7 @@ mod tests {
                 })
             }
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[test]
             fn test_bytes_tree_commitment((t, values) in arb_tree_poseidon(5)) {
                 let encoded = t.to_merkle_tree_commitment().to_bytes().expect("MerkleTreeCommitment serialization should not fail");
@@ -577,7 +577,7 @@ mod tests {
             use super::*;
 
             proptest! {
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 #[test]
                 fn test_create_invalid_proof(
                     i in any::<usize>(),
@@ -592,7 +592,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod golden {
             use super::*;
 
@@ -632,7 +632,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod golden_json {
             use super::*;
             const GOLDEN_JSON: &str = r#"

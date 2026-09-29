@@ -10,7 +10,7 @@ use mithril_common::crypto_helper::{KesPeriod, KesSigner, ProtocolInitializer};
 use mithril_common::entities::{
     PartyId, ProtocolMessage, ProtocolParameters, SingleSignature, Stake,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::entities::{SignerWithStake, SupportedEra};
 use mithril_common::logging::LoggerExtensions;
 use mithril_common::protocol::{SignerBuilder, SingleSigner as ProtocolSingleSigner};
@@ -99,14 +99,14 @@ impl MithrilSingleSigner {
                 )
             })?;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let protocol_initializer = protocol_initializer.clone();
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let mut protocol_initializer = protocol_initializer.clone();
 
         let current_signers_with_stake = epoch_service.current_signers_with_stake().await?;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let current_signers_with_stake = {
             if epoch_service.mithril_era()? == SupportedEra::Pythagoras {
                 protocol_initializer.strip_snark_keys();
@@ -276,7 +276,7 @@ mod tests {
                     &current_signer.protocol_signer.get_stake(),
                     &avk,
                     &expected_message,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .is_ok(),
@@ -293,7 +293,7 @@ mod tests {
         sign_and_verify(&single_signer, &fixture).await;
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_key_stripping {
         use super::*;
 

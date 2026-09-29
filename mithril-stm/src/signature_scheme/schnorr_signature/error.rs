@@ -1,8 +1,8 @@
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use super::{PrimeOrderProjectivePoint, StandardSchnorrSignature, UniqueSchnorrSignature};
 
 /// Error types for the Unique Schnorr signatures.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum SchnorrSignatureError {
     /// Invalid Unique signature

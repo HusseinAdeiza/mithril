@@ -7,22 +7,22 @@
 
 #![warn(missing_docs)]
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod certifier;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod http_downloader;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod registry;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod retriever;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub mod test;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use certifier::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use http_downloader::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use registry::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use retriever::*;

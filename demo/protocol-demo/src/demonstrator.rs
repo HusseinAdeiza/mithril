@@ -10,7 +10,7 @@ use std::path;
 
 use mithril_common::crypto_helper::{key_decode_hex, key_encode_hex};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::types::ProtocolSignerVerificationKeyForSnark;
 use crate::types::{
     ProtocolClerk, ProtocolInitializerNotCertified, ProtocolKeyRegistrationNotCertified,
@@ -24,7 +24,7 @@ struct PlayerArtifact {
     party_id: ProtocolPartyId,
     stake: ProtocolStake,
     verification_key_for_concatenation: String,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     verification_key_for_snark: Option<String>,
     initializer: String,
 }
@@ -38,7 +38,7 @@ pub struct PlayerFixture {
     /// The verification key for the Concatenation proof system
     verification_key_for_concatenation: ProtocolSignerVerificationKeyForConcatenation,
     /// The verification key for the Snark proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark>,
 }
 
@@ -119,7 +119,7 @@ impl Party {
                 .register(
                     player.stake,
                     &player.verification_key_for_concatenation,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     player.verification_key_for_snark,
                 )
                 .unwrap();
@@ -172,14 +172,14 @@ impl Party {
         let ancillary_input = AncillaryProofInput::new(
             None,
             AncillaryGenesisData::new(
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Vec::new(),
         );
         let msig = self.clerk.as_ref().unwrap().aggregate_signatures_with_type(
@@ -290,7 +290,7 @@ impl Verifier {
             party_id: _,
             stake,
             verification_key_for_concatenation,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark,
         } in players_with_keys
         {
@@ -298,7 +298,7 @@ impl Verifier {
                 .register(
                     *stake,
                     verification_key_for_concatenation,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark.map(|vk| vk.to_owned()),
                 )
                 .unwrap();
@@ -429,7 +429,7 @@ impl ProtocolDemonstrator for Demonstrator {
                         .get_verification_key_proof_of_possession_for_concatenation(),
                 )
                 .unwrap(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: protocol_initializer
                     .get_verification_key_for_snark()
                     .map(|vk| key_encode_hex(vk).unwrap()),
@@ -446,7 +446,7 @@ impl ProtocolDemonstrator for Demonstrator {
                     &player.verification_key_for_concatenation,
                 )
                 .unwrap(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: player
                     .verification_key_for_snark
                     .as_ref()

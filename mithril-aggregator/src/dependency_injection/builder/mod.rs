@@ -25,9 +25,9 @@ use mithril_cardano_node_internal_database::{
     ImmutableFileObserver,
     digesters::{ImmutableDigester, cache::ImmutableFileDigestCacheProvider},
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_circuit_key_registry::CircuitVerificationKeyRegistryRetriever;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::certificate_chain::CircuitVerificationKeyCertifier;
 use mithril_common::{
     api_version::APIVersionProvider,
@@ -196,12 +196,12 @@ pub struct DependenciesBuilder {
     pub certificate_verifier: Option<Arc<dyn CertificateVerifier>>,
 
     /// Circuit verification key registry retriever service.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub circuit_verification_key_registry_retriever:
         Option<Arc<dyn CircuitVerificationKeyRegistryRetriever>>,
 
     /// Circuit verification key certifier service.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub circuit_verification_key_certifier: Option<Arc<dyn CircuitVerificationKeyCertifier>>,
 
     /// Genesis signature verifier service.
@@ -348,9 +348,9 @@ impl DependenciesBuilder {
             file_archiver: None,
             snapshotter: None,
             certificate_verifier: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             circuit_verification_key_registry_retriever: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             circuit_verification_key_certifier: None,
             genesis_verifier: None,
             certificate_chain_synchronizer: None,

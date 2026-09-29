@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::entities::SupportedEra;
 use mithril_common::{
     StdResult,
@@ -179,7 +179,7 @@ impl MessageService for MithrilMessageService {
             epoch_service.signer_registration_protocol_parameters()?.clone();
         let current_signers = epoch_service.current_signers()?;
         let next_signers = epoch_service.next_signers()?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let mithril_era = epoch_service.mithril_era()?;
 
         let cardano_transactions_discriminant =
@@ -193,7 +193,7 @@ impl MessageService for MithrilMessageService {
         let current_signer_parts = SignerMessagePart::from_signers(current_signers.to_vec());
         let next_signer_parts = SignerMessagePart::from_signers(next_signers.to_vec());
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (current_signer_parts, next_signer_parts) = if mithril_era == SupportedEra::Pythagoras {
             (
                 SignerMessagePart::strip_snark_fields(current_signer_parts),
@@ -722,7 +722,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod snark_backward_compatibility {
             use mithril_common::entities::SupportedEra;
 

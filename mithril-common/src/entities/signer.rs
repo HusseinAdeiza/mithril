@@ -1,4 +1,4 @@
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::{
     ProtocolSignerVerificationKeyForSnark, ProtocolSignerVerificationKeySignatureForSnark,
 };
@@ -47,12 +47,12 @@ pub struct Signer {
     pub kes_evolutions: Option<KesEvolutions>,
 
     /// The verification key for the SNARK proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark>,
 
     /// The KES signature over the verification key for SNARK
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_signature_for_snark:
         Option<ProtocolSignerVerificationKeySignatureForSnark>,
@@ -101,11 +101,11 @@ impl Signer {
             hasher.update(operational_certificate.to_json_hex().unwrap().as_bytes());
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(verification_key_for_snark) = &self.verification_key_for_snark {
             hasher.update(verification_key_for_snark.to_json_hex().unwrap().as_bytes());
         }
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(verification_key_signature_for_snark) =
             &self.verification_key_signature_for_snark
         {
@@ -139,7 +139,7 @@ impl Debug for Signer {
                     )
                     .field("kes_evolutions", &format_args!("{:?}", self.kes_evolutions));
 
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 {
                     debug
                         .field(
@@ -168,9 +168,9 @@ impl From<SignerWithStake> for Signer {
                 .verification_key_signature_for_concatenation,
             operational_certificate: other.operational_certificate,
             kes_evolutions: other.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: other.verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: other.verification_key_signature_for_snark,
         }
     }
@@ -212,12 +212,12 @@ pub struct SignerWithStake {
     pub stake: Stake,
 
     /// The verification key for the SNARK proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark>,
 
     /// The KES signature over the verification key for SNARK (hex encoded)
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_signature_for_snark:
         Option<ProtocolSignerVerificationKeySignatureForSnark>,
@@ -252,9 +252,9 @@ impl SignerWithStake {
             operational_certificate: signer.operational_certificate,
             kes_evolutions: signer.kes_evolutions,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: signer.verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: signer.verification_key_signature_for_snark,
         }
     }
@@ -264,7 +264,7 @@ impl SignerWithStake {
     /// This clears the SNARK verification key and its KES signature, which is needed
     /// during eras that do not support SNARK proofs (e.g. Pythagoras) to ensure
     /// consistency between the signer's initializer and the key registration entries.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn without_snark_fields(mut self) -> Self {
         self.verification_key_for_snark = None;
         self.verification_key_signature_for_snark = None;
@@ -272,7 +272,7 @@ impl SignerWithStake {
     }
 
     /// Remove SNARK-related fields from a list of signers with stake for backward compatibility.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn strip_snark_fields(signers: Vec<Self>) -> Vec<Self> {
         signers.into_iter().map(Self::without_snark_fields).collect()
     }
@@ -297,11 +297,11 @@ impl SignerWithStake {
         }
         hasher.update(self.stake.to_be_bytes());
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(verification_key_for_snark) = &self.verification_key_for_snark {
             hasher.update(verification_key_for_snark.to_json_hex().unwrap().as_bytes());
         }
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(verification_key_signature_for_snark) =
             &self.verification_key_signature_for_snark
         {
@@ -335,7 +335,7 @@ impl Debug for SignerWithStake {
                     )
                     .field("kes_evolutions", &format_args!("{:?}", self.kes_evolutions));
 
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 {
                     debug
                         .field(
@@ -374,9 +374,9 @@ mod tests {
             verification_key_signature_for_concatenation: None,
             operational_certificate: None,
             kes_evolutions: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: None,
         };
         let signer_with_stake = SignerWithStake {
@@ -386,9 +386,9 @@ mod tests {
             operational_certificate: None,
             kes_evolutions: None,
             stake: 100,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: None,
         };
 
@@ -409,9 +409,9 @@ mod tests {
             verification_key_signature_for_concatenation: None,
             operational_certificate: None,
             kes_evolutions: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: None,
         };
 
@@ -422,10 +422,10 @@ mod tests {
 
     #[test]
     fn test_signer_with_stake_compute_hash() {
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const EXPECTED_HASH: &str =
             "9a832baccd04aabfc419f57319e3831a1655a95bf3bf5ed96a1167d1e81b5085";
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const EXPECTED_HASH: &str =
             "6158c4f514b1e15dc745845dac9014e710ee6b2f0c5b2b1023d5207cf6b75db9";
         let signers = MithrilFixtureBuilder::default()
@@ -459,7 +459,7 @@ mod tests {
             assert_ne!(EXPECTED_HASH, signer_different_stake.compute_hash());
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let mut signer_different_verification_key_for_snark = signer.clone();
             signer_different_verification_key_for_snark.verification_key_for_snark =
@@ -471,7 +471,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let mut signer_different_verification_key_signature_for_snark = signer.clone();
             signer_different_verification_key_signature_for_snark
@@ -485,7 +485,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod strip_snark_fields {
         use super::*;
 

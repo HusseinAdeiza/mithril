@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             &initializer.get_verification_key_proof_of_possession_for_concatenation(),
             // The SNARK proof systems need a second key per signer; the concatenation one does not,
             // so this argument only exists when the feature is enabled.
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             initializer.get_verification_key_for_snark(),
         )?;
         initializers.push(initializer);
@@ -85,14 +85,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ancillary_input = AncillaryProofInput::new(
         None,
         AncillaryGenesisData::new(
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Vec::new(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
         ),
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         Vec::new(),
     );
 

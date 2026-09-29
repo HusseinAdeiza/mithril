@@ -1,4 +1,4 @@
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use anyhow::Context;
 use anyhow::anyhow;
 use rand_core::{CryptoRng, RngCore};
@@ -10,7 +10,7 @@ use crate::{
     VerificationKeyProofOfPossessionForConcatenation, proof_system::ConcatenationProofSigner,
     signature_scheme::BlsSigningKey,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     ClosedRegistrationEntry, RegistrationEntryForSnark, VerificationKeyForSnark,
     proof_system::SnarkProofSigner, signature_scheme::SchnorrSigningKey,
@@ -35,11 +35,11 @@ pub struct Initializer {
     #[serde(rename = "pk")]
     pub bls_verification_key_proof_of_possession: VerificationKeyProofOfPossessionForConcatenation,
     /// Signing key for snark proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schnorr_signing_key: Option<SchnorrSigningKey>,
     /// Verification key for snark proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schnorr_verification_key: Option<VerificationKeyForSnark>,
 }
@@ -50,7 +50,7 @@ impl Initializer {
         let bls_signing_key = BlsSigningKey::generate(rng);
         let bls_verification_key_proof_of_possession =
             VerificationKeyProofOfPossessionForConcatenation::from(&bls_signing_key);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (schnorr_signing_key, schnorr_verification_key) = {
             let sk = SchnorrSigningKey::generate(rng);
             let vk = VerificationKeyForSnark::new_from_signing_key(sk.clone());
@@ -61,9 +61,9 @@ impl Initializer {
             parameters,
             bls_signing_key,
             bls_verification_key_proof_of_possession,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_signing_key,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_verification_key,
         }
     }
@@ -87,7 +87,7 @@ impl Initializer {
         let registration_entry = RegistrationEntry::new(
             self.bls_verification_key_proof_of_possession,
             self.stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             self.schnorr_verification_key,
         )?;
 
@@ -114,7 +114,7 @@ impl Initializer {
             key_registration_commitment_for_concatenation,
         );
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let snark_proof_signer = {
             match (self.schnorr_signing_key, self.schnorr_verification_key) {
                 (Some(schnorr_signing_key), Some(schnorr_verification_key)) => {
@@ -148,7 +148,7 @@ impl Initializer {
             closed_key_registration.clone(),
             self.parameters,
             registration_entry.get_stake(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_proof_signer,
         ))
     }
@@ -161,7 +161,7 @@ impl Initializer {
     }
 
     /// Extract the verification key for snark.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn get_verification_key_for_snark(&self) -> Option<VerificationKeyForSnark> {
         self.schnorr_verification_key
     }
@@ -172,7 +172,7 @@ impl Initializer {
     /// This is used during eras that do not yet support SNARK proofs to ensure the
     /// initializer's registration entry matches the closed key registration built from
     /// signers without SNARK verification keys.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn strip_snark_keys(&mut self) {
         self.schnorr_signing_key = None;
         self.schnorr_verification_key = None;
@@ -200,8 +200,8 @@ impl Initializer {
     /// * Parameters
     /// * BLS signing key
     /// * BLS verification key (including PoP)
-    /// * [Future Snark - Schnorr Signing Key]
-    /// * [Future Snark - Schnorr Verification Key]
+    /// * [Snark - Schnorr Signing Key]
+    /// * [Snark - Schnorr Verification Key]
     fn from_bytes_legacy(bytes: &[u8]) -> StmResult<Initializer> {
         let mut u64_bytes = [0u8; 8];
         u64_bytes.copy_from_slice(bytes.get(..8).ok_or(RegisterError::SerializationError)?);
@@ -215,7 +215,7 @@ impl Initializer {
                 bytes.get(64..256).ok_or(RegisterError::SerializationError)?,
             )?;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (schnorr_signing_key, schnorr_verification_key) = {
             let schnorr_signing_key =
                 bytes.get(256..288).map(SchnorrSigningKey::from_bytes).transpose()?;
@@ -238,9 +238,9 @@ impl Initializer {
             parameters: params,
             bls_signing_key,
             bls_verification_key_proof_of_possession,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_signing_key,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_verification_key,
         })
     }
@@ -254,7 +254,7 @@ impl PartialEq for Initializer {
             && self.get_verification_key_proof_of_possession_for_concatenation()
                 == other.get_verification_key_proof_of_possession_for_concatenation();
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let base_eq = base_eq
             && self.schnorr_signing_key == other.schnorr_signing_key
             && self.schnorr_verification_key == other.schnorr_verification_key;
@@ -304,9 +304,9 @@ mod tests {
                 },
                 bls_signing_key: sk,
                 bls_verification_key_proof_of_possession: pk,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 schnorr_signing_key: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 schnorr_verification_key: None,
             }
         }

@@ -67,7 +67,7 @@ pub use http_server_error::{ClientError, ServerError};
 pub use mithril_network::MithrilNetwork;
 pub use mithril_stake_distribution::MithrilStakeDistribution;
 pub use mk_set_proof::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use protocol_message::RigidProtocolMessageIntegrityError;
 pub use protocol_message::{
     ProtocolMessage, ProtocolMessageHashScheme, ProtocolMessagePartKey, ProtocolMessagePartValue,

@@ -32,14 +32,14 @@ impl TryToMessageAdapter<(Epoch, Signer), RegisterSignerMessage>
                 "'ToRegisterSignerMessageAdapter' can not convert the operational certificate"
             })?,
             kes_evolutions: signer.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: signer.verification_key_for_snark.map(TryInto::try_into).transpose().with_context(|| {
                 format!(
                     "'ToRegisterSignerMessageAdapter' can not convert the SNARK verification key: '{:?}'",
                     signer.verification_key_for_snark
                 )
             })?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: signer.verification_key_signature_for_snark.map(TryInto::try_into).transpose().with_context(|| {
                 format!(
                     "'ToRegisterSignerMessageAdapter' can not convert the SNARK verification key signature: '{:?}'",

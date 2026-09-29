@@ -2,24 +2,24 @@
 
 use mithril_stm::{AncillaryGenesisData, AncillaryProofInput};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::GenesisSchnorrVerificationKey;
 use crate::entities::Certificate;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::entities::{CertificateSignature, ProtocolMessage};
 
 /// Build the ancillary proof input for one aggregate signature creation, from the genesis
 /// certificate (the genesis data) and the parent certificate (the prover data).
 ///
-/// Under `future_snark`, the genesis message preimage is carried, the genesis Schnorr signature too
+/// Under `snark`, the genesis message preimage is carried, the genesis Schnorr signature too
 /// when the genesis certificate is dual-signed (absent for a legacy genesis), the genesis Schnorr
 /// verification key supplied by the caller from configuration, and the rigid preimage of the
 /// protocol message being aggregated.
 pub fn build_ancillary_proof_input(
     genesis_certificate: &Certificate,
     parent_certificate: &Certificate,
-    #[cfg(feature = "future_snark")] protocol_message: &ProtocolMessage,
-    #[cfg(feature = "future_snark")] genesis_schnorr_verification_key: Option<
+    #[cfg(feature = "snark")] protocol_message: &ProtocolMessage,
+    #[cfg(feature = "snark")] genesis_schnorr_verification_key: Option<
         GenesisSchnorrVerificationKey,
     >,
 ) -> AncillaryProofInput {
@@ -28,7 +28,7 @@ pub fn build_ancillary_proof_input(
         .clone()
         .map(|prover_data| prover_data.into_inner());
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     let genesis_data = {
         let genesis_message_preimage = genesis_certificate.protocol_message.rigid_preimage();
         let genesis_schnorr_signature = match &genesis_certificate.signature {
@@ -41,24 +41,24 @@ pub fn build_ancillary_proof_input(
             genesis_schnorr_verification_key,
         )
     };
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     let genesis_data = {
         let _ = genesis_certificate;
         AncillaryGenesisData::new()
     };
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     let message_preimage = protocol_message.rigid_preimage();
 
     AncillaryProofInput::new(
         prover_data,
         genesis_data,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         message_preimage,
     )
 }
 
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 mod tests {
     use rand_chacha::ChaCha20Rng;
     use rand_core::SeedableRng;

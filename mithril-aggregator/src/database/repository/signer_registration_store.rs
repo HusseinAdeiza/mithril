@@ -167,9 +167,9 @@ mod tests {
                 operational_certificate: None,
                 kes_evolutions: None,
                 stake: 10,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             })
             .collect()
@@ -255,9 +255,9 @@ mod tests {
                     operational_certificate: None,
                     kes_evolutions: None,
                     stake: 10,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: None,
                 },
             )
@@ -286,9 +286,9 @@ mod tests {
                     operational_certificate: None,
                     kes_evolutions: None,
                     stake: 10,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: None,
                 },
             )
@@ -305,9 +305,9 @@ mod tests {
                 operational_certificate: None,
                 kes_evolutions: None,
                 stake: 10,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }),
             res,

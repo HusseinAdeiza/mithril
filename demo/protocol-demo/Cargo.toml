@@ -10,7 +10,7 @@ repository = { workspace = true }
 
 [features]
 # Enable experimental SNARK support in mithril-stm and mithril-common.
-future_snark = ["mithril-stm/future_snark", "mithril-common/future_snark"]
+snark = ["mithril-stm/snark", "mithril-common/snark"]
 
 [dependencies]
 clap = { workspace = true }

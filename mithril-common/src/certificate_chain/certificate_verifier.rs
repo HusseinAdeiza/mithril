@@ -10,9 +10,9 @@ use thiserror::Error;
 use mithril_stm::{AggregateSignatureType, AncillaryVerifierData};
 
 use crate::StdResult;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::certificate_chain::CircuitVerificationKeyCertifier;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::ProtocolAggregateVerificationKeyForSnark;
 use crate::crypto_helper::{
     GenesisEd25519Error, GenesisVerifier, ProtocolAggregateVerificationKey,
@@ -22,7 +22,7 @@ use crate::entities::{
     Certificate, CertificateSignature, ProtocolMessagePartKey, ProtocolParameters,
 };
 use crate::logging::LoggerExtensions;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_stm::GenesisVerificationKeyBundle as StmGenesisVerificationKeyBundle;
 
 use super::CertificateRetriever;
@@ -95,7 +95,7 @@ pub enum CertificateVerifierError {
 
     /// Error raised when a certificate whose aggregate signature type requires certified circuit
     /// verification keys carries no ancillary verifier data.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[error(
         "certificate is missing the ancillary verifier data carrying its circuit verification keys"
     )]
@@ -138,7 +138,7 @@ pub struct MithrilCertificateVerifier {
     logger: Logger,
     certificate_retriever: Arc<dyn CertificateRetriever>,
     genesis_verifier: Arc<GenesisVerifier>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     circuit_verification_key_certifier: Arc<dyn CircuitVerificationKeyCertifier>,
 }
 
@@ -151,7 +151,7 @@ impl MithrilCertificateVerifier {
         logger: Logger,
         certificate_retriever: Arc<dyn CertificateRetriever>,
         genesis_verifier: Arc<GenesisVerifier>,
-        #[cfg(feature = "future_snark")] circuit_verification_key_certifier: Arc<
+        #[cfg(feature = "snark")] circuit_verification_key_certifier: Arc<
             dyn CircuitVerificationKeyCertifier,
         >,
     ) -> Self {
@@ -160,7 +160,7 @@ impl MithrilCertificateVerifier {
             logger: logger.new_with_component_name::<Self>(),
             certificate_retriever,
             genesis_verifier,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             circuit_verification_key_certifier,
         }
     }
@@ -189,9 +189,9 @@ impl MithrilCertificateVerifier {
             message.encode_hex::<String>()
         );
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let genesis_verification_key_bundle = None;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let genesis_verification_key_bundle = self
             .genesis_verifier
             .to_schnorr_verification_key()
@@ -213,7 +213,7 @@ impl MithrilCertificateVerifier {
     ///
     /// The digests are taken from the ancillary verifier data the aggregate signature is verified
     /// against, so certifying them certifies the circuits used to produce the signature.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     async fn verify_certified_circuit_verification_keys(
         &self,
         certificate: &Certificate,
@@ -358,12 +358,12 @@ impl MithrilCertificateVerifier {
                     certificate,
                     previous_certificate,
                 ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => self.verify_snark_aggregate_verification_key_chaining(
                 certificate,
                 previous_certificate,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => self
                 .verify_snark_aggregate_verification_key_chaining(
                     certificate,
@@ -409,7 +409,7 @@ impl MithrilCertificateVerifier {
         Ok(())
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn verify_snark_aggregate_verification_key_chaining(
         &self,
         certificate: &Certificate,
@@ -495,7 +495,7 @@ impl CertificateVerifier for MithrilCertificateVerifier {
         let genesis_signature = match &genesis_certificate.signature {
             CertificateSignature::GenesisSignature(signature) => Ok(signature),
             // The Schnorr half is intentionally not verified here as it is needed for IVC SNARK only
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(signature, _) => Ok(signature),
             CertificateSignature::MultiSignature(_, _) => {
                 Err(CertificateVerifierError::InvalidGenesisCertificateProvided)
@@ -520,7 +520,7 @@ impl CertificateVerifier for MithrilCertificateVerifier {
         certificate: &Certificate,
         previous_certificate: &Certificate,
     ) -> StdResult<()> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         self.verify_certified_circuit_verification_keys(certificate).await?;
         self.verify_standard_certificate_integrity(certificate)?;
         self.verify_epoch_chaining(certificate, previous_certificate)?;
@@ -558,7 +558,7 @@ impl CertificateVerifier for MithrilCertificateVerifier {
         if certificate.signature.aggregate_signature_type().is_some_and(
             |aggregate_signature_type| aggregate_signature_type.certifies_full_certificate_chain(),
         ) {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             self.verify_certified_circuit_verification_keys(certificate).await?;
             self.verify_standard_certificate_integrity(certificate)?;
 
@@ -582,7 +582,7 @@ mod tests {
 
     use mithril_stm::{AggregateSignatureType, AncillaryProofInput};
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::test::double::FakeCircuitVerificationKeyCertifier;
     use crate::test::{
         TestLogger,
@@ -597,11 +597,11 @@ mod tests {
 
     use super::*;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::crypto_helper::GenesisSchnorrSigner;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_chacha::ChaCha20Rng;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_core::SeedableRng;
 
     macro_rules! assert_error_matches {
@@ -637,13 +637,13 @@ mod tests {
                 TestLogger::stdout(),
                 Arc::new(self.mock_certificate_retriever),
                 genesis_verifier,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Arc::new(FakeCircuitVerificationKeyCertifier::that_fails()),
             )
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn fake_genesis_verifier() -> Arc<GenesisVerifier> {
         Arc::new(setup_certificate_chain(1, 1).genesis_verifier)
     }
@@ -682,7 +682,7 @@ mod tests {
             TestLogger::stdout(),
             Arc::new(MockCertificateRetriever::new()),
             Arc::new(genesis_verifier),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(FakeCircuitVerificationKeyCertifier::that_fails()),
         );
         let message_tampered = message_hash[1..].to_vec();
@@ -722,7 +722,7 @@ mod tests {
         verify.expect("verify_genesis_certificate should not fail");
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[tokio::test]
     async fn verify_genesis_certificate_ignores_the_schnorr_half_of_a_dual_signature() {
         let (total_certificates, certificates_per_epoch) = (5, 1);
@@ -1266,7 +1266,7 @@ mod tests {
             TestLogger::stdout(),
             Arc::new(certificate_retriever),
             Arc::new(fake_certificates.genesis_verifier.clone()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(FakeCircuitVerificationKeyCertifier::that_fails()),
         );
         let certificate_to_verify = fake_certificates[0].clone();
@@ -1288,7 +1288,7 @@ mod tests {
             TestLogger::stdout(),
             Arc::new(certificate_retriever),
             Arc::new(fake_certificates.genesis_verifier.clone()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(FakeCircuitVerificationKeyCertifier::that_fails()),
         );
         let certificate_to_verify = fake_certificates[0].clone();
@@ -1303,8 +1303,8 @@ mod tests {
 
     // This implementation of SNARKs fixes this problem by default as if the adversary
     // changes its value of phi_f, its lottery target won't match the one in the merkle tree
-    /// Note: Check if this test is still necessary when enabling `future_snark` as default
-    #[cfg(not(feature = "future_snark"))]
+    /// Note: Check if this test is still necessary when enabling `snark` as default
+    #[cfg(not(feature = "snark"))]
     #[tokio::test]
     async fn verify_certificate_chain_fails_when_adversarial_with_registered_signer_forgery_through_protocol_parameters()
      {
@@ -1391,7 +1391,7 @@ mod tests {
         )
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_avk_chaining {
         use super::*;
 
@@ -1637,7 +1637,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod rigid_protocol_message_dispatch {
         use super::*;
 
@@ -1747,7 +1747,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod era_transition_chain_linkage {
         use super::*;
 
@@ -1860,7 +1860,7 @@ mod tests {
                 );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod snark_signature_dispatch {
             use super::*;
 
@@ -1908,7 +1908,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod certified_circuit_verification_keys {
         use crate::test::double::fake_data::snark_aggregate_signature;
 

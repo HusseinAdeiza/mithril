@@ -60,17 +60,17 @@ impl SignerRegistrationRecord {
                 .map(|o| o.to_json_hex().unwrap()),
             kes_evolutions: other.kes_evolutions,
             stake: Some(other.stake),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: other
                 .verification_key_for_snark
                 .map(|k| k.to_json_hex().unwrap()),
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             verification_key_for_snark: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: other
                 .verification_key_signature_for_snark
                 .map(|s| s.to_json_hex().unwrap()),
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             verification_key_signature_for_snark: None,
             created_at: Utc::now(),
         }
@@ -90,11 +90,11 @@ impl From<SignerRegistrationRecord> for Signer {
                 .map(|k| k.try_into().unwrap()),
             operational_certificate: other.operational_certificate.map(|o| o.try_into().unwrap()),
             kes_evolutions: other.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: other
                 .verification_key_for_snark
                 .map(|k| k.try_into().unwrap()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: other
                 .verification_key_signature_for_snark
                 .map(|s| s.try_into().unwrap()),
@@ -116,11 +116,11 @@ impl From<SignerRegistrationRecord> for SignerWithStake {
             operational_certificate: other.operational_certificate.map(|o| o.try_into().unwrap()),
             kes_evolutions: other.kes_evolutions,
             stake: other.stake.unwrap_or_default(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: other
                 .verification_key_for_snark
                 .map(|k| k.try_into().unwrap()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: other
                 .verification_key_signature_for_snark
                 .map(|s| s.try_into().unwrap()),

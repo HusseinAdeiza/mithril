@@ -225,11 +225,11 @@ impl Runner for SignerRunner {
                     .verification_key_signature_for_concatenation(),
                 operational_certificate: protocol_operational_certificate,
                 kes_evolutions,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: protocol_initializer
                     .verification_key_for_snark()
                     .map(Into::into),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: protocol_initializer
                     .verification_key_signature_for_snark(),
             };
@@ -512,7 +512,7 @@ mod tests {
             cardano_blocks_transactions_builder,
             cardano_stake_distribution_builder,
             cardano_database_signable_builder,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             era_checker.clone(),
         );
         let signable_builder_service = Arc::new(MithrilSignableBuilderService::new(

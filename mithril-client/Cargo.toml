@@ -44,10 +44,10 @@ rustls-no-provider = ["reqwest/rustls-no-provider", "mithril-circuit-key-registr
 # Support compressed traffic with `reqwest`
 enable-http-compression = ["reqwest/gzip", "reqwest/zstd", "reqwest/deflate", "reqwest/brotli"]
 
-future_snark = [
-    "mithril-common/future_snark",
+snark = [
+    "mithril-common/snark",
     "dep:mithril-circuit-key-registry",
-    "mithril-circuit-key-registry/future_snark",
+    "mithril-circuit-key-registry/snark",
 ]
 
 # Enables usage of `rug` numerical backend in `mithril-stm` (dependency of `mithril-common`).

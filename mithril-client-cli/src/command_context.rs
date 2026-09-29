@@ -1,11 +1,11 @@
 use anyhow::anyhow;
 use slog::Logger;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_client::circuit_key_registry::FileCircuitVerificationKeyRegistryRetriever;
 use mithril_client::{
     AggregatorDiscoveryType, ClientBuilder, GenesisVerificationKey, MithrilResult,
@@ -168,7 +168,7 @@ impl CommandContext {
             builder = builder.with_era_fetcher(Arc::new(ForcedEraFetcher::new(era.to_string())));
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(registry_path) = params.get("circuit_verification_key_registry_path") {
             self.require_unstable(
                 "--circuit-verification-key-registry-path <path>",
@@ -223,7 +223,7 @@ mod tests {
         assert!(result.is_err(), "Expected Err, got {result:?}");
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod circuit_verification_key_registry_path {
         use super::*;
 

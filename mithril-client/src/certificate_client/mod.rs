@@ -70,7 +70,7 @@ pub use verify_cache::MemoryCertificateVerifierCache;
 
 #[cfg(test)]
 pub(crate) mod tests_utils {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_circuit_key_registry::test::double::FakeCircuitVerificationKeyRegistryRetriever;
     use mithril_common::entities::Certificate;
     use mithril_common::messages::CertificateMessage;
@@ -153,7 +153,7 @@ pub(crate) mod tests_utils {
                             self.verifier_cache,
                             #[cfg(feature = "unstable")]
                             self.verifier_cache_mode,
-                            #[cfg(feature = "future_snark")]
+                            #[cfg(feature = "snark")]
                             Arc::new(FakeCircuitVerificationKeyRegistryRetriever::that_fails()),
                             logger.clone(),
                         )

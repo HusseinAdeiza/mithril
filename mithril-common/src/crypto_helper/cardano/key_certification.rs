@@ -11,14 +11,14 @@ use rand_core::{CryptoRng, RngCore};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_stm::VerificationKeyForSnark;
 use mithril_stm::{
     ClosedKeyRegistration, Initializer, KeyRegistration, MithrilMembershipDigest, Parameters,
     RegisterError, Signer, Stake, VerificationKeyProofOfPossessionForConcatenation,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::types::{
     ProtocolSignerVerificationKeyForSnark, ProtocolSignerVerificationKeySignatureForSnark,
 };
@@ -110,7 +110,7 @@ pub struct StmInitializerWrapper {
     kes_signature_for_concatenation: Option<Sum6KesSig>,
 
     /// The KES signature over the verification key for the SNARK proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     kes_signature_for_snark: Option<Sum6KesSig>,
 }
@@ -128,7 +128,7 @@ impl StmInitializerWrapper {
     ) -> StdResult<Self> {
         let stm_initializer = Initializer::new(params, stake, rng);
         let kes_signature;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let kes_signature_for_snark;
 
         if let Some(kes_signer) = kes_signer {
@@ -140,7 +140,7 @@ impl StmInitializerWrapper {
             )?;
             kes_signature = Some(signature);
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             {
                 kes_signature_for_snark = if let Some(schnorr_verification_key) =
                     &stm_initializer.schnorr_verification_key
@@ -160,7 +160,7 @@ impl StmInitializerWrapper {
                 "WARNING: Non certified signer registration by providing only a Pool Id is decommissioned and must be used for tests only!"
             );
             kes_signature = None;
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             {
                 kes_signature_for_snark = None;
             }
@@ -169,7 +169,7 @@ impl StmInitializerWrapper {
         Ok(Self {
             stm_initializer,
             kes_signature_for_concatenation: kes_signature,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             kes_signature_for_snark,
         })
     }
@@ -190,13 +190,13 @@ impl StmInitializerWrapper {
     }
 
     /// Extract the verification key for the SNARK proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_for_snark(&self) -> Option<VerificationKeyForSnark> {
         self.stm_initializer.schnorr_verification_key
     }
 
     /// Extract the KES signature over the Schnorr verification key.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_signature_for_snark(
         &self,
     ) -> Option<ProtocolSignerVerificationKeySignatureForSnark> {
@@ -209,7 +209,7 @@ impl StmInitializerWrapper {
     /// This is used during eras that do not yet support SNARK proofs to ensure the
     /// initializer's registration entry matches the closed key registration built from
     /// signers without SNARK verification keys.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn strip_snark_keys(&mut self) {
         self.stm_initializer.strip_snark_keys();
         self.kes_signature_for_snark = None;
@@ -245,7 +245,7 @@ impl StmInitializerWrapper {
     ///
     /// * Length-prefixed STM Initializer (dynamic size)
     /// * Optional KES signature for the concatenation proof system (fixed size)
-    /// * Optional KES signature for the SNARK proof system (fixed size, when `future_snark` feature is enabled and if some KES signature for concatenation)
+    /// * Optional KES signature for the SNARK proof system (fixed size, when `snark` feature is enabled and if some KES signature for concatenation)
     pub fn to_bytes(&self) -> StdResult<Vec<u8>> {
         let mut out = Vec::new();
 
@@ -260,7 +260,7 @@ impl StmInitializerWrapper {
         if let Some(kes_signature_for_concatenation) = &self.kes_signature_for_concatenation {
             out.extend_from_slice(&kes_signature_for_concatenation.to_bytes());
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             if let Some(kes_signature_for_snark) = &self.kes_signature_for_snark {
                 out.extend_from_slice(&kes_signature_for_snark.to_bytes());
             }
@@ -292,7 +292,7 @@ impl StmInitializerWrapper {
         bytes_index += 8 + stm_initializer_size;
 
         let kes_signature_for_concatenation;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let kes_signature_for_snark;
         if let Some(kes_signature) = bytes.get(bytes_index..bytes_index + Sum6KesSig::SIZE) {
             kes_signature_for_concatenation = Some(
@@ -300,7 +300,7 @@ impl StmInitializerWrapper {
                     .map_err(|_| RegisterError::SerializationError)?,
             );
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             {
                 bytes_index += Sum6KesSig::SIZE;
                 kes_signature_for_snark = if let Some(snark_kes_signature) =
@@ -316,7 +316,7 @@ impl StmInitializerWrapper {
             }
         } else {
             kes_signature_for_concatenation = None;
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             {
                 kes_signature_for_snark = None;
             }
@@ -325,7 +325,7 @@ impl StmInitializerWrapper {
         Ok(Self {
             stm_initializer,
             kes_signature_for_concatenation,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             kes_signature_for_snark,
         })
     }
@@ -361,11 +361,11 @@ pub struct SignerRegistrationParameters {
     pub kes_evolutions: Option<KesEvolutions>,
 
     /// The verification key for the SNARK proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark>,
 
     /// The KES signature over the verification key for SNARK
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub verification_key_signature_for_snark:
         Option<ProtocolSignerVerificationKeySignatureForSnark>,
 }
@@ -420,7 +420,7 @@ impl KeyRegWrapper {
     /// provide the OpCert (in cbor form), the cold VK, a KES signature, and a
     /// Mithril key (with its corresponding Proof of Possession).
     ///
-    /// When the `future_snark` feature is enabled, an optional Schnorr verification key
+    /// When the `snark` feature is enabled, an optional Schnorr verification key
     /// and its KES signature can be provided for SNARK proof system authentication.
     pub fn register(
         &mut self,
@@ -442,7 +442,7 @@ impl KeyRegWrapper {
                 )
                 .with_context(|| "invalid KES signature for Concatenation")?;
 
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 if let Some(verification_key_for_snark) = &parameters.verification_key_for_snark {
                     self.verify_kes_signature(
                         &verification_key_for_snark.to_bytes(),
@@ -471,7 +471,7 @@ impl KeyRegWrapper {
             self.stm_key_reg.register(
                 stake,
                 &parameters.verification_key_for_concatenation.into(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 parameters.verification_key_for_snark.map(|k| k.into()),
             )?;
             return Ok(pool_id_bech32);
@@ -568,9 +568,9 @@ mod test {
                 .stm_initializer
                 .get_verification_key_proof_of_possession_for_concatenation()
                 .into(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: initializer_1.verification_key_for_snark().map(Into::into),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: initializer_1
                 .verification_key_signature_for_snark(),
         });
@@ -602,9 +602,9 @@ mod test {
                 .stm_initializer
                 .get_verification_key_proof_of_possession_for_concatenation()
                 .into(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: initializer_2.verification_key_for_snark().map(Into::into),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: initializer_2
                 .verification_key_signature_for_snark(),
         });

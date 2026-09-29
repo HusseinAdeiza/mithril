@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use std::sync::Arc;
 
 use anyhow::Context;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use anyhow::anyhow;
 
-#[cfg(all(feature = "future_snark", test))]
+#[cfg(all(feature = "snark", test))]
 use crate::proof_system::{MockIvcOffCircuitChecker, MockSnarkProverFactory};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     AggregateSignatureError, AncillaryProverData, AncillaryVerifierData,
     proof_system::{
@@ -32,18 +32,18 @@ use super::{
 
 /// Clerk for aggregate signatures.
 ///
-/// Manages both the concatenation proof clerk and, when the `future_snark`
+/// Manages both the concatenation proof clerk and, when the `snark`
 /// feature is enabled, the SNARK proof clerk. Provides methods for signature
 /// aggregation and aggregate verification key computation.
 #[derive(Debug, Clone)]
 pub struct Clerk<D: MembershipDigest> {
     concatenation_proof_clerk: ConcatenationClerk,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     snark_proof_clerk: Option<SnarkClerk>,
     /// A factory that returns the provers necessary to create the SNARK proofs
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     snark_prover_factory: Arc<dyn SnarkProverFactory<D> + Send + Sync>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     ivc_off_circuit_checker: Arc<dyn IvcOffCircuitChecker<D> + Send + Sync>,
     phantom_data: PhantomData<D>,
 }
@@ -53,16 +53,16 @@ impl<D: MembershipDigest> Clerk<D> {
     pub fn new_clerk_from_signer(signer: &Signer<D>) -> Self {
         Self {
             concatenation_proof_clerk: ConcatenationClerk::new_clerk_from_signer(signer),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_proof_clerk: signer
                 .closed_key_registration
                 .has_snark_verification_keys()
                 .then(|| SnarkClerk::new_clerk_from_signer(signer)),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_prover_factory: Arc::new(NonDeterministicSnarkProverFactory::new(
                 SnarkProverSetupReuse::Enabled,
             )),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             ivc_off_circuit_checker: Arc::new(MithrilIvcOffCircuitChecker),
             phantom_data: PhantomData,
         }
@@ -78,22 +78,22 @@ impl<D: MembershipDigest> Clerk<D> {
                 parameters,
                 closed_registration,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_proof_clerk: closed_registration.has_snark_verification_keys().then(|| {
                 SnarkClerk::new_clerk_from_closed_key_registration(parameters, closed_registration)
             }),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_prover_factory: Arc::new(NonDeterministicSnarkProverFactory::new(
                 SnarkProverSetupReuse::Enabled,
             )),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             ivc_off_circuit_checker: Arc::new(MithrilIvcOffCircuitChecker),
             phantom_data: PhantomData,
         }
     }
 
     /// Create a Clerk from a signer whose SNARK provers come from a mocked factory.
-    #[cfg(all(feature = "future_snark", test))]
+    #[cfg(all(feature = "snark", test))]
     pub(crate) fn new_clerk_from_signer_with_mock_prover_factory(
         signer: &Signer<D>,
         snark_prover_factory: MockSnarkProverFactory<D>,
@@ -139,7 +139,7 @@ impl<D: MembershipDigest> Clerk<D> {
                     AncillaryProofOutput::new(None, None),
                 ))
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => {
                 let clerk = self
                     .get_snark_clerk()
@@ -150,7 +150,7 @@ impl<D: MembershipDigest> Clerk<D> {
                     .snark_aggregate_signature_prover(&clerk.parameters)?;
                 Self::aggregate_signatures_for_snark(clerk, prover.as_mut(), sigs, msg)
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => {
                 let snark_clerk = self
                     .get_snark_clerk()
@@ -167,7 +167,7 @@ impl<D: MembershipDigest> Clerk<D> {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn aggregate_signatures_for_snark(
         snark_clerk: &SnarkClerk,
         prover: &mut dyn SnarkAggregateSignatureProver<D>,
@@ -193,7 +193,7 @@ impl<D: MembershipDigest> Clerk<D> {
         ))
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn aggregate_signatures_for_ivc_snark(
         &self,
         snark_clerk: &SnarkClerk,
@@ -247,7 +247,7 @@ impl<D: MembershipDigest> Clerk<D> {
     }
 
     /// Get the SNARK clerk, if available.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn get_snark_clerk(&self) -> Option<&SnarkClerk> {
         self.snark_proof_clerk.as_ref()
     }
@@ -257,7 +257,7 @@ impl<D: MembershipDigest> Clerk<D> {
         AggregateVerificationKey::new(
             self.concatenation_proof_clerk
                 .compute_aggregate_verification_key_for_concatenation(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             self.snark_proof_clerk
                 .as_ref()
                 .map(|clerk| clerk.compute_aggregate_verification_key_for_snark()),
@@ -290,7 +290,7 @@ impl<D: MembershipDigest> Clerk<D> {
     }
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 #[cfg(test)]
 mod tests {
 

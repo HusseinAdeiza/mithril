@@ -17,13 +17,13 @@ macro_rules! cfg_rug {
 }
 
 mod concatenation;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod halo2_snark;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod snark_prover_factory;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod snark_setup_cache;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod snark_setup_warmer;
 
 /// Serialized `ParamsVerifierKZG` (i.e. `s_g2`) from the Midnight production trusted SRS.
@@ -35,7 +35,7 @@ mod snark_setup_warmer;
 /// Regenerate by extracting `srs.verifier_params()` from `TrustedSetupProvider` and
 /// serializing with `SerdeFormat::RawBytesUnchecked`; the `verifier_setup_matches_trusted_srs`
 /// test (in `halo2_snark`) asserts the embedded bytes still match the trusted SRS.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) const KZG_VERIFIER_PARAMS: [u8; 192] = [
     4, 187, 225, 162, 79, 204, 79, 152, 140, 110, 242, 104, 208, 193, 22, 14, 172, 10, 12, 79, 83,
     216, 11, 215, 79, 61, 46, 70, 103, 190, 39, 64, 134, 37, 168, 56, 37, 53, 78, 39, 199, 8, 89,
@@ -49,7 +49,7 @@ pub(crate) const KZG_VERIFIER_PARAMS: [u8; 192] = [
     90, 73, 68, 203, 89,
 ];
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) mod halo2_ivc_snark;
 
 pub use concatenation::{
@@ -57,30 +57,30 @@ pub use concatenation::{
 };
 pub(crate) use concatenation::{ConcatenationProofSigner, SingleSignatureForConcatenation};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use halo2_snark::{
     AggregateVerificationKeyForSnark, MERKLE_TREE_DEPTH_FOR_SNARK, SnarkProof, SnarkVerifierData,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) use halo2_ivc_snark::IvcRollingState;
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 pub(crate) use halo2_ivc_snark::MockIvcOffCircuitChecker;
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 pub(crate) use halo2_snark::RIGID_SLOT_BYTES as SNARK_AGGREGATE_VERIFICATION_KEY_RIGID_SLOT_BYTES;
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 pub(crate) use halo2_snark::{MockSnarkAggregateSignatureProver, SnarkProverSetup};
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) use halo2_snark::{
     SingleSignatureForSnark, SnarkAggregateSignatureProver, SnarkClerk, SnarkProofSigner,
     SnarkProver, SnarkVerifierSetup, compute_target_value_for_snark_lottery,
 };
 
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 pub(crate) use snark_prover_factory::MockSnarkProverFactory;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) use snark_prover_factory::{NonDeterministicSnarkProverFactory, SnarkProverFactory};
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub(crate) use snark_setup_cache::SnarkProverSetupReuse;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use snark_setup_warmer::SnarkProverSetupWarmer;

@@ -298,13 +298,13 @@ mod tests {
             protocol_message: protocol_message.clone(),
             signed_message: "signed_message".to_string(),
             aggregate_verification_key: String::new(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: None,
             ancillary_prover_data: None,
             ancillary_verifier_data: None,
             multi_signature: String::new(),
             genesis_signature: String::new(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_signature: String::new(),
         }
     }

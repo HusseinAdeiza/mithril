@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::{
     ProtocolKey, ProtocolSignerVerificationKeyForSnark,
     ProtocolSignerVerificationKeySignatureForSnark,
@@ -208,7 +208,7 @@ impl MithrilFixture {
     }
 
     /// Compute the SNARK Aggregate Verification Key for this fixture, if available.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn compute_snark_aggregate_verification_key(
         &self,
     ) -> Option<crate::crypto_helper::ProtocolAggregateVerificationKeyForSnark> {
@@ -218,7 +218,7 @@ impl MithrilFixture {
     }
 
     /// Compute the SNARK Aggregate Verification Key for this fixture and returns it as a hex-encoded string.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn compute_and_encode_snark_aggregate_verification_key(&self) -> Option<String> {
         self.compute_snark_aggregate_verification_key()
             .map(|avk| avk.to_bytes_hex().unwrap())
@@ -266,7 +266,7 @@ impl MithrilFixture {
                     genesis_signature,
                     mithril_era,
                 ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(
                 genesis_signature,
                 genesis_signature_snark,
@@ -360,13 +360,13 @@ impl SignerFixture {
     }
 
     /// Get the verification key for snark if any
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_for_snark(&self) -> Option<ProtocolSignerVerificationKeyForSnark> {
         self.signer_with_stake.verification_key_for_snark
     }
 
     /// Get the verification key signature for snark if any
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_signature_for_snark(
         &self,
     ) -> Option<ProtocolSignerVerificationKeySignatureForSnark> {

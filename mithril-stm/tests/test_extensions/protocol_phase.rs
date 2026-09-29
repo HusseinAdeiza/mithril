@@ -46,7 +46,7 @@ pub fn initialization_phase(
             .register(
                 stake,
                 &vk_pop,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 p.schnorr_verification_key,
             )
             .unwrap();
@@ -93,7 +93,7 @@ pub fn operation_phase(
                 stake,
                 &avk,
                 &msg,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .is_ok(),
@@ -104,14 +104,14 @@ pub fn operation_phase(
     let ancillary_input = AncillaryProofInput::new(
         None,
         AncillaryGenesisData::new(
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Vec::new(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
         ),
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         Vec::new(),
     );
     let msig = clerk.aggregate_signatures_with_type(&sigs, &msg, aggr_sig_type, ancillary_input);

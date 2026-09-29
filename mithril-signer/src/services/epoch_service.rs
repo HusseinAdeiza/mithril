@@ -158,9 +158,9 @@ impl MithrilEpochService {
                 operational_certificate: signer.operational_certificate.to_owned(),
                 kes_evolutions: signer.kes_evolutions.to_owned(),
                 stake: *stake,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: signer.verification_key_for_snark.to_owned(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: signer
                     .verification_key_signature_for_snark
                     .to_owned(),

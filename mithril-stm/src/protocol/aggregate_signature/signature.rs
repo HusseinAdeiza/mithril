@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, hash::Hash, str::FromStr};
 
 use anyhow::anyhow;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use midnight_proofs::transcript::Blake2b256;
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +9,7 @@ use crate::{
     MembershipDigest, Parameters, StmError, StmResult, codec,
     membership_commitment::MerkleBatchPath, proof_system::ConcatenationProof,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     circuits::halo2_ivc::state::Global,
     proof_system::{
@@ -30,10 +30,10 @@ pub enum AggregateSignatureType {
     #[default]
     Concatenation,
     /// SNARK proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     Snark,
     /// IVC SNARK proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     IvcSnark,
 }
 
@@ -44,9 +44,9 @@ impl AggregateSignatureType {
     pub fn get_byte_encoding_prefix(&self) -> u8 {
         match self {
             AggregateSignatureType::Concatenation => 0,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => 1,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => 2,
         }
     }
@@ -57,9 +57,9 @@ impl AggregateSignatureType {
     pub fn from_byte_encoding_prefix(byte: u8) -> Option<Self> {
         match byte {
             0 => Some(AggregateSignatureType::Concatenation),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             1 => Some(AggregateSignatureType::Snark),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             2 => Some(AggregateSignatureType::IvcSnark),
             _ => None,
         }
@@ -74,9 +74,9 @@ impl AggregateSignatureType {
     pub fn certifies_full_certificate_chain(&self) -> bool {
         match self {
             AggregateSignatureType::Concatenation => false,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => false,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => true,
         }
     }
@@ -90,9 +90,9 @@ impl AggregateSignatureType {
     pub fn requires_certified_circuit_verification_keys(&self) -> bool {
         match self {
             AggregateSignatureType::Concatenation => false,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => true,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => true,
         }
     }
@@ -116,9 +116,9 @@ impl<D: MembershipDigest> From<&AggregateSignature<D>> for AggregateSignatureTyp
     fn from(aggr_sig: &AggregateSignature<D>) -> Self {
         match aggr_sig {
             AggregateSignature::Concatenation(_) => AggregateSignatureType::Concatenation,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::Snark(_) => AggregateSignatureType::Snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::IvcSnark(_) => AggregateSignatureType::IvcSnark,
         }
     }
@@ -130,9 +130,9 @@ impl FromStr for AggregateSignatureType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Concatenation" => Ok(AggregateSignatureType::Concatenation),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             "Snark" => Ok(AggregateSignatureType::Snark),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             "IvcSnark" => Ok(AggregateSignatureType::IvcSnark),
             _ => Err(anyhow!(AggregateSignatureError::UnknownProofSystem(
                 s.to_string()
@@ -145,9 +145,9 @@ impl Display for AggregateSignatureType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AggregateSignatureType::Concatenation => write!(f, "Concatenation"),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => write!(f, "Snark"),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => write!(f, "IvcSnark"),
         }
     }
@@ -172,11 +172,11 @@ struct AggregateSignatureCborEnvelope {
 ))]
 pub enum AggregateSignature<D: MembershipDigest> {
     /// SNARK proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     Snark(Box<SnarkProof<D>>),
 
     /// IVC SNARK proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     IvcSnark(Box<IvcProof<Blake2b256>>),
 
     /// Concatenation proof system.
@@ -205,7 +205,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
                 avk.to_concatenation_aggregate_verification_key(),
                 parameters,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::Snark(snark_proof) => {
                 let snark_avk = avk.to_snark_aggregate_verification_key().ok_or_else(|| {
                     anyhow!(AggregateSignatureError::MissingSnarkAggregateVerificationKey)
@@ -223,7 +223,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
                     &verifier_setup.verifier_params,
                 )
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::IvcSnark(ivc_proof) => {
                 let ivc_verifier_data = ancillary_verifier_data
                     .as_ref()
@@ -370,7 +370,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
                             &parameters,
                         )
                     }
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     AggregateSignatureType::Snark => {
                         for (
                             aggregate_signature,
@@ -392,7 +392,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
 
                         Ok(())
                     }
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     AggregateSignatureType::IvcSnark => {
                         for (
                             aggregate_signature,
@@ -428,9 +428,9 @@ impl<D: MembershipDigest> AggregateSignature<D> {
             AggregateSignature::Concatenation(concatenation_proof) => {
                 concatenation_proof.to_bytes()?
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::Snark(snark_proof) => snark_proof.to_bytes()?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::IvcSnark(ivc_proof) => ivc_proof.to_bytes()?,
         };
         let envelope = AggregateSignatureCborEnvelope {
@@ -473,11 +473,11 @@ impl<D: MembershipDigest> AggregateSignature<D> {
             AggregateSignatureType::Concatenation => Ok(AggregateSignature::Concatenation(
                 Box::new(ConcatenationProof::from_bytes(&envelope.proof_bytes)?),
             )),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => Ok(AggregateSignature::Snark(Box::new(
                 SnarkProof::from_bytes(&envelope.proof_bytes)?,
             ))),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => Ok(AggregateSignature::IvcSnark(Box::new(
                 IvcProof::from_bytes(&envelope.proof_bytes)?,
             ))),
@@ -494,11 +494,11 @@ impl<D: MembershipDigest> AggregateSignature<D> {
             AggregateSignatureType::Concatenation => Ok(AggregateSignature::Concatenation(
                 Box::new(ConcatenationProof::from_bytes(proof_bytes)?),
             )),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::Snark => Ok(AggregateSignature::Snark(Box::new(
                 SnarkProof::from_bytes(proof_bytes)?,
             ))),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignatureType::IvcSnark => Ok(AggregateSignature::IvcSnark(Box::new(
                 IvcProof::from_bytes(proof_bytes)?,
             ))),
@@ -509,15 +509,15 @@ impl<D: MembershipDigest> AggregateSignature<D> {
     pub fn to_concatenation_proof(&self) -> Option<&ConcatenationProof<D>> {
         match self {
             AggregateSignature::Concatenation(proof) => Some(proof),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::Snark(_) => None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             AggregateSignature::IvcSnark(_) => None,
         }
     }
 
     /// If the aggregate signature is a SNARK proof, return it.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn get_snark_proof(&self) -> Option<&SnarkProof<D>> {
         match self {
             AggregateSignature::Snark(proof) => Some(proof),
@@ -527,7 +527,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
     }
 
     /// If the aggregate signature is an IVC proof, return it.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn get_ivc_proof(&self) -> Option<&IvcProof<Blake2b256>> {
         match self {
             AggregateSignature::IvcSnark(proof) => Some(proof),
@@ -541,7 +541,7 @@ impl<D: MembershipDigest> AggregateSignature<D> {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod ivc_proof {
         use midnight_proofs::transcript::Blake2b256;
 
@@ -638,7 +638,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_proof_verify {
         use crate::{
             AggregateSignature, AggregateSignatureError, AggregateSignatureType,
@@ -887,7 +887,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[test]
         fn golden_bytes_encoding_prefix_for_snark() {
             assert_eq!(
@@ -912,7 +912,7 @@ mod tests {
         }
 
         assert_golden_value(AggregateSignatureType::Concatenation, false);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert_golden_value(AggregateSignatureType::Snark, false);
     }
 
@@ -927,9 +927,9 @@ mod tests {
         }
 
         assert_golden_value(AggregateSignatureType::Concatenation, false);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert_golden_value(AggregateSignatureType::Snark, true);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert_golden_value(AggregateSignatureType::IvcSnark, true);
     }
 
@@ -944,11 +944,11 @@ mod tests {
             assert!(
                 aggregate_signature_type.can_chain_to(Some(AggregateSignatureType::Concatenation))
             );
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             assert!(aggregate_signature_type.can_chain_to(Some(AggregateSignatureType::IvcSnark)));
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[test]
         fn ivc_snark_can_only_chain_to_a_genesis_certificate_or_to_ivc_snark() {
             let aggregate_signature_type = AggregateSignatureType::IvcSnark;
@@ -1048,14 +1048,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();
@@ -1079,7 +1079,7 @@ mod tests {
                 closed_key_reg.clone(),
                 params,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             );
 
@@ -1096,7 +1096,7 @@ mod tests {
                 closed_key_reg.clone(),
                 params,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             );
             let signature_1 = signer_1.create_single_signature(&msg).unwrap();
@@ -1290,7 +1290,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod aggregate_signature_golden_snark {
         use rand_chacha::ChaCha20Rng;
         use rand_core::SeedableRng;

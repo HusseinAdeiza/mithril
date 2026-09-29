@@ -1,4 +1,4 @@
-//! Halo2 STM circuit integration (feature-gated by `future_snark`).
+//! Halo2 STM circuit integration (feature-gated by `snark`).
 //!
 //! Module map:
 //! - `circuit`: relation orchestration and top-level constraint flow

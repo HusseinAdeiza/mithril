@@ -225,7 +225,7 @@ impl ServeCommand {
             Ok(())
         });
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Err(error) = dependencies_builder
             .create_aggregate_signature_prover_warmer()
             .await

@@ -1,4 +1,4 @@
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod circuit_key_registry_command;
 mod config_association;
 mod database_command;
@@ -28,7 +28,7 @@ pub enum MainCommand {
     Tools(tools_command::ToolsCommand),
     Database(database_command::DatabaseCommand),
     ProtocolConfiguration(protocol_configuration_command::ProtocolConfigurationCommand),
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     CircuitKeyRegistry(circuit_key_registry_command::CircuitKeyRegistryCommand),
     #[clap(alias("doc"), hide(true))]
     GenerateDoc(GenerateDocCommands),
@@ -55,7 +55,7 @@ impl MainCommand {
             Self::Tools(cmd) => cmd.execute(root_logger, config_builder).await,
             Self::Database(cmd) => cmd.execute(root_logger, config_builder).await,
             Self::ProtocolConfiguration(cmd) => cmd.execute(root_logger, config_builder).await,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Self::CircuitKeyRegistry(cmd) => cmd.execute(root_logger).await,
             Self::GenerateDoc(cmd) => {
                 let commands_configs =
@@ -68,7 +68,7 @@ impl MainCommand {
     }
 
     pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             extract_all!(
                 command_path,
@@ -84,7 +84,7 @@ impl MainCommand {
                 GenerateDoc = {},
             )
         }
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             extract_all!(
                 command_path,
@@ -113,7 +113,7 @@ impl MainCommand {
             MainCommand::Tools(_) => CommandType::CommandLine,
             MainCommand::Database(_) => CommandType::CommandLine,
             MainCommand::ProtocolConfiguration(_) => CommandType::CommandLine,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             MainCommand::CircuitKeyRegistry(_) => CommandType::CommandLine,
             MainCommand::GenerateDoc(_) => CommandType::CommandLine,
         }

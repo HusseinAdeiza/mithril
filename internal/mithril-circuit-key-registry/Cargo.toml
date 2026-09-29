@@ -14,8 +14,8 @@ include = ["**/*.rs", "Cargo.toml", "README.md", ".gitignore"]
 all-features = true
 
 [features]
-# Enables the registry, which requires the future SNARK implementation of the `mithril-common` dependency
-future_snark = ["mithril-common/future_snark"]
+# Enables the registry, which requires the SNARK implementation of the `mithril-common` dependency
+snark = ["mithril-common/snark"]
 
 # TLS backend of the registry download
 # Exactly one of these must be enabled

@@ -13,14 +13,14 @@ mod stm {
             Self::new(
                 None,
                 AncillaryGenesisData::new(
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     Vec::new(),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 ),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
             )
         }
@@ -280,9 +280,9 @@ mod messages {
                 operational_certificate: Some(fake_keys::operational_certificate()[0].to_string()),
                 kes_evolutions: Some(KesEvolutions(6)),
                 stake: 234,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }
         }
@@ -300,9 +300,9 @@ mod messages {
                 ),
                 operational_certificate: Some(fake_keys::operational_certificate()[0].to_string()),
                 kes_evolutions: Some(KesEvolutions(6)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }
         }
@@ -565,13 +565,13 @@ mod messages {
                 signed_message: "signed_message".to_string(),
                 aggregate_verification_key:
                     fake_keys::aggregate_verification_key_for_concatenation()[0].to_owned(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 aggregate_verification_key_snark: None,
                 ancillary_prover_data: None,
                 ancillary_verifier_data: None,
                 multi_signature: fake_keys::multi_signature()[0].to_owned(),
                 genesis_signature: String::new(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 genesis_schnorr_signature: String::new(),
             }
         }
@@ -720,9 +720,9 @@ mod messages {
                 ),
                 operational_certificate: Some(fake_keys::operational_certificate()[0].to_string()),
                 kes_evolutions: Some(KesEvolutions(6)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }
         }

@@ -5,7 +5,7 @@ use slog::{Logger, debug, info, trace, warn};
 use std::sync::Arc;
 
 use mithril_common::certificate_chain::CertificateVerifier;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::crypto_helper::GenesisVerifier;
 use mithril_common::crypto_helper::PROTOCOL_VERSION;
 use mithril_common::entities::{
@@ -34,7 +34,7 @@ pub struct MithrilCertifierService {
     single_signature_repository: Arc<SingleSignatureRepository>,
     certificate_repository: Arc<CertificateRepository>,
     certificate_verifier: Arc<dyn CertificateVerifier>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     genesis_verifier: Arc<GenesisVerifier>,
     multi_signer: Arc<dyn MultiSigner>,
     epoch_service: EpochServiceWrapper,
@@ -50,7 +50,7 @@ impl MithrilCertifierService {
         single_signature_repository: Arc<SingleSignatureRepository>,
         certificate_repository: Arc<CertificateRepository>,
         certificate_verifier: Arc<dyn CertificateVerifier>,
-        #[cfg(feature = "future_snark")] genesis_verifier: Arc<GenesisVerifier>,
+        #[cfg(feature = "snark")] genesis_verifier: Arc<GenesisVerifier>,
         multi_signer: Arc<dyn MultiSigner>,
         epoch_service: EpochServiceWrapper,
         logger: Logger,
@@ -62,7 +62,7 @@ impl MithrilCertifierService {
             certificate_repository,
             multi_signer,
             certificate_verifier,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_verifier,
             epoch_service,
             logger: logger.new_with_component_name::<Self>(),
@@ -318,9 +318,9 @@ impl CertifierService for MithrilCertifierService {
         let ancillary_input = build_ancillary_proof_input(
             &genesis_certificate,
             &parent_certificate,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             &open_message.protocol_message,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             self.genesis_verifier.to_schnorr_verification_key(),
         );
 
@@ -486,7 +486,7 @@ mod tests {
                 Arc::new(SingleSignatureRepository::new(connection.clone()));
             let certificate_repository = Arc::new(CertificateRepository::new(connection));
             let certificate_verifier = dependency_builder.get_certificate_verifier().await.unwrap();
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let genesis_verifier = dependency_builder.get_genesis_verifier().await.unwrap();
             let multi_signer = dependency_builder.get_multi_signer().await.unwrap();
             let epoch_service = dependency_builder.get_epoch_service().await.unwrap();
@@ -497,7 +497,7 @@ mod tests {
                 single_signature_repository,
                 certificate_repository,
                 certificate_verifier,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 genesis_verifier,
                 multi_signer,
                 epoch_service,
@@ -835,7 +835,7 @@ mod tests {
 
         struct CreatedCertificate {
             certificate: Certificate,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_hash: String,
             concatenation_certificate_hash: String,
         }
@@ -843,7 +843,7 @@ mod tests {
         struct PreparedCertification {
             certifier_service: MithrilCertifierService,
             signed_entity_type: SignedEntityType,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_hash: String,
             concatenation_certificate_hash: String,
         }
@@ -908,7 +908,7 @@ mod tests {
             PreparedCertification {
                 certifier_service,
                 signed_entity_type,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 genesis_hash: genesis_certificate.hash,
                 concatenation_certificate_hash: concatenation_certificate.hash,
             }
@@ -933,7 +933,7 @@ mod tests {
 
             CreatedCertificate {
                 certificate,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 genesis_hash: prepared.genesis_hash,
                 concatenation_certificate_hash: prepared.concatenation_certificate_hash,
             }
@@ -953,7 +953,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[tokio::test]
         async fn chains_to_the_genesis_certificate_rather_than_a_concatenation_certificate_for_ivc_snark()
          {
@@ -966,7 +966,7 @@ mod tests {
             assert_eq!(created.genesis_hash, created.certificate.previous_hash);
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[tokio::test]
         async fn fails_to_find_a_parent_certificate_for_ivc_snark_after_a_legacy_genesis_certificate()
          {

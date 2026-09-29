@@ -15,7 +15,7 @@ ignored = ["reqwest"]
 
 [features]
 default = ["rustls"]
-future_snark = ["mithril-common/future_snark"]
+snark = ["mithril-common/snark"]
 rustls = ["reqwest/rustls"]
 
 [dependencies]

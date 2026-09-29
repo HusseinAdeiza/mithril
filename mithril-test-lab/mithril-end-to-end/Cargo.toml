@@ -17,7 +17,7 @@ bench = false
 [features]
 default = ["rustls"]
 allow_skip_signer_certification = []
-future_snark = ["mithril-common/future_snark"]
+snark = ["mithril-common/snark"]
 rustls = ["reqwest/rustls"]
 
 [dependencies]

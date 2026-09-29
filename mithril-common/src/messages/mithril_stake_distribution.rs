@@ -46,9 +46,9 @@ mod tests {
                     operational_certificate: None,
                     kes_evolutions: None,
                     stake: 826,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: None,
                 },
             ],

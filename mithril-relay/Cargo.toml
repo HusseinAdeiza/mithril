@@ -12,7 +12,7 @@ repository = { workspace = true }
 [features]
 default = ["rustls"]
 # For activating snark features
-future_snark = ["mithril-common/future_snark"]
+snark = ["mithril-common/snark"]
 rustls = ["reqwest/rustls"]
 
 [dependencies]

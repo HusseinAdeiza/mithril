@@ -9,7 +9,7 @@ use crate::{
     StmResult, VerificationKeyForConcatenation, codec,
     proof_system::SingleSignatureForConcatenation, signature_scheme::BlsSignature,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{RegistrationEntryForSnark, proof_system::SingleSignatureForSnark};
 
 use super::SignatureError;
@@ -24,7 +24,7 @@ pub struct SingleSignature {
     /// Merkle tree index of the signer.
     pub signer_index: SignerIndex,
     /// Underlying signature for snark proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub(crate) snark_signature: Option<SingleSignatureForSnark>,
 }
@@ -38,11 +38,9 @@ impl SingleSignature {
         stake: &Stake,
         avk: &AggregateVerificationKey<D>,
         msg: &[u8],
-        #[cfg(feature = "future_snark")] snark_registration_entry: Option<
-            RegistrationEntryForSnark,
-        >,
+        #[cfg(feature = "snark")] snark_registration_entry: Option<RegistrationEntryForSnark>,
     ) -> StmResult<()> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let (Some(snark_signature), Some(entry), Some(snark_avk)) = (
             &self.snark_signature,
             snark_registration_entry,
@@ -124,7 +122,7 @@ impl SingleSignature {
         );
         let signer_index = u64::from_be_bytes(u64_bytes);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let snark_signature = {
             let snark_offset = signer_index_end;
             if snark_offset < bytes.len() {
@@ -173,7 +171,7 @@ impl SingleSignature {
         Ok(SingleSignature {
             concatenation_signature: SingleSignatureForConcatenation::new(sigma, indexes),
             signer_index,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_signature,
         })
     }
@@ -194,7 +192,7 @@ impl SingleSignature {
     }
 
     /// Set the indices of the single signature for snark proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn set_snark_signature_indices(&mut self, indices: &[LotteryIndex]) {
         if let Some(snark_signature) = &mut self.snark_signature {
             snark_signature.set_indices(indices);
@@ -202,7 +200,7 @@ impl SingleSignature {
     }
 
     /// Get indices of the single signature for snark proof system.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn get_snark_signature_indices(&self) -> Option<Vec<LotteryIndex>> {
         self.snark_signature.as_ref().map(|s| s.get_indices().to_vec())
     }
@@ -240,7 +238,7 @@ mod tests {
     use rand_chacha::ChaCha20Rng;
     use rand_core::SeedableRng;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::{
         ClosedRegistrationEntry, MembershipDigest, VerificationKeyForSnark,
         proof_system::SnarkProofSigner, protocol::RegistrationEntryForSnark,
@@ -258,7 +256,7 @@ mod tests {
 
         type D = MithrilMembershipDigest;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_BYTES: &[u8; 96] = &[
             0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,
             0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 8, 149, 157, 201, 187, 140, 54, 0, 128, 209, 88, 16, 203,
@@ -267,7 +265,7 @@ mod tests {
             0, 0, 0, 0, 0, 1,
         ];
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_BYTES: &[u8; 208] = &[
             0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0,
             0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 7, 140, 18, 156, 86, 86, 16, 179,
@@ -283,10 +281,10 @@ mod tests {
 
         fn golden_value() -> SingleSignature {
             let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             let message = [0u8; 16];
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let message = [0u8; 32];
 
             let params = Parameters {
@@ -299,13 +297,13 @@ mod tests {
             let pk_1 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_1);
             let pk_2 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_2);
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let (schnorr_sk_1, schnorr_vk_1) = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 let vk = VerificationKeyForSnark::new_from_signing_key(sk.clone());
                 (sk, vk)
             };
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let schnorr_vk_2 = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 VerificationKeyForSnark::new_from_signing_key(sk)
@@ -315,14 +313,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_1),
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_2),
             )
             .unwrap();
@@ -344,7 +342,7 @@ mod tests {
             let concatenation_signature =
                 concatenation_proof_signer.create_single_signature(&message).unwrap();
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let snark_signature = {
                 let key_registration_commitment = closed_key_registration
                     .to_merkle_tree::<<D as MembershipDigest>::SnarkHash, RegistrationEntryForSnark>(
@@ -374,7 +372,7 @@ mod tests {
             SingleSignature {
                 concatenation_signature,
                 signer_index: 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 snark_signature,
             }
         }
@@ -392,7 +390,7 @@ mod tests {
             assert_eq!(golden_serialized, serialized);
         }
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_CBOR_BYTES: &[u8; 131] = &[
             1, 191, 101, 115, 105, 103, 109, 97, 152, 48, 24, 149, 24, 157, 24, 201, 24, 187, 24,
             140, 24, 54, 0, 24, 128, 24, 209, 24, 88, 16, 24, 203, 24, 61, 24, 78, 24, 77, 24, 98,
@@ -403,7 +401,7 @@ mod tests {
             103, 110, 101, 114, 95, 105, 110, 100, 101, 120, 1, 255,
         ];
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_CBOR_BYTES: &[u8; 396] = &[
             1, 191, 101, 115, 105, 103, 109, 97, 152, 48, 24, 140, 18, 24, 156, 24, 86, 24, 86, 16,
             24, 179, 24, 117, 24, 148, 17, 24, 195, 24, 177, 24, 207, 24, 235, 24, 93, 24, 252, 24,
@@ -449,7 +447,7 @@ mod tests {
 
         type D = MithrilMembershipDigest;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_JSON: &str = r#"
         {
             "sigma": [
@@ -461,7 +459,7 @@ mod tests {
             "signer_index": 1
         }"#;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_JSON: &str = r#"
         {
             "sigma": [
@@ -495,10 +493,10 @@ mod tests {
 
         fn golden_value() -> SingleSignature {
             let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             let message = [0u8; 16];
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let message = [0u8; 32];
 
             let params = Parameters {
@@ -511,13 +509,13 @@ mod tests {
             let pk_1 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_1);
             let pk_2 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_2);
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let (schnorr_sk_1, schnorr_vk_1) = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 let vk = VerificationKeyForSnark::new_from_signing_key(sk.clone());
                 (sk, vk)
             };
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let schnorr_vk_2 = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 VerificationKeyForSnark::new_from_signing_key(sk)
@@ -527,14 +525,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_1),
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_2),
             )
             .unwrap();
@@ -557,7 +555,7 @@ mod tests {
             let concatenation_signature =
                 concatenation_proof_signer.create_single_signature(&message).unwrap();
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let snark_signature = {
                 let key_registration_commitment = closed_key_registration
                     .to_merkle_tree::<<D as MembershipDigest>::SnarkHash, RegistrationEntryForSnark>(
@@ -587,7 +585,7 @@ mod tests {
             SingleSignature {
                 concatenation_signature,
                 signer_index: 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 snark_signature,
             }
         }
@@ -656,7 +654,7 @@ mod tests {
                 let entry = RegistrationEntry::new(
                     *verification_key,
                     1,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .unwrap();
@@ -688,7 +686,7 @@ mod tests {
                 closed_key_registration,
                 params,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             );
 
@@ -719,7 +717,7 @@ mod tests {
                     &1,
                     &ctx.avk,
                     &TEST_MESSAGE,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .expect_err("Verification should fail with wrong verification key");
@@ -750,7 +748,7 @@ mod tests {
                     &1,
                     &ctx.avk,
                     &TEST_MESSAGE,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .expect_err("Verification should fail with invalid index");
@@ -780,7 +778,7 @@ mod tests {
                     &1,
                     &ctx.avk,
                     &wrong_message,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .expect_err("Verification should fail with wrong message");
@@ -810,7 +808,7 @@ mod tests {
                     &1,
                     &different_registration_ctx.avk,
                     &TEST_MESSAGE,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 )
                 .expect_err("Verification should fail with a different registration AVK");

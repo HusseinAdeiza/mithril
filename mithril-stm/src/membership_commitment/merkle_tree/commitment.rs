@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 use crate::StmResult;
 use crate::codec;
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 use super::MerklePath;
 use super::{MerkleBatchPath, MerkleTreeError, MerkleTreeLeaf, parent, sibling};
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 /// `MerkleTree` commitment.
 /// This structure differs from `MerkleTree` in that it does not contain all elements, which are not always necessary.
@@ -28,8 +28,8 @@ pub struct MerkleTreeCommitment<D: Digest, L: MerkleTreeLeaf> {
     leaf_type: PhantomData<L>,
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl<D: Digest + FixedOutput, L: MerkleTreeLeaf> MerkleTreeCommitment<D, L> {
     pub(crate) fn new(root: Vec<u8>) -> Self {
@@ -127,8 +127,8 @@ impl<D: Digest + FixedOutput, L: MerkleTreeLeaf> MerkleTreeBatchCommitment<D, L>
         }
     }
 
-    #[cfg(feature = "future_snark")]
-    // TODO: remove this allow dead_code directive when function is called or future_snark is activated
+    #[cfg(feature = "snark")]
+    // TODO: remove this allow dead_code directive when function is called or snark is activated
     #[allow(dead_code)]
     /// Used in property test of `tree`: `test_bytes_tree_commitment_batch_compat`
     pub(crate) fn get_number_of_leaves(&self) -> usize {
@@ -342,7 +342,7 @@ mod tests {
             .to_merkle_tree_batch_commitment()
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod bytes_codec_ambiguity {
         use crate::{
             MembershipDigest, MithrilMembershipDigest,

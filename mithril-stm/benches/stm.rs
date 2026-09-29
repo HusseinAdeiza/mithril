@@ -48,7 +48,7 @@ fn stm_benches<D: MembershipDigest>(
                     .register(
                         p.stake,
                         &p.get_verification_key_proof_of_possession_for_concatenation(),
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         p.schnorr_verification_key,
                     )
                     .unwrap();
@@ -85,14 +85,14 @@ fn stm_benches<D: MembershipDigest>(
                 AncillaryProofInput::new(
                     None,
                     AncillaryGenesisData::new(
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         Vec::new(),
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         None,
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         None,
                     ),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     Vec::new(),
                 ),
             )
@@ -147,7 +147,7 @@ fn batch_benches<D>(
                     .register(
                         p.stake,
                         &p.get_verification_key_proof_of_possession_for_concatenation(),
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         p.schnorr_verification_key,
                     )
                     .unwrap();
@@ -175,14 +175,14 @@ fn batch_benches<D>(
                     AncillaryProofInput::new(
                         None,
                         AncillaryGenesisData::new(
-                            #[cfg(feature = "future_snark")]
+                            #[cfg(feature = "snark")]
                             Vec::new(),
-                            #[cfg(feature = "future_snark")]
+                            #[cfg(feature = "snark")]
                             None,
-                            #[cfg(feature = "future_snark")]
+                            #[cfg(feature = "snark")]
                             None,
                         ),
-                        #[cfg(feature = "future_snark")]
+                        #[cfg(feature = "snark")]
                         Vec::new(),
                     ),
                 )

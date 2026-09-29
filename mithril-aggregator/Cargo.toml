@@ -15,13 +15,13 @@ rustls = ["reqwest/rustls", "mithril-circuit-key-registry?/rustls"]
 
 # The SRS download needs a TLS backend, which the removal of the `mithril-stm` TLS features no
 # longer enforces anywhere else.
-future_snark = [
-    "mithril-common/future_snark",
+snark = [
+    "mithril-common/snark",
     "dep:ciborium",
     "dep:rand_core",
     "rustls",
     "dep:mithril-circuit-key-registry",
-    "mithril-circuit-key-registry/future_snark",
+    "mithril-circuit-key-registry/snark",
 ]
 
 [dependencies]

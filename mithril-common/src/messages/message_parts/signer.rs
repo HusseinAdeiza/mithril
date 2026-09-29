@@ -14,7 +14,7 @@ use crate::{
         Stake,
     },
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     crypto_helper::{
         ProtocolSignerVerificationKeyForSnark, ProtocolSignerVerificationKeySignatureForSnark,
@@ -59,12 +59,12 @@ pub struct SignerWithStakeMessagePart {
     pub stake: Stake,
 
     /// The encoded verification key for the SNARK proof system
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_for_snark: Option<HexEncodedVerificationKeyForSnark>,
 
     /// The encoded KES signature over the verification key for SNARK
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_signature_for_snark: Option<HexEncodedVerificationKeySignatureForSnark>,
 }
@@ -107,7 +107,7 @@ impl TryInto<SignerWithStake> for SignerWithStakeMessagePart {
                     self.party_id
                 )
             })?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark> = self
             .verification_key_for_snark
             .map(|f| f.try_into())
@@ -118,7 +118,7 @@ impl TryInto<SignerWithStake> for SignerWithStakeMessagePart {
                     self.party_id
                 )
             })?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let verification_key_signature_for_snark: Option<
             ProtocolSignerVerificationKeySignatureForSnark,
         > = self
@@ -148,9 +148,9 @@ impl TryInto<SignerWithStake> for SignerWithStakeMessagePart {
             kes_evolutions: self.kes_evolutions,
             operational_certificate,
             stake: self.stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark,
         };
         Ok(value)
@@ -173,11 +173,11 @@ impl From<SignerWithStake> for SignerWithStakeMessagePart {
                 .map(|op_cert| op_cert.try_into().unwrap()),
             kes_evolutions: value.kes_evolutions,
             stake: value.stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: value
                 .verification_key_for_snark
                 .map(|k| k.try_into().unwrap()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: value
                 .verification_key_signature_for_snark
                 .map(|s| s.try_into().unwrap()),
@@ -208,7 +208,7 @@ impl Debug for SignerWithStakeMessagePart {
                     )
                     .field("kes_evolutions", &format_args!("{:?}", self.kes_evolutions));
 
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 {
                     debug
                         .field(
@@ -263,12 +263,12 @@ pub struct SignerMessagePart {
     pub kes_evolutions: Option<KesEvolutions>,
 
     /// The verification key for the SNARK proof system (hex encoded)
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_for_snark: Option<HexEncodedVerificationKeyForSnark>,
 
     /// The KES signature over the verification key for SNARK (hex encoded)
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub verification_key_signature_for_snark: Option<HexEncodedVerificationKeySignatureForSnark>,
 }
@@ -288,7 +288,7 @@ impl SignerMessagePart {
     ///
     /// This is needed during the Pythagoras era to avoid deserialization failures
     /// in older signers/aggregators that don't know about the SNARK fields.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn without_snark_fields(mut self) -> Self {
         self.verification_key_for_snark = None;
         self.verification_key_signature_for_snark = None;
@@ -296,7 +296,7 @@ impl SignerMessagePart {
     }
 
     /// Remove SNARK-related fields from a list of signer message parts for backward compatibility.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn strip_snark_fields(signers: Vec<Self>) -> Vec<Self> {
         signers.into_iter().map(Self::without_snark_fields).collect()
     }
@@ -325,7 +325,7 @@ impl TryInto<Signer> for SignerMessagePart {
                     self.party_id
                 )
             })?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let verification_key_for_snark: Option<ProtocolSignerVerificationKeyForSnark> = self
             .verification_key_for_snark
             .map(|f| f.try_into())
@@ -336,7 +336,7 @@ impl TryInto<Signer> for SignerMessagePart {
                     self.party_id
                 )
             })?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let verification_key_signature_for_snark: Option<
             ProtocolSignerVerificationKeySignatureForSnark,
         > = self
@@ -366,9 +366,9 @@ impl TryInto<Signer> for SignerMessagePart {
             verification_key_signature_for_concatenation,
             kes_evolutions: self.kes_evolutions,
             operational_certificate,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark,
         };
         Ok(value)
@@ -390,11 +390,11 @@ impl From<Signer> for SignerMessagePart {
                 .operational_certificate
                 .map(|op_cert| op_cert.try_into().unwrap()),
             kes_evolutions: value.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: value
                 .verification_key_for_snark
                 .map(|k| k.try_into().unwrap()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: value
                 .verification_key_signature_for_snark
                 .map(|s| s.try_into().unwrap()),
@@ -425,7 +425,7 @@ impl Debug for SignerMessagePart {
                     )
                     .field("kes_evolutions", &format_args!("{:?}", self.kes_evolutions));
 
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 {
                     debug
                         .field(
@@ -463,9 +463,9 @@ mod tests {
                         "5b5b5b35312c36322c392c3230302c3230392c34312c3234352c3230372c3135392c3139392c31342c372c38322c3230332c3234302c312c3132392c3138372c3131392c3232312c3133362c3234372c38392c3132382c3232382c3133332c302c39382c31322c3232382c3137382c3233345d2c31362c313139302c5b3231302c3134382c37332c3136332c3232322c3233332c3138302c33372c3133312c3235342c392c3230352c3135382c3134392c31342c37302c39322c372c3233352c3231342c3131312c35322c3131362c34312c3131382c362c3132392c312c3130362c312c39342c3233332c3131352c3137332c3130302c3133392c3131342c3130392c31352c31342c3233332c34332c3137392c3137342c35302c31302c3135302c39372c3132372c3138322c31362c372c3131322c3234352c34382c3134312c38342c3130322c342c32352c3231312c3134342c3230322c345d5d2c5b3133312c3135352c37322c35372c3134372c3231382c3137332c36382c3139312c3234322c3138392c3234372c32372c3235342c3134382c3232352c35332c31312c36392c3135372c3138322c38302c3233342c3133312c3233342c33392c3130322c32312c322c332c36352c3139305d5d".to_string(),
                     ),
                     kes_evolutions: Some(KesEvolutions(6)),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: None,
                 }
         }
@@ -482,9 +482,9 @@ mod tests {
                         "82845820333e09c8d129f5cf9fc70e0752cbf00181bb77dd88f75980e48500620ce4b2ea101904a65840d29449a3dee9b42583fe09cd9e950e465c07ebd66f347429760681016a015ee973ad648b726d0f0ee92bb3ae320a96617fb6100770f5308d54660419d390ca045820839b483993daad44bff2bdf71bfe94e1350b459db650ea83ea276615020341be".to_string(),
                     ),
                     kes_evolutions: Some(KesEvolutions(6)),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: None,
                 }
         }
@@ -527,9 +527,9 @@ mod tests {
                     operational_certificate: signer_message_part.operational_certificate,
                     kes_evolutions: signer_message_part.kes_evolutions,
                     stake: 123,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: signer_message_part.verification_key_for_snark,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: signer_message_part
                         .verification_key_signature_for_snark,
                 }
@@ -547,9 +547,9 @@ mod tests {
                     operational_certificate: signer_message_part.operational_certificate,
                     kes_evolutions: signer_message_part.kes_evolutions,
                     stake: 123,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_for_snark: signer_message_part.verification_key_for_snark,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     verification_key_signature_for_snark: signer_message_part
                         .verification_key_signature_for_snark,
                 }
@@ -568,7 +568,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod strip_snark_fields {
         use super::*;
 

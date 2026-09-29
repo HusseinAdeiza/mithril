@@ -1,6 +1,6 @@
 //! Aggregating and verifying aggregate signatures with the recursive SNARK proof system.
 //!
-//! This proof system is experimental. It is gated behind the `future_snark` feature and its API
+//! This proof system is experimental. It is gated behind the `snark` feature and its API
 //! may still change.
 //!
 //! Each aggregate signature carries one recursive proof attesting to the whole chain behind it, so
@@ -31,7 +31,7 @@
 //!
 //! ```text
 //! cargo run --release -p mithril-stm --example recursive_snark_aggregate_signature \
-//!     --features future_snark
+//!     --features snark
 //! ```
 //!
 //! Advancing an epoch proves the same circuit twice, under a different transcript each time. Only

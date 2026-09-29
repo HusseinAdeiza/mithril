@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
 use mithril_common::StdError;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::crypto_helper::{schnorr_signature_from_hex, schnorr_signature_to_hex};
 use mithril_common::entities::{
     Certificate, CertificateMetadata, CertificateSignature, Epoch,
@@ -21,7 +21,7 @@ use mithril_persistence::{
     database::Hydrator,
     sqlite::{HydrationError, Projection, SqLiteEntity},
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use serde::{Deserialize, Serialize};
 
 /// JSON-serialised wrapper holding both signatures of a Lagrange-era dual genesis signature.
@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 /// Stored in the `signature` column so the SQLite round-trip preserves the SNARK half. Legacy
 /// Pythagoras records keep the raw Ed25519 hex string in the same column; deserialisation
 /// attempts this JSON wrapper first and falls back to the raw hex when the input is not JSON.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PersistedDualGenesisSignature {
@@ -44,7 +44,7 @@ struct PersistedDualGenesisSignature {
 ///
 /// A stored certificate carries exactly one of these signature shapes, so the variants are
 /// mutually exclusive by construction.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 enum PersistedRecordSignatures {
     /// Multi-signature carried by a standard (non-genesis) certificate.
     MultiSignature(HexEncodedKey),
@@ -56,7 +56,7 @@ enum PersistedRecordSignatures {
     GenesisDual(PersistedDualGenesisSignature),
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 impl PersistedDualGenesisSignature {
     /// Parse a persisted genesis signature column value.
     ///
@@ -218,7 +218,7 @@ impl TryFrom<Certificate> for CertificateRecord {
             CertificateSignature::GenesisSignature(signature) => {
                 (String::try_from(&signature)?, None)
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(ed_signature, schnorr_signature) => {
                 let payload = PersistedDualGenesisSignature {
                     ed25519: String::try_from(&ed_signature)?,
@@ -231,13 +231,13 @@ impl TryFrom<Certificate> for CertificateRecord {
             }
         };
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let aggregate_verification_key_snark = other
             .aggregate_verification_key_snark
             .as_ref()
             .map(String::try_from)
             .transpose()?;
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let aggregate_verification_key_snark: Option<HexEncodedKey> = None;
 
         let ancillary_prover_data = other
@@ -289,10 +289,10 @@ impl TryFrom<CertificateRecord> for Certificate {
         );
         let (previous_hash, signature) = match other.parent_certificate_id {
             None => {
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 let signature =
                     PersistedDualGenesisSignature::parse_genesis_signature(&other.signature)?;
-                #[cfg(not(feature = "future_snark"))]
+                #[cfg(not(feature = "snark"))]
                 let signature =
                     CertificateSignature::GenesisSignature(other.signature.as_str().try_into()?);
                 (String::new(), signature)
@@ -306,7 +306,7 @@ impl TryFrom<CertificateRecord> for Certificate {
             ),
         };
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let aggregate_verification_key_snark = other
             .aggregate_verification_key_snark
             .map(|hex| hex.as_str().try_into())
@@ -329,7 +329,7 @@ impl TryFrom<CertificateRecord> for Certificate {
             signed_message: other.protocol_message.compute_hash(),
             protocol_message: other.protocol_message,
             aggregate_verification_key: other.aggregate_verification_key.try_into()?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark,
             ancillary_prover_data,
             ancillary_verifier_data,
@@ -342,7 +342,7 @@ impl TryFrom<CertificateRecord> for Certificate {
 
 impl From<CertificateRecord> for CertificateMessage {
     fn from(value: CertificateRecord) -> Self {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (multi_signature, genesis_signature, genesis_schnorr_signature) =
             match PersistedDualGenesisSignature::split_message_signatures(
                 value.parent_certificate_id.is_some(),
@@ -358,7 +358,7 @@ impl From<CertificateRecord> for CertificateMessage {
                     (String::new(), payload.ed25519, payload.schnorr)
                 }
             };
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let (multi_signature, genesis_signature) = if value.parent_certificate_id.is_none() {
             (String::new(), value.signature)
         } else {
@@ -382,13 +382,13 @@ impl From<CertificateRecord> for CertificateMessage {
             protocol_message: value.protocol_message,
             signed_message: value.message,
             aggregate_verification_key: value.aggregate_verification_key,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: value.aggregate_verification_key_snark,
             ancillary_prover_data: value.ancillary_prover_data,
             ancillary_verifier_data: value.ancillary_verifier_data,
             multi_signature,
             genesis_signature,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_signature,
         }
     }
@@ -601,7 +601,7 @@ mod tests {
         assert_eq!(expected_hash, &certificate.hash);
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_multi_signature {
         use super::*;
 
@@ -632,7 +632,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_aggregate_verification_key {
         use super::*;
 
@@ -710,7 +710,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod dual_genesis_signature {
         use mithril_common::crypto_helper::{GenesisEd25519Signer, GenesisSchnorrSigner};
         use mithril_common::entities::CertificateSignature;

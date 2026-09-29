@@ -21,17 +21,17 @@ use mithril_common::{
     protocol::SignerBuilder,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::tools::GenesisSignedPayload;
 use crate::{
     database::repository::CertificateRepository,
     dependency_injection::GenesisCommandDependenciesContainer,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_circuit_key_registry::{
     MithrilCircuitVerificationKeyCertifier, UnconfiguredCircuitVerificationKeyRegistryRetriever,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::crypto_helper::{
     GenesisBundleError, GenesisEd25519SecretKey, GenesisSchnorrSigner, GenesisSigningKeyBundle,
     GenesisVerificationKeyBundle, ProtocolKey, sha256_digest, signed_message_from_digest,
@@ -87,7 +87,7 @@ impl GenesisTools {
             self.logger.clone(),
             self.certificate_repository.clone(),
             Arc::new(genesis_verifier.clone()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(MithrilCircuitVerificationKeyCertifier::new(
                 Arc::new(UnconfiguredCircuitVerificationKeyRegistryRetriever),
                 Arc::new(genesis_verifier.clone()),
@@ -154,7 +154,7 @@ impl GenesisTools {
             self.configuration.mithril_era,
         )?;
         match self.configuration.mithril_era {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => {
                 target_file.write_all(&protocol_message.rigid_preimage())?;
             }
@@ -182,7 +182,7 @@ impl GenesisTools {
     /// Decodes the [`crate::tools::GenesisSignedPayload`] envelope, reconstructs the certificate
     /// from the pre-computed Ed25519 + Schnorr signatures, then verifies both the Ed25519
     /// (ed25519) and the Schnorr (SNARK) signatures against it before saving.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub async fn import_dual_payload_signature(
         &self,
         signed_payload_path: &Path,
@@ -220,7 +220,7 @@ impl GenesisTools {
         &self,
         genesis_signer: GenesisSigner,
     ) -> StdResult<()> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if matches!(self.configuration.mithril_era, SupportedEra::Lagrange)
             && genesis_signer.schnorr.is_none()
         {
@@ -229,7 +229,7 @@ impl GenesisTools {
             ));
         }
         let ed25519_verification_key = genesis_signer.ed25519.verification_key();
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let schnorr_verification_key =
             genesis_signer.schnorr.as_ref().map(|s| s.verification_key());
         let genesis_producer = CertificateGenesisProducer::new().with_logger(self.logger.clone());
@@ -251,7 +251,7 @@ impl GenesisTools {
                     genesis_signature,
                     self.configuration.mithril_era,
                 )?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(
                 genesis_signature,
                 genesis_signature_snark,
@@ -268,9 +268,9 @@ impl GenesisTools {
                 unreachable!("the genesis signer never produces a multi-signature")
             }
         };
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let genesis_verifier = GenesisVerifier::from_ed25519(ed25519_verification_key);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let genesis_verifier = match schnorr_verification_key {
             Some(schnorr) => GenesisVerifier::from_bundle(GenesisVerificationKeyBundle::new(
                 ed25519_verification_key,
@@ -308,7 +308,7 @@ impl GenesisTools {
         to_sign_payload_file.read_to_end(&mut to_sign_payload_buffer)?;
 
         let signed_payload = match mithril_era {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => {
                 let digest = sha256_digest(&to_sign_payload_buffer);
                 let signed_message = signed_message_from_digest(&digest);
@@ -379,7 +379,7 @@ impl GenesisTools {
                     .verification_key()
                     .write_json_hex_to_file(&genesis_verification_key_path)?;
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => {
                 let ed25519 = GenesisEd25519Signer::create_non_deterministic_signer();
                 let schnorr = GenesisSchnorrSigner::create_non_deterministic_signer();
@@ -400,10 +400,10 @@ impl GenesisTools {
                     ProtocolKey::new(verification_bundle).to_bytes_hex()?,
                 )?;
             }
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             SupportedEra::Lagrange => {
                 return Err(anyhow::anyhow!(
-                    "Lagrange genesis keypair generation requires the 'future_snark' build feature"
+                    "Lagrange genesis keypair generation requires the 'snark' build feature"
                 ));
             }
         }
@@ -418,7 +418,7 @@ impl GenesisTools {
     ///
     /// Refuses to run if either target file already exists, to prevent accidentally overwriting
     /// an in-use genesis key.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn upgrade_legacy_keypair_to_dual(
         legacy_secret_key_path: &Path,
         target_path: &Path,
@@ -462,11 +462,11 @@ impl GenesisTools {
 mod tests {
     use std::{fs::read_to_string, path::PathBuf};
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::crypto_helper::{
         BUNDLE_FIRST_HEX_CHAR, GenesisSchnorrSigner, GenesisSigningKeyBundle,
     };
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::entities::Certificate;
     use mithril_common::{
         certificate_chain::MithrilCertificateVerifier,
@@ -476,7 +476,7 @@ mod tests {
         test::{TempDir, builder::MithrilFixtureBuilder, double::fake_data},
     };
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::test::double::FakeCircuitVerificationKeyCertifier;
 
     use crate::database::test_helper::main_db_connection;
@@ -494,7 +494,7 @@ mod tests {
         fixture.compute_aggregate_verification_key()
     }
 
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     fn build_tools(
         genesis_signer: &GenesisEd25519Signer,
     ) -> (
@@ -525,7 +525,7 @@ mod tests {
             TestLogger::stdout(),
             certificate_store.clone(),
             genesis_verifier.clone(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(FakeCircuitVerificationKeyCertifier::that_fails()),
         ));
         let configuration = GenesisToolsConfiguration {
@@ -549,7 +549,7 @@ mod tests {
         )
     }
 
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     #[tokio::test]
     async fn export_sign_then_import_genesis_payload() {
         let test_dir = get_temp_dir("export_payload_to_sign");
@@ -594,7 +594,7 @@ mod tests {
             );
     }
 
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     #[tokio::test]
     async fn bootstrap_test_genesis_certificate_works() {
         let ed25519_signer = GenesisEd25519Signer::create_deterministic_signer();
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(expected_genesis_verification_key, genesis_verification_key);
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn create_and_save_genesis_keypair_lagrange() {
         let temp_dir = get_temp_dir("create_and_save_genesis_keypair_lagrange");
@@ -667,7 +667,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod bootstrap {
         use mithril_common::crypto_helper::{GenesisSchnorrSigner, GenesisSigningKeyBundle};
 
@@ -733,7 +733,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod sign {
         use std::fs;
 
@@ -847,7 +847,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod import {
         use std::fs;
 
@@ -961,7 +961,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod upgrade_key_to_dual {
         use std::fs;
 

@@ -600,7 +600,7 @@ mod tests {
     // Slow runtime smoke: builds the full IVC setup (recursive keygen) once and exercises every
     // façade operation on all three transition paths, confirming fixture assembly, proving,
     // verification, and folding all succeed. Opt-in — run with
-    // `cargo test -p mithril-stm --features future_snark,benchmark-internals -- --ignored`
+    // `cargo test -p mithril-stm --features snark,benchmark-internals -- --ignored`
     // (the façade, and hence this test, is gated behind `benchmark-internals`).
     #[test]
     #[ignore = "slow: builds the full IVC setup via recursive keygen"]

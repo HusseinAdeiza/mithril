@@ -5,9 +5,9 @@
 //! Lagrange-era offline sign ceremony.
 
 mod operations;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod signed_payload;
 
 pub use operations::GenesisTools;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use signed_payload::GenesisSignedPayload;

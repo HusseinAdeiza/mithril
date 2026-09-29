@@ -36,13 +36,13 @@ pub(super) fn insert_many(certificates_records: Vec<CertificateRecord>) -> Where
     let values: Vec<Value> = certificates_records
         .into_iter()
         .flat_map(|certificate_record| {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let aggregate_verification_key_snark =
                 match certificate_record.aggregate_verification_key_snark {
                     Some(key) => Value::String(key),
                     None => Value::Null,
                 };
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             let aggregate_verification_key_snark = Value::Null;
 
             vec![

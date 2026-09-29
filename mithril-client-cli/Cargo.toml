@@ -24,7 +24,7 @@ path = "src/main.rs"
 [features]
 default = ["rustls"]
 rustls = ["mithril-client/rustls"]
-future_snark = ["mithril-client/future_snark"]
+snark = ["mithril-client/snark"]
 
 [dependencies]
 anyhow = { workspace = true }

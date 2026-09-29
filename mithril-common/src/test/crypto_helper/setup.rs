@@ -105,11 +105,11 @@ fn setup_signer_with_stake(
         operational_certificate,
         kes_evolutions,
         stake,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         verification_key_for_snark: protocol_initializer
             .verification_key_for_snark()
             .map(|vk| vk.into()),
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         verification_key_signature_for_snark: protocol_initializer
             .verification_key_signature_for_snark(),
     }
@@ -167,11 +167,11 @@ pub fn setup_signers_from_stake_distribution(
                 verification_key_for_concatenation: protocol_initializer
                     .verification_key_for_concatenation()
                     .into(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: protocol_initializer
                     .verification_key_for_snark()
                     .map(Into::into),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: protocol_initializer
                     .verification_key_signature_for_snark(),
             })

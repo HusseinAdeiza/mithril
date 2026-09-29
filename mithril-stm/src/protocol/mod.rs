@@ -12,7 +12,7 @@ pub use aggregate_signature::{
 };
 pub use error::{ProtocolError, RegisterError};
 pub(crate) use key_registration::RegistrationEntry;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use key_registration::RegistrationEntryForSnark;
 pub use key_registration::{
     ClosedKeyRegistration, ClosedRegistrationEntry, KeyRegistration,
@@ -29,6 +29,6 @@ pub type VerificationKeyProofOfPossessionForConcatenation =
 /// Wrapper of the MultiSignature Verification key
 pub type VerificationKeyForConcatenation = crate::signature_scheme::BlsVerificationKey;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 /// Wrapper of the Snark Verification key
 pub type VerificationKeyForSnark = crate::signature_scheme::SchnorrVerificationKey;

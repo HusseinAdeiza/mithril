@@ -33,14 +33,14 @@ impl TryFromMessageAdapter<RegisterSignerMessage, Signer> for FromRegisterSigner
                 })
                 .transpose()?,
             kes_evolutions: register_signer_message.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: register_signer_message.verification_key_for_snark.map(|verification_key_for_snark| {
                     verification_key_for_snark.try_into().with_context(|| {
                         "'FromRegisterSignerAdapter' can not convert the snark verification key"
                     })
                 })
                 .transpose()?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: register_signer_message
                 .verification_key_signature_for_snark.map(|verification_key_signature_for_snark| {
                     verification_key_signature_for_snark.try_into().with_context(|| {

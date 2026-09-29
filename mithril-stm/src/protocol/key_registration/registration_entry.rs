@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::Hash;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::VerificationKeyForSnark;
 use crate::{
     Initializer, RegisterError, Stake, StmResult, VerificationKeyForConcatenation,
@@ -15,7 +15,7 @@ use super::ClosedRegistrationEntry;
 pub(crate) struct RegistrationEntry(
     VerificationKeyForConcatenation,
     Stake,
-    #[cfg(feature = "future_snark")] Option<VerificationKeyForSnark>,
+    #[cfg(feature = "snark")] Option<VerificationKeyForSnark>,
 );
 
 impl RegistrationEntry {
@@ -24,7 +24,7 @@ impl RegistrationEntry {
     pub(crate) fn new(
         bls_verification_key_proof_of_possession: VerificationKeyProofOfPossessionForConcatenation,
         stake: Stake,
-        #[cfg(feature = "future_snark")] schnorr_verification_key: Option<VerificationKeyForSnark>,
+        #[cfg(feature = "snark")] schnorr_verification_key: Option<VerificationKeyForSnark>,
     ) -> StmResult<Self> {
         bls_verification_key_proof_of_possession
             .verify_proof_of_possession()
@@ -34,7 +34,7 @@ impl RegistrationEntry {
                 ))
             })?;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         schnorr_verification_key
             .map(|schnorr_vk| {
                 schnorr_vk
@@ -46,7 +46,7 @@ impl RegistrationEntry {
         Ok(RegistrationEntry(
             bls_verification_key_proof_of_possession.vk,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_verification_key,
         ))
     }
@@ -56,7 +56,7 @@ impl RegistrationEntry {
         self.0
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Gets the verification key for snark.
     pub(crate) fn get_verification_key_for_snark(&self) -> Option<VerificationKeyForSnark> {
         self.2
@@ -73,7 +73,7 @@ impl From<ClosedRegistrationEntry> for RegistrationEntry {
         RegistrationEntry(
             entry.get_verification_key_for_concatenation(),
             entry.get_stake(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             entry.get_verification_key_for_snark(),
         )
     }
@@ -86,7 +86,7 @@ impl TryFrom<Initializer> for RegistrationEntry {
         Self::new(
             initializer.bls_verification_key_proof_of_possession,
             initializer.stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             initializer.schnorr_verification_key,
         )
     }
@@ -97,7 +97,7 @@ impl Hash for RegistrationEntry {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.1.hash(state);
         self.0.hash(state);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         self.2.hash(state);
     }
 
@@ -134,7 +134,7 @@ mod tests {
         VerificationKeyProofOfPossessionForConcatenation, signature_scheme::BlsSigningKey,
     };
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::{VerificationKeyForSnark, signature_scheme::SchnorrSigningKey};
 
     use super::*;
@@ -143,7 +143,7 @@ mod tests {
         let bls_sk = BlsSigningKey::generate(rng);
         let bls_pk = VerificationKeyProofOfPossessionForConcatenation::from(&bls_sk);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let schnorr_verification_key = {
             let sk = SchnorrSigningKey::generate(rng);
             VerificationKeyForSnark::new_from_signing_key(sk)
@@ -151,7 +151,7 @@ mod tests {
         RegistrationEntry::new(
             bls_pk,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Some(schnorr_verification_key),
         )
         .unwrap()

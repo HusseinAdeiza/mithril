@@ -251,7 +251,7 @@ impl<D: MembershipDigest, R: RngCore + CryptoRng> SnarkAggregateSignatureProver<
     }
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 #[cfg(test)]
 mod tests {
 

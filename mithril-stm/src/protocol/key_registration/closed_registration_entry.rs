@@ -7,7 +7,7 @@ use crate::{
     codec,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     LotteryTargetValue, VerificationKeyForSnark,
     proof_system::compute_target_value_for_snark_lottery,
@@ -22,10 +22,10 @@ use crate::{
 struct ClosedRegistrationEntryCborEnvelope {
     verification_key_bytes: Vec<u8>,
     stake: Stake,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     snark_verification_key_bytes: Option<Vec<u8>>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     lottery_target_value_bytes: Option<Vec<u8>>,
 }
@@ -35,10 +35,10 @@ struct ClosedRegistrationEntryCborEnvelope {
 pub struct ClosedRegistrationEntry {
     verification_key_for_concatenation: VerificationKeyForConcatenation,
     stake: Stake,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     verification_key_for_snark: Option<VerificationKeyForSnark>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     lottery_target_value: Option<LotteryTargetValue>,
 }
@@ -54,17 +54,15 @@ impl ClosedRegistrationEntry {
     fn new(
         verification_key_for_concatenation: VerificationKeyForConcatenation,
         stake: Stake,
-        #[cfg(feature = "future_snark")] verification_key_for_snark: Option<
-            VerificationKeyForSnark,
-        >,
-        #[cfg(feature = "future_snark")] lottery_target_value: Option<LotteryTargetValue>,
+        #[cfg(feature = "snark")] verification_key_for_snark: Option<VerificationKeyForSnark>,
+        #[cfg(feature = "snark")] lottery_target_value: Option<LotteryTargetValue>,
     ) -> Self {
         ClosedRegistrationEntry {
             verification_key_for_concatenation,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             lottery_target_value,
         }
     }
@@ -83,8 +81,8 @@ impl ClosedRegistrationEntry {
     ///
     /// This is used when embedding registration entries in concatenation proofs,
     /// which do not need SNARK fields and must remain backward-compatible with
-    /// clients that do not support the `future_snark` feature.
-    #[cfg(feature = "future_snark")]
+    /// clients that do not support the `snark` feature.
+    #[cfg(feature = "snark")]
     pub fn without_snark_fields(&self) -> Self {
         ClosedRegistrationEntry {
             verification_key_for_concatenation: self.verification_key_for_concatenation,
@@ -94,13 +92,13 @@ impl ClosedRegistrationEntry {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Gets the verification key for snark.
     pub fn get_verification_key_for_snark(&self) -> Option<VerificationKeyForSnark> {
         self.verification_key_for_snark
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// Gets the lottery target value.
     pub fn get_lottery_target_value(&self) -> Option<LotteryTargetValue> {
         self.lottery_target_value
@@ -114,11 +112,11 @@ impl ClosedRegistrationEntry {
         let envelope = ClosedRegistrationEntryCborEnvelope {
             verification_key_bytes: self.verification_key_for_concatenation.to_bytes().to_vec(),
             stake: self.stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_verification_key_bytes: self
                 .verification_key_for_snark
                 .map(|vk| vk.to_bytes().to_vec()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             lottery_target_value_bytes: self
                 .lottery_target_value
                 .map(|ltv| ltv.to_bytes().to_vec()),
@@ -137,13 +135,13 @@ impl ClosedRegistrationEntry {
             let verification_key_for_concatenation =
                 VerificationKeyForConcatenation::from_bytes(&envelope.verification_key_bytes)?;
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let verification_key_for_snark = envelope
                 .snark_verification_key_bytes
                 .map(|b| VerificationKeyForSnark::from_bytes(&b))
                 .transpose()?;
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let lottery_target_value = envelope
                 .lottery_target_value_bytes
                 .map(|b| LotteryTargetValue::from_bytes(&b))
@@ -152,9 +150,9 @@ impl ClosedRegistrationEntry {
             Ok(ClosedRegistrationEntry {
                 verification_key_for_concatenation,
                 stake: envelope.stake,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 lottery_target_value,
             })
         } else {
@@ -165,7 +163,7 @@ impl ClosedRegistrationEntry {
     /// Creates a registration entry from legacy byte-packed format.
     /// Expects 96 bytes for the verification key for concatenation and 8 bytes for the stake
     /// (u64 big-endian).
-    /// #[cfg(feature = "future_snark")] Expects 64 bytes for the verification key for snark and 32
+    /// #[cfg(feature = "snark")] Expects 64 bytes for the verification key for snark and 32
     /// bytes for the lottery target value.
     /// The order is backward compatible with previous implementations.
     fn from_bytes_legacy(bytes: &[u8]) -> StmResult<Self> {
@@ -176,7 +174,7 @@ impl ClosedRegistrationEntry {
         u64_bytes.copy_from_slice(bytes.get(96..104).ok_or(RegisterError::SerializationError)?);
         let stake = Stake::from_be_bytes(u64_bytes);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (verification_key_for_snark, lottery_target_value) = {
             let schnorr_verification_key = bytes
                 .get(104..168)
@@ -198,9 +196,9 @@ impl ClosedRegistrationEntry {
         Ok(ClosedRegistrationEntry {
             verification_key_for_concatenation,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             lottery_target_value,
         })
     }
@@ -208,18 +206,18 @@ impl ClosedRegistrationEntry {
 
 impl Serialize for ClosedRegistrationEntry {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             let mut tuple = serializer.serialize_tuple(2)?;
             tuple.serialize_element(&self.verification_key_for_concatenation)?;
             tuple.serialize_element(&self.stake)?;
             tuple.end()
         }
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let has_snark_fields = self.verification_key_for_snark.is_some()
                 && self.lottery_target_value.is_some()
-                && cfg!(feature = "future_snark");
+                && cfg!(feature = "snark");
             let tuples_number = if has_snark_fields { 4 } else { 2 };
             let mut tuple = serializer.serialize_tuple(tuples_number)?;
             tuple.serialize_element(&self.verification_key_for_concatenation)?;
@@ -235,17 +233,17 @@ impl Serialize for ClosedRegistrationEntry {
 
 /// Converts a `RegistrationEntry` into a `ClosedRegistrationEntry`.
 ///
-/// Extracts the concatenation verification key and stake from the entry. When the `future_snark`
+/// Extracts the concatenation verification key and stake from the entry. When the `snark`
 /// feature is enabled and a SNARK verification key is present, the lottery target value is also
 /// computed from `phi_f`, the entry's stake, and `total_stake` via `compute_target_value_for_snark_lottery`.
 impl TryFrom<(RegistrationEntry, Stake, PhiFValue)> for ClosedRegistrationEntry {
     type Error = anyhow::Error;
     fn try_from(entry_total_stake: (RegistrationEntry, Stake, PhiFValue)) -> StmResult<Self> {
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         let (entry, _total_stake, _phi_f) = entry_total_stake;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (entry, total_stake, phi_f) = entry_total_stake;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let (schnorr_verification_key, target_value) = {
             let vk = entry.get_verification_key_for_snark();
             let target = vk
@@ -261,9 +259,9 @@ impl TryFrom<(RegistrationEntry, Stake, PhiFValue)> for ClosedRegistrationEntry 
         Ok(ClosedRegistrationEntry::new(
             entry.get_verification_key_for_concatenation(),
             entry.get_stake(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_verification_key,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             target_value,
         ))
     }
@@ -274,7 +272,7 @@ impl Hash for ClosedRegistrationEntry {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.stake.hash(state);
         self.verification_key_for_concatenation.hash(state);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             self.verification_key_for_snark.hash(state);
             self.lottery_target_value.hash(state);
@@ -321,7 +319,7 @@ mod tests {
         VerificationKeyProofOfPossessionForConcatenation, signature_scheme::BlsSigningKey,
     };
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::{VerificationKeyForSnark, signature_scheme::SchnorrSigningKey};
 
     use super::*;
@@ -333,7 +331,7 @@ mod tests {
         let bls_sk = BlsSigningKey::generate(rng);
         let bls_pk = VerificationKeyProofOfPossessionForConcatenation::from(&bls_sk);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let schnorr_verification_key = {
             let sk = SchnorrSigningKey::generate(rng);
             VerificationKeyForSnark::new_from_signing_key(sk.clone())
@@ -341,9 +339,9 @@ mod tests {
         ClosedRegistrationEntry::new(
             bls_pk.vk,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Some(schnorr_verification_key),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Some(LotteryTargetValue::get_one()),
         )
     }
@@ -375,7 +373,7 @@ mod tests {
     mod golden {
         use super::*;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_BYTES: &[u8; 104] = &[
             143, 161, 255, 48, 78, 57, 204, 220, 25, 221, 164, 252, 248, 14, 56, 126, 186, 135,
             228, 188, 145, 181, 52, 200, 97, 99, 213, 46, 0, 199, 193, 89, 187, 88, 29, 135, 173,
@@ -385,7 +383,7 @@ mod tests {
             224, 194, 0, 0, 0, 0, 0, 0, 0, 1,
         ];
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_BYTES: &[u8; 200] = &[
             143, 161, 255, 48, 78, 57, 204, 220, 25, 221, 164, 252, 248, 14, 56, 126, 186, 135,
             228, 188, 145, 181, 52, 200, 97, 99, 213, 46, 0, 199, 193, 89, 187, 88, 29, 135, 173,
@@ -404,7 +402,7 @@ mod tests {
             let bls_sk = BlsSigningKey::generate(&mut rng);
             let bls_pk = VerificationKeyProofOfPossessionForConcatenation::from(&bls_sk);
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let schnorr_verification_key = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 VerificationKeyForSnark::new_from_signing_key(sk.clone())
@@ -412,9 +410,9 @@ mod tests {
             ClosedRegistrationEntry::new(
                 bls_pk.vk,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_verification_key),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(LotteryTargetValue::get_one()),
             )
         }
@@ -432,7 +430,7 @@ mod tests {
             assert_eq!(golden_serialized, serialized);
         }
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_CBOR_BYTES: &[u8; 219] = &[
             1, 162, 118, 118, 101, 114, 105, 102, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101,
             121, 95, 98, 121, 116, 101, 115, 152, 96, 24, 143, 24, 161, 24, 255, 24, 48, 24, 78,
@@ -447,7 +445,7 @@ mod tests {
             251, 24, 68, 24, 69, 24, 121, 16, 24, 224, 24, 194, 101, 115, 116, 97, 107, 101, 1,
         ];
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_CBOR_BYTES: &[u8; 433] = &[
             1, 164, 118, 118, 101, 114, 105, 102, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101,
             121, 95, 98, 121, 116, 101, 115, 152, 96, 24, 143, 24, 161, 24, 255, 24, 48, 24, 78,
@@ -555,7 +553,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod without_snark_fields {
         use super::*;
 

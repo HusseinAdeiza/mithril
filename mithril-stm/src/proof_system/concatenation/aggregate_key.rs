@@ -120,14 +120,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();
@@ -214,14 +214,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();

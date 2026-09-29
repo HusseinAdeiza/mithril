@@ -20,7 +20,7 @@ use mithril_aggregator_discovery::{
     CapableAggregatorDiscoverer, HttpConfigAggregatorDiscoverer, RequiredAggregatorCapabilities,
     ShuffleAggregatorDiscoverer,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_circuit_key_registry::CircuitVerificationKeyRegistryRetriever;
 use mithril_common::{MITHRIL_CLIENT_TYPE_HEADER, MITHRIL_ORIGIN_TAG_HEADER};
 
@@ -37,7 +37,7 @@ use crate::certificate_client::{
 };
 #[cfg(feature = "unstable")]
 use crate::certificate_client::{CertificateVerifierCache, CertificateVerifierCacheMode};
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::circuit_key_registry::RemoteCircuitVerificationKeyRegistryRetriever;
 #[cfg(not(target_family = "wasm"))]
 use crate::common::MithrilNetwork;
@@ -234,7 +234,7 @@ pub struct ClientBuilder {
     certificate_verifier_cache: Option<Arc<dyn CertificateVerifierCache>>,
     #[cfg(feature = "unstable")]
     certificate_verifier_cache_mode: Option<CertificateVerifierCacheMode>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     circuit_key_registry_retriever: Option<Arc<dyn CircuitVerificationKeyRegistryRetriever>>,
     era_fetcher: Option<Arc<dyn EraFetcher>>,
     logger: Option<Logger>,
@@ -291,7 +291,7 @@ impl ClientBuilder {
             certificate_verifier_cache: None,
             #[cfg(feature = "unstable")]
             certificate_verifier_cache_mode: None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             circuit_key_registry_retriever: None,
             era_fetcher: None,
             logger: None,
@@ -362,7 +362,7 @@ impl ClientBuilder {
             Some(era_fetcher) => Arc::new(MithrilEraClient::new(era_fetcher)),
         };
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let circuit_key_registry_retriever = match self.circuit_key_registry_retriever {
             Some(circuit_key_registry_retriever) => circuit_key_registry_retriever,
             None => Arc::new(RemoteCircuitVerificationKeyRegistryRetriever::new(
@@ -379,7 +379,7 @@ impl ClientBuilder {
                     self.certificate_verifier_cache,
                     #[cfg(feature = "unstable")]
                     self.certificate_verifier_cache_mode.unwrap_or_default(),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     circuit_key_registry_retriever,
                     logger.clone(),
                 )
@@ -608,7 +608,7 @@ impl ClientBuilder {
     /// Set a custom registry retriever for the circuit verification key registry check on
     /// certificate verification, replacing the default one resolving the registry of the
     /// client's network from the published networks configuration.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn with_circuit_verification_key_registry_retriever(
         mut self,
         circuit_key_registry_retriever: Arc<dyn CircuitVerificationKeyRegistryRetriever>,

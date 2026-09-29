@@ -10,7 +10,7 @@ use mithril_stm::{
     SingleSignature,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_stm::MidnightPoseidonDigest;
 
 fn size<D>(k: u64, m: u64, nparties: usize, hash_name: &str)
@@ -36,7 +36,7 @@ where
             .register(
                 stake,
                 &p.get_verification_key_proof_of_possession_for_concatenation(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 p.schnorr_verification_key,
             )
             .unwrap();
@@ -66,14 +66,14 @@ where
             AncillaryProofInput::new(
                 None,
                 AncillaryGenesisData::new(
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     Vec::new(),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 ),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
             ),
         )
@@ -96,7 +96,7 @@ pub struct MembershipDigestConcatenationHashU64 {}
 
 impl MembershipDigest for MembershipDigestConcatenationHashU64 {
     type ConcatenationHash = Blake2b<U64>;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     type SnarkHash = MidnightPoseidonDigest;
 }
 

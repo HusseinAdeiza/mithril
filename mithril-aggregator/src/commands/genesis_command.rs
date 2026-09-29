@@ -7,7 +7,7 @@ use serde::Deserialize;
 use slog::{Logger, debug};
 
 use mithril_cardano_node_chain::chain_observer::ChainObserverType;
-#[cfg(not(feature = "future_snark"))]
+#[cfg(not(feature = "snark"))]
 use mithril_common::crypto_helper::GenesisEd25519VerificationKey;
 use mithril_common::crypto_helper::GenesisVerifier;
 use mithril_common::{
@@ -132,7 +132,7 @@ impl GenesisCommand {
     }
 
     pub fn extract_config(command_path: String) -> HashMap<String, StructDoc> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             extract_all!(
                 command_path,
@@ -145,7 +145,7 @@ impl GenesisCommand {
                 UpgradeKeyToDual = { UpgradeKeyToDualGenesisSubCommand },
             )
         }
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             extract_all!(
                 command_path,
@@ -179,7 +179,7 @@ pub enum GenesisSubCommand {
     GenerateKeypair(GenerateKeypairGenesisSubCommand),
 
     /// Upgrade a legacy single-Ed25519 genesis keypair into a dual signing/verification bundle.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     UpgradeKeyToDual(UpgradeKeyToDualGenesisSubCommand),
 }
 
@@ -195,7 +195,7 @@ impl GenesisSubCommand {
             Self::Import(cmd) => cmd.execute(root_logger, config_builder).await,
             Self::Sign(cmd) => cmd.execute(root_logger).await,
             Self::GenerateKeypair(cmd) => cmd.execute(root_logger).await,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Self::UpgradeKeyToDual(cmd) => cmd.execute(root_logger).await,
         }
     }
@@ -305,7 +305,7 @@ impl ImportGenesisSubCommand {
         self.run_import(&genesis_tools, mithril_era).await
     }
 
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     async fn run_import(
         &self,
         genesis_tools: &GenesisTools,
@@ -320,7 +320,7 @@ impl ImportGenesisSubCommand {
             .with_context(|| "genesis-tools: import error")
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     async fn run_import(
         &self,
         genesis_tools: &GenesisTools,
@@ -476,7 +476,7 @@ impl GenerateKeypairGenesisSubCommand {
 }
 
 /// Upgrade a legacy single-Ed25519 genesis keypair into a dual signing/verification bundle.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 #[derive(Parser, Debug, Clone)]
 pub struct UpgradeKeyToDualGenesisSubCommand {
     /// Legacy single-Ed25519 secret key file (genesis.sk).
@@ -488,7 +488,7 @@ pub struct UpgradeKeyToDualGenesisSubCommand {
     target_path: PathBuf,
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 impl UpgradeKeyToDualGenesisSubCommand {
     pub async fn execute(&self, root_logger: Logger) -> StdResult<()> {
         debug!(root_logger, "UPGRADE-KEY-TO-DUAL GENESIS command");
@@ -516,10 +516,10 @@ impl UpgradeKeyToDualGenesisSubCommand {
 mod tests {
     use std::sync::Arc;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::crypto_helper::GenesisEd25519Signer;
     use mithril_common::temp_dir;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::temp_dir_create;
 
     use crate::test::TestLogger;
@@ -618,7 +618,7 @@ mod tests {
         assert!(target.join("genesis.vk").exists());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[tokio::test]
     async fn upgrade_key_to_dual_subcommand_writes_bundle_files() {
         let temp = temp_dir_create!();

@@ -80,7 +80,7 @@ impl MessageBuilder {
         let mut message = certificate.protocol_message.clone();
         message.set_message_part(ProtocolMessagePartKey::NextAggregateVerificationKey, avk);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if certificate
             .protocol_message
             .get_message_part(&ProtocolMessagePartKey::NextSnarkAggregateVerificationKey)

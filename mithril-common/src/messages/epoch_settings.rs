@@ -105,9 +105,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_123".to_string()),
                 operational_certificate: Some("certificate_123".to_string()),
                 kes_evolutions: Some(KesEvolutions(12)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             next_signers: vec![SignerMessagePart {
@@ -116,9 +116,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_456".to_string()),
                 operational_certificate: Some("certificate_456".to_string()),
                 kes_evolutions: Some(KesEvolutions(45)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             cardano_transactions_signing_config: Some(CardanoTransactionsSigningConfig {
@@ -143,9 +143,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_123".to_string()),
                 operational_certificate: Some("certificate_123".to_string()),
                 kes_evolutions: Some(KesEvolutions(12)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             next_signers: vec![SignerMessagePart {
@@ -154,9 +154,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_456".to_string()),
                 operational_certificate: Some("certificate_456".to_string()),
                 kes_evolutions: Some(KesEvolutions(45)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             cardano_transactions_signing_config: Some(CardanoTransactionsSigningConfig {
@@ -181,9 +181,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_123".to_string()),
                 operational_certificate: Some("certificate_123".to_string()),
                 kes_evolutions: Some(KesEvolutions(12)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             next_signers: vec![SignerMessagePart {
@@ -192,9 +192,9 @@ mod tests {
                 verification_key_signature_for_concatenation: Some("signature_456".to_string()),
                 operational_certificate: Some("certificate_456".to_string()),
                 kes_evolutions: Some(KesEvolutions(45)),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_for_snark: None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
             }],
             cardano_transactions_signing_config: Some(CardanoTransactionsSigningConfig {
