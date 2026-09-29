@@ -837,7 +837,7 @@ mod tests {
     #[test]
     fn every_recursive_verifying_key_cache_input_changes_the_address() {
         let circuit_digest =
-            |seed: u8| -> CircuitVerificationKeyDigest { hex::encode([seed; 32]).parse().unwrap() };
+            |byte: u8| -> CircuitVerificationKeyDigest { hex::encode([byte; 32]).parse().unwrap() };
         let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
                          recursive_circuit_digest: CircuitVerificationKeyDigest,
                          recursive_degree: u32,

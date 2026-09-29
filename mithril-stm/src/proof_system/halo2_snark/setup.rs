@@ -211,8 +211,8 @@ mod test {
         }
     }
 
-    fn circuit_digest(seed: u8) -> CircuitVerificationKeyDigest {
-        hex::encode([seed; 32]).parse().unwrap()
+    fn circuit_digest(byte: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([byte; 32]).parse().unwrap()
     }
 
     // A cached key never has this digest, so every load regenerates the pair.

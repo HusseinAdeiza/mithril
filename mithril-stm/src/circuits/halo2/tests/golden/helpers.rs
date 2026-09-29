@@ -775,8 +775,8 @@ mod tests {
         parameters(3, 30, 0.2)
     }
 
-    fn certificate_circuit_digest(seed: u8) -> CircuitVerificationKeyDigest {
-        hex::encode([seed; 32]).parse().unwrap()
+    fn certificate_circuit_digest(byte: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([byte; 32]).parse().unwrap()
     }
 
     fn cache_directory(

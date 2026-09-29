@@ -493,8 +493,8 @@ mod tests {
         );
     }
 
-    fn circuit_digest(seed: u8) -> CircuitVerificationKeyDigest {
-        hex::encode([seed; 32]).parse().unwrap()
+    fn circuit_digest(byte: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([byte; 32]).parse().unwrap()
     }
 
     // The serialized key omits the gates, so the circuit enters the identity through its digest.
