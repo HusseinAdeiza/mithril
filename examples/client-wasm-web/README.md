@@ -18,6 +18,8 @@ In this example, the client interacts by default with a real aggregator on the n
   - compute a message for
   - verify that the certificate signs the computed message
 
+The certificate chain verifications use the certificate chain cache (unstable), stored in IndexedDB, in the `EarlyStopVerification` mode: the next verifications stop at the first certificate fetched from the cache, even after a page reload.
+
 ## Build and run the example
 
 First you need to switch to the latest release tag:

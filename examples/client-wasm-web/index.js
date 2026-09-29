@@ -22,6 +22,14 @@ broadcast_channel.onmessage = (e) => {
         ", event_id: " +
         event.payload.certificate_chain_validation_id,
     );
+  } else if (event.type == "CertificateFetchedFromCache") {
+    displayMessageInDOM(
+      event.type,
+      "A certificate has been fetched from the cache, certificate_hash: " +
+        event.payload.certificate_hash +
+        ", event_id: " +
+        event.payload.certificate_chain_validation_id,
+    );
   } else if (event.type == "CertificateChainValidated") {
     certificate_chain_validated_occurs = true;
     displayMessageInDOM(
@@ -75,8 +83,18 @@ let client_options = {
   // The following option activates the unstable features of the client.
   // Unstable features will trigger an error if this option is not set.
   unstable: true,
+  // The following option activates the certificate chain cache (unstable), stored in IndexedDB.
+  // The verified certificates are reused by the next certificate chain verifications, even after a page reload.
+  enable_certificate_chain_verification_cache: true,
+  // The chain verification stops at the first cached certificate ('EarlyStopVerification', the default),
+  // or re-verifies the cached certificates ('FullVerification').
+  certificate_chain_verification_cache_mode: "EarlyStopVerification",
 };
 let client = new MithrilClient(aggregator_endpoint, genesis_verification_key, client_options);
+displayMessageInDOM(
+  "Certificate chain cache enabled",
+  await client.is_certificate_verifier_cache_enabled(),
+);
 
 displayStepInDOM(1, "Getting stake distributions list...");
 let mithril_stake_distributions_list = await client.list_mithril_stake_distributions();
