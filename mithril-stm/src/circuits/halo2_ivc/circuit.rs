@@ -271,7 +271,14 @@ mod tests {
     use crate::{
         circuits::{
             halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-            halo2_ivc::RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+            halo2_ivc::{
+                PREIMAGE_SIZE, RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+                tests::common::asset_readers::{
+                    load_embedded_genesis_benchmark_fixture,
+                    load_embedded_recursive_chain_state_asset,
+                },
+                types::{MerkleTreeCommitment, MessageHash, ProtocolMessagePreimage},
+            },
         },
         codec::TryFromBytes,
     };
@@ -311,6 +318,119 @@ mod tests {
             cs.lookups().len(),
             7,
             "lookup argument count must not silently grow"
+        );
+    }
+
+    #[test]
+    fn ivc_circuit_data_new_stores_the_certificate_proof_it_was_given() {
+        let certificate_verification_key = production_certificate_verification_key();
+        let ivc_verification_key = RecursiveCircuitVerifyingKey::try_from_bytes(
+            RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+        )
+        .unwrap();
+        let genesis_fixture = load_embedded_genesis_benchmark_fixture()
+            .expect("genesis benchmark fixture should load");
+        let chain_state = load_embedded_recursive_chain_state_asset()
+            .expect("recursive chain state asset should load");
+
+        // Distinct nonempty bytes, so a `new` that dropped the certificate proof or substituted
+        // another one is caught here rather than looking like a passing hand-off.
+        let certificate_proof_bytes = vec![0x5c; 64];
+        let ivc_proof_bytes = vec![0x7e; 96];
+
+        let data = IvcCircuitData::new(
+            Global::new(
+                genesis_fixture.genesis_message_hash(),
+                genesis_fixture.genesis_verification_key,
+                &certificate_verification_key,
+                &ivc_verification_key,
+            ),
+            chain_state.state,
+            Witness::new(
+                genesis_fixture.genesis_signature,
+                MessageHash::ZERO,
+                MerkleTreeCommitment::ZERO,
+                ProtocolMessagePreimage::new([0u8; PREIMAGE_SIZE]),
+            ),
+            CertificateProofBytes::from_certificate_circuit_proof_bytes(
+                certificate_proof_bytes.clone(),
+            ),
+            IvcProofBytes::new(ivc_proof_bytes.clone()),
+            chain_state.accumulator,
+        );
+
+        assert_eq!(
+            data.certificate_proof, certificate_proof_bytes,
+            "IvcCircuitData::new must store the certificate proof bytes it was handed"
+        );
+        assert_eq!(
+            data.ivc_proof, ivc_proof_bytes,
+            "IvcCircuitData::new must store the IVC proof bytes it was handed"
+        );
+    }
+
+    // The recursive key is not stored on the circuit, only its domain and constraint system, so
+    // this asserts the certificate key by transcript and the recursive key by its derived metadata.
+    #[test]
+    fn ivc_circuit_try_new_stores_the_certificate_key_and_the_recursive_verifier_metadata() {
+        let certificate_verification_key = production_certificate_verification_key();
+        let ivc_verification_key = RecursiveCircuitVerifyingKey::try_from_bytes(
+            RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+        )
+        .unwrap();
+
+        let circuit = IvcCircuit::try_new(&certificate_verification_key, &ivc_verification_key)
+            .expect("two production keys must build a circuit");
+
+        // `try_new` clones the certificate key, so identity is the only thing to check: a circuit
+        // built from the certificate key in the recursive slot would carry a different transcript
+        // here.
+        assert_eq!(
+            circuit
+                .certificate_verification_key
+                .midnight_vk()
+                .vk()
+                .transcript_repr(),
+            certificate_verification_key.midnight_vk().vk().transcript_repr(),
+            "the circuit must carry the certificate key it was built from"
+        );
+        assert_eq!(
+            circuit.ivc_circuit_domain_and_constraint_system.0.k(),
+            ivc_verification_key.verifying_key().get_domain().k(),
+            "the stored domain must be the IVC key's own domain"
+        );
+        assert_eq!(
+            circuit.ivc_circuit_domain_and_constraint_system.1.degree(),
+            ivc_verification_key.verifying_key().cs().degree(),
+            "the stored constraint system must be the IVC key's own"
+        );
+        assert_eq!(
+            circuit.ivc_circuit_domain_and_constraint_system.1.blinding_factors(),
+            ivc_verification_key.verifying_key().cs().blinding_factors(),
+            "the stored constraint system must be the IVC key's own"
+        );
+    }
+
+    #[test]
+    fn ivc_circuit_try_new_rejects_a_wrong_degree_ivc_key() {
+        let certificate_verification_key = production_certificate_verification_key();
+        // The certificate VK has degree CERTIFICATE_CIRCUIT_DEGREE, so wrapping it in the
+        // recursive newtype gives a wrong-degree key without any SRS generation.
+        let wrong_degree_ivc_key =
+            RecursiveCircuitVerifyingKey::new(certificate_verification_key.midnight_vk().clone());
+
+        let err = IvcCircuit::try_new(&certificate_verification_key, &wrong_degree_ivc_key)
+            .expect_err("try_new must validate the IVC key degree before building");
+
+        let typed = err
+            .downcast::<IvcCircuitError>()
+            .expect("the degree mismatch must be typed, not a bare string");
+        assert_eq!(
+            typed,
+            IvcCircuitError::IvcVerificationKeyDegreeMismatch {
+                expected: RECURSIVE_CIRCUIT_DEGREE,
+                actual: wrong_degree_ivc_key.circuit_degree(),
+            }
         );
     }
 
