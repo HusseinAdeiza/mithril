@@ -11,8 +11,9 @@ repository = "https://github.com/IntersectMBO/mithril/"
 
 [dependencies]
 anyhow = { workspace = true }
+chrono = { workspace = true }
 clap = { workspace = true }
-mithril-client = { path = "../../mithril-client", features = ["unstable", "rustls"] }
+mithril-client = { path = "../../mithril-client", features = ["fs", "unstable", "rustls"] }
 slog = { workspace = true }
 slog-async = { workspace = true }
 slog-term = { workspace = true }

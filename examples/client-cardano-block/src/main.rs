@@ -3,11 +3,17 @@
 //! In this example, the client interacts with an aggregator whose URL must be specified in the command to get the data.
 
 use anyhow::anyhow;
+use chrono::TimeDelta;
 use clap::Parser;
 use slog::info;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
+use mithril_client::certificate_client::{
+    CertificateVerifierCache, CertificateVerifierCacheMode, FileCertificateVerifierCache,
+};
 use mithril_client::common::BlockHash;
 use mithril_client::{
     AggregatorDiscoveryType, ClientBuilder, GenesisVerificationKey, MessageBuilder, MithrilResult,
@@ -40,6 +46,42 @@ pub struct Args {
     /// Hashes of the blocks to certify.
     #[clap(value_delimiter = ',', required = true)]
     blocks_hashes: Vec<String>,
+
+    /// Use the certificate chain cache to verify the certificate chain.
+    #[clap(long)]
+    use_certificate_chain_cache: bool,
+
+    /// Verification mode of the certificate chain when the cache is used.
+    ///
+    /// Either "FullVerification" (cached certificates are re-verified) or "EarlyStopVerification"
+    /// (the verification stops at the first cached certificate).
+    #[clap(long, default_value_t, requires = "use_certificate_chain_cache")]
+    certificate_chain_cache_mode: CertificateVerifierCacheMode,
+
+    /// Directory of the certificate chain cache.
+    #[clap(
+        long,
+        default_value = "./certificate-chain-cache",
+        requires = "use_certificate_chain_cache"
+    )]
+    certificate_chain_cache_path: PathBuf,
+}
+
+impl Args {
+    /// Time a verified certificate stays in the certificate chain cache.
+    const CERTIFICATE_CHAIN_CACHE_EXPIRATION_DELAY: TimeDelta = TimeDelta::weeks(1);
+
+    /// File system certificate chain cache stored in the configured directory, if enabled.
+    fn certificate_verifier_cache(&self) -> Option<Arc<dyn CertificateVerifierCache>> {
+        self.use_certificate_chain_cache.then(|| {
+            let cache: Arc<dyn CertificateVerifierCache> =
+                Arc::new(FileCertificateVerifierCache::new(
+                    &self.certificate_chain_cache_path,
+                    Self::CERTIFICATE_CHAIN_CACHE_EXPIRATION_DELAY,
+                ));
+            cache
+        })
+    }
 }
 
 #[tokio::main]
@@ -54,6 +96,10 @@ async fn main() -> MithrilResult<()> {
         args.genesis_verification_key.clone(),
     ))
     .with_origin_tag(Some("EXAMPLE".to_string()))
+    .with_certificate_verifier_cache(
+        args.certificate_verifier_cache(),
+        args.certificate_chain_cache_mode,
+    )
     .with_logger(logger.clone())
     .build()?;
 
@@ -67,10 +113,17 @@ async fn main() -> MithrilResult<()> {
         logger,
         "Fetching the associated certificate and verifying the certificate chain…",
     );
+    let certificate_chain_verification_start = Instant::now();
     let certificate = client
         .certificate()
         .verify_chain(&cardano_block_proof.certificate_hash)
         .await?;
+    info!(
+        logger,
+        "Certificate chain verified in {:?} (certificate chain cache enabled: {})",
+        certificate_chain_verification_start.elapsed(),
+        args.use_certificate_chain_cache,
+    );
 
     info!(
         logger,

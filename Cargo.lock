@@ -1054,6 +1054,7 @@ name = "client-cardano-block"
 version = "0.1.4"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "mithril-client",
  "slog",
