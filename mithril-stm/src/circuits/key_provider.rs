@@ -151,8 +151,8 @@ impl CircuitCacheIdentity {
         }
     }
 
-    /// Digest a cached entry is validated against: the embedded production key's for the production
-    /// configuration, none for the others, which their own directory already isolates.
+    /// Digest a cached entry is validated against: the embedded production key's digest for the
+    /// production configuration, none for the others, which their own directory already isolates.
     fn expected_verification_key_digest(
         &self,
         production_verification_key_digest: impl FnOnce() -> StmResult<CircuitVerificationKeyDigest>,

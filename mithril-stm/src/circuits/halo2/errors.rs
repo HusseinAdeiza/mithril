@@ -136,8 +136,8 @@ pub enum CertificateCircuitError {
     )]
     VerificationKeyCommitmentCountMismatch { expected: usize, actual: usize },
 
-    /// An encoded verification key declares a public input count that is not the certificate
-    /// circuit's, which verification checks the instance length against.
+    /// An encoded verification key declares a different number of public inputs than the
+    /// certificate circuit has, and verification checks the instance length against that number.
     #[error(
         "Certificate verification key public input count mismatch: expected {expected}, got {actual}"
     )]
