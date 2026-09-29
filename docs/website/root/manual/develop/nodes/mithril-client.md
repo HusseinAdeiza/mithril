@@ -533,6 +533,82 @@ Here are the subcommands available:
 | **cache**               | Cache related commands (e.g., resetting the certificate chain cache) (unstable)       |
 | **help**                | Prints this message or the help for the given subcommand(s)                           |
 
+## Certificate chain cache
+
+:::warning
+
+The certificate chain cache is unstable and requires the `--unstable` flag.
+
+:::
+
+The certificate chain cache stores the certificates of the verified certificate chains in a directory, so that the next commands reuse them.
+It is enabled with the `--use-certificate-chain-cache` option, and its directory is set with the `--certificate-chain-cache-path` option (`./certificate-chain-cache` by default).
+A cached certificate expires after one week.
+
+The `--certificate-chain-cache-mode` option sets the verification mode:
+
+- `FullVerification` (default): the cached certificates are cryptographically re-verified, the cache only saves network round-trips
+- `EarlyStopVerification`: the chain verification stops at the first cached certificate, the cache also saves the cryptographic verifications.
+
+:::danger
+
+In the `EarlyStopVerification` mode, the cache is part of the trust base of the client: the directory of the cache must be protected against tampering and must never be shared with an untrusted party.
+Read the [certificate chain cache](../../../mithril/advanced/mithril-protocol/certificates.md#the-certificate-chain-cache) section for more details about the security impact of the modes.
+
+:::
+
+Certify Cardano transactions with the certificate chain cache in the `EarlyStopVerification` mode:
+
+<Tabs groupId="system" queryString>
+  <TabItem value="linux-mac" label="Linux / Mac">
+  ```bash
+  ./mithril-client --unstable --use-certificate-chain-cache --certificate-chain-cache-mode EarlyStopVerification cardano-transaction certify $TRANSACTIONS_HASHES
+  ```
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+  ```powershell
+  .\mithril-client --unstable --use-certificate-chain-cache --certificate-chain-cache-mode EarlyStopVerification cardano-transaction certify $TRANSACTIONS_HASHES
+  ```
+  </TabItem>
+</Tabs>
+
+Reset the certificate chain cache in the default directory:
+
+<Tabs groupId="system" queryString>
+  <TabItem value="linux-mac" label="Linux / Mac">
+  ```bash
+  ./mithril-client --unstable tools cache reset
+  ```
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+  ```powershell
+  .\mithril-client --unstable tools cache reset
+  ```
+  </TabItem>
+</Tabs>
+
+Reset the certificate chain cache in a custom directory (the `--certificate-chain-cache-path` option requires the `--use-certificate-chain-cache` option):
+
+<Tabs groupId="system" queryString>
+  <TabItem value="linux-mac" label="Linux / Mac">
+  ```bash
+  ./mithril-client --unstable --use-certificate-chain-cache --certificate-chain-cache-path $CERTIFICATE_CHAIN_CACHE_PATH tools cache reset
+  ```
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+  ```powershell
+  .\mithril-client --unstable --use-certificate-chain-cache --certificate-chain-cache-path $CERTIFICATE_CHAIN_CACHE_PATH tools cache reset
+  ```
+  </TabItem>
+</Tabs>
+
+:::info
+
+The cache directory holds a `.mithril-certificate-chain-cache` marker file.
+The client refuses to use or reset a directory that holds other data without this marker file.
+
+:::
+
 ## Configuration parameters
 
 The configuration parameters can be set in either of the following ways:
