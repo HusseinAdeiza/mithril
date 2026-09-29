@@ -33,6 +33,7 @@ As a minor extension, we have adopted a slightly different versioning convention
   - Support for the `EarlyStopVerification` mode of the certificate chain verification cache in the Mithril client library, which stops the chain verification at the first cached certificate.
   - Support for a file system backend of the certificate chain verification cache in the Mithril client library, which persists the verified certificates across runs.
   - Support for the certificate chain verification cache in the Mithril client CLI with the `--use-certificate-chain-cache`, `--certificate-chain-cache-mode` and `--certificate-chain-cache-path` options, and the new `tools cache reset` command.
+  - Support for an IndexedDB backend of the certificate chain verification cache in the Mithril client WASM library with the `enable_certificate_chain_verification_cache` client option, which persists the verified certificates across page loads, and the `certificate_chain_verification_cache_mode` client option (`EarlyStopVerification` by default).
   - Renamed the `future_snark` feature to `snark` in all the crates.
 
 - **REMOVED** support for `Gzip` compression/decompression in the Mithril aggregator and client:
