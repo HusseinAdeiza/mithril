@@ -25,6 +25,7 @@ Reviewers:
 - Make sure the degree of the circuits did not increase
 - Reviews the update of the key values (golden and production)
 - Run the tests for the integrity of the production keys
+- Review the updated circuit verification key digests: the integrity tests compare key bytes, which do not cover the constraint system
 
 Commands to run the integrity tests, once the [production SRS is downloaded](#download-of-the-production-srs):
 
@@ -72,6 +73,8 @@ On macOS, `sha256sum -c` is `shasum -a 256 -c`.
 ## Update of the golden value
 
 The author needs to update the golden value of the verification keys in the golden test in `mithril-stm/src/circuits/halo2/tests/golden/mod.rs` and `mithril-stm/src/circuits/halo2_ivc/tests/golden/mod.rs`. The failing tests (in red) need to be updated by changing the golden value used (in the golden files) to turn them green again.
+
+The circuit verification key digests are pinned as well, in `mithril-stm/src/circuits/verification_key_digest.rs`: `golden_digests_of_production_circuit_keys` for the two production keys, and `golden_digests_of_embedded_verification_context_keys` for the two keys of the recursive circuit test assets. A digest is computed from the key's transcript representation, which covers the constraint system that the key bytes omit, so a circuit change can turn these tests red while the golden verification key tests stay green. Update a failing digest with the value its test computes, the right-hand side of the assertion, once the key it is computed from has been updated: the production keys as described below, the test asset keys as described in the [recursive circuit test assets README](../../../mithril-stm/src/circuits/halo2_ivc/tests/assets/README.md).
 
 ## Update of the production circuit verification key
 
