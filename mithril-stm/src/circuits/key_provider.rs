@@ -810,26 +810,49 @@ mod tests {
         fs::remove_dir_all(&base_dir).ok();
     }
 
+    // The proving key is never compared, so a corrupt one is an error with or without an expected
+    // digest.
     #[test]
     fn an_undecodable_cached_proving_key_is_an_error() {
-        let (base_dir, provider) = counting_provider(current_function!(), b"vk", b"vk", b"pk");
-        fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
-        fs::write(provider.verification_key_path(), b"vk").unwrap();
-        fs::write(provider.proving_key_path(), UNDECODABLE_KEY).unwrap();
+        for (mode, expected_verification_key) in [
+            ("an expected digest", b"vk".as_slice()),
+            ("no expected digest", b"".as_slice()),
+        ] {
+            let (base_dir, provider) = counting_provider(
+                &format!(
+                    "{}-{}",
+                    current_function!(),
+                    expected_verification_key.len()
+                ),
+                expected_verification_key,
+                b"vk",
+                b"pk",
+            );
+            fs::create_dir_all(provider.verification_key_path().parent().unwrap()).unwrap();
+            fs::write(provider.verification_key_path(), b"vk").unwrap();
+            fs::write(provider.proving_key_path(), UNDECODABLE_KEY).unwrap();
 
-        let error = provider
-            .key_pair(&negligible_srs())
-            .expect_err("a corrupt cached proving key must surface its decoding error");
-        let verification_key = provider.verification_key(&negligible_srs()).unwrap();
+            let error = provider.key_pair(&negligible_srs()).expect_err(&format!(
+                "with {mode}, a corrupt cached proving key must surface its decoding error"
+            ));
+            let verification_key = provider.verification_key(&negligible_srs()).unwrap();
 
-        assert!(error.to_string().contains(UNDECODABLE_KEY_ERROR));
-        assert_eq!(
-            verification_key,
-            ByteKey(b"vk".to_vec()),
-            "the verifying key alone is served without decoding the proving key"
-        );
-        assert_eq!(provider.generator().calls.get(), 0);
-        fs::remove_dir_all(&base_dir).ok();
+            assert!(
+                error.to_string().contains(UNDECODABLE_KEY_ERROR),
+                "with {mode}, expected the decoding error, got: {error}"
+            );
+            assert_eq!(
+                verification_key,
+                ByteKey(b"vk".to_vec()),
+                "with {mode}, the verifying key alone is served without decoding the proving key"
+            );
+            assert_eq!(
+                provider.generator().calls.get(),
+                0,
+                "with {mode}, nothing is regenerated"
+            );
+            fs::remove_dir_all(&base_dir).ok();
+        }
     }
 
     // Only a missing file is a miss; any other read failure surfaces.
