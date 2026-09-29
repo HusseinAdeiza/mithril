@@ -90,17 +90,19 @@ manual workflow dominated by real proof generation.
 
 ## Source Constants To Update
 
-Regenerating the assets is only half the work. Six constants are pinned in source and are not
+Regenerating the assets is only half the work. Eight constants are pinned in source and are not
 written by any generator.
 
-| Constant                                    | File                                             | Test that computes it                                  | Computed value appears |
-| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------ | ---------------------- |
-| production certificate key digest           | `circuits/verification_key_digest.rs`            | `golden_digests_of_production_circuit_keys`            | right                  |
-| production recursive key digest             | `circuits/verification_key_digest.rs`            | `golden_digests_of_production_circuit_keys`            | right                  |
-| verification-context certificate key digest | `circuits/verification_key_digest.rs`            | `golden_digests_of_embedded_verification_context_keys` | right                  |
-| verification-context recursive key digest   | `circuits/verification_key_digest.rs`            | `golden_digests_of_embedded_verification_context_keys` | right                  |
-| `GOLDEN_R` combiner challenge               | `proof_system/halo2_ivc_snark/proof.rs`          | `golden_combiner_r_for_stored_recursive_step_output`   | left                   |
-| `EXPECTED_IVC_ANCILLARY_DIGEST`             | `protocol/aggregate_signature/ancillary_data.rs` | `ivc_ancillary_encoding_is_byte_stable`                | left                   |
+| Constant                                    | File                                             | Test that computes it                                                 | Computed value appears |
+| ------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------- | ---------------------- |
+| production certificate key digest           | `circuits/verification_key_digest.rs`            | `golden_digests_of_production_circuit_keys`                           | right                  |
+| production recursive key digest             | `circuits/verification_key_digest.rs`            | `golden_digests_of_production_circuit_keys`                           | right                  |
+| verification-context certificate key digest | `circuits/verification_key_digest.rs`            | `golden_digests_of_embedded_verification_context_keys`                | right                  |
+| verification-context recursive key digest   | `circuits/verification_key_digest.rs`            | `golden_digests_of_embedded_verification_context_keys`                | right                  |
+| `GOLDEN_R` combiner challenge               | `proof_system/halo2_ivc_snark/proof.rs`          | `golden_combiner_r_for_stored_recursive_step_output`                  | left                   |
+| `EXPECTED_IVC_ANCILLARY_DIGEST`             | `protocol/aggregate_signature/ancillary_data.rs` | `ivc_ancillary_encoding_is_byte_stable`                               | left                   |
+| `CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT`    | `circuits/halo2/mod.rs`                          | `the_pinned_public_input_count_is_the_formatted_instance_length`      | left                   |
+| `RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT`      | `circuits/halo2_ivc/mod.rs`                      | `the_pinned_public_input_count_follows_the_current_circuit_structure` | left                   |
 
 The assertions are not written the same way round, so check the last column before copying a value:
 taking the wrong side copies the old expected value back, leaving the test failing.
@@ -110,13 +112,17 @@ Each constant binds something different, which is what decides whether it moves:
 - The four key digests bind the raw verifying key's **transcript representation**.
 - `GOLDEN_R` binds the **proof verification transcript and accumulator**.
 - `EXPECTED_IVC_ANCILLARY_DIGEST` binds the **complete encoded CBOR**, embedded keys included.
+- The two public input counts bind the **number of public inputs** of each circuit, which the key decoders
+  check against the count a key declares.
 
-These four tests compute golden values; they do not establish validity. Confirm the regenerated keys
-and proofs pass their integrity and verification checks before updating any constant — the
-`GOLDEN_R` test in particular prepares the transcript without performing the final pairing check —
-then rerun the golden checks.
+These tests compute golden values; they do not establish validity. The two public input counts come
+first: update them with the circuit and its keys, to the values their guard tests compute, since the
+key decoders reject a key declaring another count. Then confirm the regenerated keys and proofs pass
+their integrity and verification checks before updating the other constants — the `GOLDEN_R` test in
+particular prepares the transcript without performing the final pairing check — then rerun the golden
+checks.
 
-So the rule is not to predict which will move. Rerun all four tests after regenerating, and update
+So the rule is not to predict which will move. Rerun all of them after regenerating, and update
 only those whose inputs you deliberately changed. Some cases are counter-intuitive: a constraint
 system change can alter a transcript representation without altering the serialized commitments; a
 key encoding change moves only the ancillary digest, since the others never see the envelope;
