@@ -348,6 +348,8 @@ impl IvcProverInputVerificationContext {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::{
         Parameters,
         circuits::halo2_ivc::tests::common::asset_readers::load_embedded_verification_context_asset,
@@ -382,67 +384,47 @@ mod tests {
             .directory()
             .to_path_buf()
         };
-        let baseline = directory(circuit_digest(1), circuit_digest(2), parameters, 4, 42);
 
-        for (label, varied) in [
-            (
-                "certificate circuit digest",
-                directory(circuit_digest(3), circuit_digest(2), parameters, 4, 42),
+        let directories = [
+            directory(circuit_digest(1), circuit_digest(2), parameters, 4, 42),
+            directory(circuit_digest(3), circuit_digest(2), parameters, 4, 42),
+            directory(circuit_digest(1), circuit_digest(3), parameters, 4, 42),
+            directory(
+                circuit_digest(1),
+                circuit_digest(2),
+                Parameters { k: 4, ..parameters },
+                4,
+                42,
             ),
-            (
-                "recursive circuit digest",
-                directory(circuit_digest(1), circuit_digest(3), parameters, 4, 42),
+            directory(
+                circuit_digest(1),
+                circuit_digest(2),
+                Parameters {
+                    m: 11,
+                    ..parameters
+                },
+                4,
+                42,
             ),
-            (
-                "quorum size",
-                directory(
-                    circuit_digest(1),
-                    circuit_digest(2),
-                    Parameters { k: 4, ..parameters },
-                    4,
-                    42,
-                ),
+            directory(
+                circuit_digest(1),
+                circuit_digest(2),
+                Parameters {
+                    phi_f: 0.3,
+                    ..parameters
+                },
+                4,
+                42,
             ),
-            (
-                "lottery count",
-                directory(
-                    circuit_digest(1),
-                    circuit_digest(2),
-                    Parameters {
-                        m: 11,
-                        ..parameters
-                    },
-                    4,
-                    42,
-                ),
-            ),
-            (
-                "phi_f",
-                directory(
-                    circuit_digest(1),
-                    circuit_digest(2),
-                    Parameters {
-                        phi_f: 0.3,
-                        ..parameters
-                    },
-                    4,
-                    42,
-                ),
-            ),
-            (
-                "merkle tree depth",
-                directory(circuit_digest(1), circuit_digest(2), parameters, 5, 42),
-            ),
-            (
-                "unsafe srs seed",
-                directory(circuit_digest(1), circuit_digest(2), parameters, 4, 43),
-            ),
-        ] {
-            assert_ne!(
-                baseline, varied,
-                "a change of {label} must resolve to a different cache entry"
-            );
-        }
+            directory(circuit_digest(1), circuit_digest(2), parameters, 5, 42),
+            directory(circuit_digest(1), circuit_digest(2), parameters, 4, 43),
+        ];
+
+        assert_eq!(
+            directories.iter().collect::<HashSet<_>>().len(),
+            directories.len(),
+            "every input must resolve to a different cache entry: {directories:#?}"
+        );
     }
 
     #[test]

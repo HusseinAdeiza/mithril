@@ -188,7 +188,7 @@ impl SnarkVerifierData {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use std::{collections::HashSet, fs};
 
     use midnight_proofs::utils::SerdeFormat;
     use midnight_zk_stdlib::MidnightCircuit;
@@ -224,6 +224,7 @@ mod test {
     /// [`SnarkProverSetup::test_key_cache`] makes this fail rather than silently sharing an entry.
     #[test]
     fn every_test_key_cache_input_changes_the_address() {
+        let parameters = default_params();
         let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
                          parameters: Parameters,
                          merkle_tree_depth: u32,
@@ -238,63 +239,38 @@ mod test {
             .directory()
             .to_path_buf()
         };
-        let baseline = directory(circuit_digest(1), default_params(), 4, 42);
 
-        for (label, varied) in [
-            (
-                "certificate circuit digest",
-                directory(circuit_digest(2), default_params(), 4, 42),
+        let directories = [
+            directory(circuit_digest(1), parameters, 4, 42),
+            directory(circuit_digest(2), parameters, 4, 42),
+            directory(circuit_digest(1), Parameters { k: 4, ..parameters }, 4, 42),
+            directory(
+                circuit_digest(1),
+                Parameters {
+                    m: 11,
+                    ..parameters
+                },
+                4,
+                42,
             ),
-            (
-                "quorum size",
-                directory(
-                    circuit_digest(1),
-                    Parameters {
-                        k: 4,
-                        ..default_params()
-                    },
-                    4,
-                    42,
-                ),
+            directory(
+                circuit_digest(1),
+                Parameters {
+                    phi_f: 0.3,
+                    ..parameters
+                },
+                4,
+                42,
             ),
-            (
-                "lottery count",
-                directory(
-                    circuit_digest(1),
-                    Parameters {
-                        m: 11,
-                        ..default_params()
-                    },
-                    4,
-                    42,
-                ),
-            ),
-            (
-                "phi_f",
-                directory(
-                    circuit_digest(1),
-                    Parameters {
-                        phi_f: 0.3,
-                        ..default_params()
-                    },
-                    4,
-                    42,
-                ),
-            ),
-            (
-                "merkle tree depth",
-                directory(circuit_digest(1), default_params(), 5, 42),
-            ),
-            (
-                "unsafe srs seed",
-                directory(circuit_digest(1), default_params(), 4, 43),
-            ),
-        ] {
-            assert_ne!(
-                baseline, varied,
-                "a change of {label} must resolve to a different cache entry"
-            );
-        }
+            directory(circuit_digest(1), parameters, 5, 42),
+            directory(circuit_digest(1), parameters, 4, 43),
+        ];
+
+        assert_eq!(
+            directories.iter().collect::<HashSet<_>>().len(),
+            directories.len(),
+            "every input must resolve to a different cache entry: {directories:#?}"
+        );
     }
 
     #[test]
