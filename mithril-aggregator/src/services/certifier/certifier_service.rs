@@ -835,6 +835,7 @@ mod tests {
 
         struct CreatedCertificate {
             certificate: Certificate,
+            #[cfg(feature = "future_snark")]
             genesis_hash: String,
             concatenation_certificate_hash: String,
         }
@@ -842,6 +843,7 @@ mod tests {
         struct PreparedCertification {
             certifier_service: MithrilCertifierService,
             signed_entity_type: SignedEntityType,
+            #[cfg(feature = "future_snark")]
             genesis_hash: String,
             concatenation_certificate_hash: String,
         }
@@ -906,6 +908,7 @@ mod tests {
             PreparedCertification {
                 certifier_service,
                 signed_entity_type,
+                #[cfg(feature = "future_snark")]
                 genesis_hash: genesis_certificate.hash,
                 concatenation_certificate_hash: concatenation_certificate.hash,
             }
@@ -930,6 +933,7 @@ mod tests {
 
             CreatedCertificate {
                 certificate,
+                #[cfg(feature = "future_snark")]
                 genesis_hash: prepared.genesis_hash,
                 concatenation_certificate_hash: prepared.concatenation_certificate_hash,
             }
