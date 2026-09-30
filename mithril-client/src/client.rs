@@ -112,7 +112,7 @@ pub struct ClientOptions {
     ///
     /// `unstable` must be set to `true` for this option to have any effect.
     ///
-    /// DANGER: This feature is highly experimental and insecure, and it must not be used in production
+    /// The certificate chain cache is globally unstable.
     #[cfg(target_family = "wasm")]
     #[cfg_attr(target_family = "wasm", serde(default))]
     pub enable_certificate_chain_verification_cache: bool,
@@ -126,6 +126,19 @@ pub struct ClientOptions {
     #[cfg(target_family = "wasm")]
     #[cfg_attr(target_family = "wasm", serde(default = "one_week_in_seconds"))]
     pub certificate_chain_verification_cache_duration_in_seconds: u32,
+
+    /// Verification mode of the certificate chain when the cache is used in the WASM client.
+    ///
+    /// Default to `EarlyStopVerification`.
+    ///
+    /// `enable_certificate_chain_verification_cache` and `unstable` must both be set to `true`
+    /// for this option to have any effect.
+    #[cfg(all(target_family = "wasm", feature = "unstable"))]
+    #[cfg_attr(
+        all(target_family = "wasm", feature = "unstable"),
+        serde(default = "ClientOptions::default_certificate_chain_verification_cache_mode")
+    )]
+    pub certificate_chain_verification_cache_mode: CertificateVerifierCacheMode,
 }
 
 impl ClientOptions {
@@ -141,7 +154,16 @@ impl ClientOptions {
             enable_certificate_chain_verification_cache: false,
             #[cfg(target_family = "wasm")]
             certificate_chain_verification_cache_duration_in_seconds: one_week_in_seconds(),
+            #[cfg(all(target_family = "wasm", feature = "unstable"))]
+            certificate_chain_verification_cache_mode:
+                Self::default_certificate_chain_verification_cache_mode(),
         }
+    }
+
+    /// Default verification mode of the certificate chain when the cache is used in the WASM client.
+    #[cfg(all(target_family = "wasm", feature = "unstable"))]
+    const fn default_certificate_chain_verification_cache_mode() -> CertificateVerifierCacheMode {
+        CertificateVerifierCacheMode::EarlyStopVerification
     }
 
     /// Enable unstable features in the WASM client.
