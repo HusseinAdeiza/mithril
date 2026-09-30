@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.12.25 (09-30-2026)
+
+### Changed
+
+- Fingerprinted the circuit key caches outside production by the digests of the circuit verification keys, which cover the constraint system the key bytes omit. The cache schema version moves to `v2`.
+- Compared a cached production circuit verification key with the embedded one by digest. The production keys are unchanged, so no re-genesis is needed.
+
+### Fixed
+
+- Rejected a circuit verification key declaring another public input count than its circuit's.
+
+### Added
+
+- Added tests for the recovery of the key provider cache and the addresses of the prover setup test caches.
+- Documented the pinned digests, public input counts and cache directory name for circuit key updates, and updated the SNARK book.
+
 ## 0.12.24 (09-29-2026)
 
 ### Added

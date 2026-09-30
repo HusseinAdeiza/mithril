@@ -13,9 +13,8 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 use crate::circuits::{
-    halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-    halo2_ivc::RECURSIVE_CIRCUIT_DEGREE, test_utils::file_mutex::FileMutex,
-    trusted_setup::UNSAFE_SRS_SEED,
+    CircuitVerificationKeyDigest, halo2_ivc::RECURSIVE_CIRCUIT_DEGREE,
+    test_utils::file_mutex::FileMutex, trusted_setup::UNSAFE_SRS_SEED,
 };
 use crate::{
     Parameters, StmResult,
@@ -101,18 +100,12 @@ impl SnarkProverSetup {
         merkle_tree_depth: u32,
         unsafe_srs_degree: u32,
     ) -> StmResult<Self> {
-        let parameters_bytes = parameters.to_bytes()?;
-        let depth_bytes = merkle_tree_depth.to_le_bytes();
-        let seed_bytes = UNSAFE_SRS_SEED.to_le_bytes();
-        let cache = FileMutex::for_shared_cache(
-            "non-recursive",
-            &[
-                NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
-                &parameters_bytes,
-                &depth_bytes,
-                &seed_bytes,
-            ],
-        );
+        let cache = Self::test_key_cache(
+            &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
+            parameters,
+            merkle_tree_depth,
+            UNSAFE_SRS_SEED,
+        )?;
         let cache_directory = cache.directory().to_path_buf();
         // Serialize cold-start keygen across the parallel slow-test processes.
         let _key_cache_lock = cache.lock()?;
@@ -120,8 +113,30 @@ impl SnarkProverSetup {
         let trusted_setup_provider =
             TrustedSetupProvider::with_unsafe_srs(&cache_directory, unsafe_srs_degree);
         let circuit = CertificateCircuit::try_new(parameters, merkle_tree_depth)?;
-        let provider = KeyProvider::new(cache_directory, "non-recursive", &[], circuit);
+        let provider = KeyProvider::new(cache_directory, "non-recursive", None, circuit);
         Self::load(&trusted_setup_provider, &provider)
+    }
+
+    /// The shared cache the test setup derives its keys in.
+    ///
+    /// Every input is a parameter, so the address is a pure function of them and a test can vary
+    /// each one.
+    #[cfg(test)]
+    fn test_key_cache(
+        certificate_circuit_digest: &CircuitVerificationKeyDigest,
+        parameters: &crate::Parameters,
+        merkle_tree_depth: u32,
+        unsafe_srs_seed: u64,
+    ) -> StmResult<FileMutex> {
+        Ok(FileMutex::for_shared_cache(
+            "non-recursive",
+            &[
+                certificate_circuit_digest.as_bytes(),
+                &parameters.to_bytes()?,
+                &merkle_tree_depth.to_le_bytes(),
+                &unsafe_srs_seed.to_le_bytes(),
+            ],
+        ))
     }
 }
 
@@ -173,7 +188,7 @@ impl SnarkVerifierData {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use std::{collections::HashSet, fs};
 
     use midnight_proofs::utils::SerdeFormat;
     use midnight_zk_stdlib::MidnightCircuit;
@@ -181,8 +196,8 @@ mod test {
     use crate::{
         Parameters,
         circuits::{
-            halo2::circuit::CertificateCircuit, key_provider::KeyProvider,
-            trusted_setup::TrustedSetupProvider,
+            CircuitVerificationKeyDigest, halo2::circuit::CertificateCircuit,
+            key_provider::KeyProvider, trusted_setup::TrustedSetupProvider,
         },
         codec::TryToBytes,
         proof_system::halo2_snark::SnarkProverSetup,
@@ -196,6 +211,68 @@ mod test {
         }
     }
 
+    fn circuit_digest(byte: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([byte; 32]).parse().unwrap()
+    }
+
+    // A cached key never has this digest, so every load regenerates the pair.
+    fn digest_matching_no_key() -> CircuitVerificationKeyDigest {
+        circuit_digest(0)
+    }
+
+    /// Exercises the test key cache address, so dropping an input from
+    /// [`SnarkProverSetup::test_key_cache`] makes this fail rather than silently sharing an entry.
+    #[test]
+    fn every_test_key_cache_input_changes_the_address() {
+        let parameters = default_params();
+        let directory = |certificate_circuit_digest: CircuitVerificationKeyDigest,
+                         parameters: Parameters,
+                         merkle_tree_depth: u32,
+                         unsafe_srs_seed: u64| {
+            SnarkProverSetup::test_key_cache(
+                &certificate_circuit_digest,
+                &parameters,
+                merkle_tree_depth,
+                unsafe_srs_seed,
+            )
+            .expect("the test key cache should resolve")
+            .directory()
+            .to_path_buf()
+        };
+
+        let directories = [
+            directory(circuit_digest(1), parameters, 4, 42),
+            directory(circuit_digest(2), parameters, 4, 42),
+            directory(circuit_digest(1), Parameters { k: 4, ..parameters }, 4, 42),
+            directory(
+                circuit_digest(1),
+                Parameters {
+                    m: 11,
+                    ..parameters
+                },
+                4,
+                42,
+            ),
+            directory(
+                circuit_digest(1),
+                Parameters {
+                    phi_f: 0.3,
+                    ..parameters
+                },
+                4,
+                42,
+            ),
+            directory(circuit_digest(1), parameters, 5, 42),
+            directory(circuit_digest(1), parameters, 4, 43),
+        ];
+
+        assert_eq!(
+            directories.iter().collect::<HashSet<_>>().len(),
+            directories.len(),
+            "every input must resolve to a different cache entry: {directories:#?}"
+        );
+    }
+
     #[test]
     fn load_succeeds_with_valid_parameters() {
         let params = default_params();
@@ -204,7 +281,12 @@ mod test {
         let base_dir = std::env::temp_dir().join(current_function!());
         fs::remove_dir_all(&base_dir).ok();
         let trusted_setup_provider = TrustedSetupProvider::with_unsafe_srs(&base_dir, degree);
-        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", b"test-vk", circuit);
+        let provider = KeyProvider::new(
+            base_dir.clone(),
+            "non-recursive",
+            Some(digest_matching_no_key()),
+            circuit,
+        );
         let result = SnarkProverSetup::load(&trusted_setup_provider, &provider);
         assert!(result.is_ok());
         fs::remove_dir_all(&base_dir).ok();
@@ -218,7 +300,12 @@ mod test {
         let base_dir = std::env::temp_dir().join(current_function!());
         fs::remove_dir_all(&base_dir).ok();
         let trusted_setup_provider = TrustedSetupProvider::with_unsafe_srs(&base_dir, degree);
-        let provider = KeyProvider::new(base_dir.clone(), "non-recursive", b"test-vk", circuit);
+        let provider = KeyProvider::new(
+            base_dir.clone(),
+            "non-recursive",
+            Some(digest_matching_no_key()),
+            circuit,
+        );
         let setup1 = SnarkProverSetup::load(&trusted_setup_provider, &provider).unwrap();
         let setup2 = SnarkProverSetup::load(&trusted_setup_provider, &provider).unwrap();
 

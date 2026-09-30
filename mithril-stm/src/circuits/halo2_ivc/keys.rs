@@ -12,6 +12,7 @@ use midnight_zk_stdlib::{self as zk, MidnightPK, MidnightVK};
 use serde::{Deserialize, Serialize};
 
 use crate::StmResult;
+use crate::circuits::CircuitVerificationKeyDigest;
 use crate::circuits::halo2::circuit::CertificateCircuit;
 use crate::circuits::halo2::keys::NonRecursiveCircuitVerifyingKey;
 use crate::circuits::key_generator::KeyGenerator;
@@ -21,7 +22,7 @@ use crate::codec::{TryFromBytes, TryToBytes};
 
 use super::{
     ConstraintSystem, KZGCommitmentScheme, NativeField, PairingEngine, RECURSIVE_CIRCUIT_DEGREE,
-    VerifyingKey, ZkStdLib, ZkStdLibArch,
+    RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT, VerifyingKey, ZkStdLib, ZkStdLibArch,
     circuit::{IvcCircuit, recursive_circuit_architecture},
     errors::IvcCircuitError,
 };
@@ -134,7 +135,8 @@ impl RecursiveCircuitVerifyingKey {
     /// circuit's key would decode in the recursive position. Both degrees are checked: the envelope
     /// declares one and the raw key it wraps declares another, and the reader takes them
     /// independently without comparing them, so an envelope claiming the expected degree can carry
-    /// a raw key of a different one.
+    /// a raw key of a different one. The public input count is checked as well, as the digest
+    /// identifying a key does not cover it.
     fn validate_encoded_header(bytes: &[u8]) -> StmResult<()> {
         let mut reader = bytes;
         let architecture = ZkStdLibArch::read_from_serialized_vk(&mut reader)
@@ -155,6 +157,15 @@ impl RecursiveCircuitVerifyingKey {
         reader
             .read_exact(&mut public_input_count)
             .with_context(|| "Failed to read the recursive verifying key public input count")?;
+        let public_input_count = u32::from_le_bytes(public_input_count) as usize;
+        if public_input_count != RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT {
+            return Err(anyhow!(
+                IvcCircuitError::RecursiveVerificationKeyPublicInputCountMismatch {
+                    expected: RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT,
+                    actual: public_input_count,
+                }
+            ));
+        }
 
         // The wrapped raw key opens with its own version and degree.
         let mut raw_header = [0u8; 2];
@@ -311,6 +322,12 @@ impl KeyGenerator for IvcCircuit {
             RecursiveCircuitProvingKey(proving_key),
         ))
     }
+
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest {
+        CircuitVerificationKeyDigest::from_verification_key(verification_key)
+    }
 }
 
 /// Generates the recursive (IVC) circuit's keys, wrapping the non-recursive key provider it needs. The
@@ -351,16 +368,41 @@ impl KeyGenerator for RecursiveCircuitKeyGenerator {
         let certificate_verifying_key = self.non_recursive_key_provider.verification_key(srs)?;
         IvcCircuit::for_key_generation(&certificate_verifying_key).generate_key_pair(srs)
     }
+
+    fn verification_key_digest(
+        verification_key: &Self::VerifyingKey,
+    ) -> CircuitVerificationKeyDigest {
+        CircuitVerificationKeyDigest::from_verification_key(verification_key)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use midnight_proofs::utils::helpers::byte_length;
 
+    use std::collections::BTreeSet;
+
+    use midnight_circuits::types::Instantiable;
+    use midnight_zk_stdlib::MidnightCircuit;
+
     use super::*;
+    use crate::Parameters;
     use crate::circuits::halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
+    use crate::circuits::halo2::circuit::certificate_circuit_architecture;
     use crate::circuits::halo2::errors::CertificateCircuitError;
-    use crate::circuits::halo2_ivc::RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
+    use crate::circuits::halo2_ivc::accumulator::{
+        fixed_base_names_from_constraint_system, trivial_accumulator,
+    };
+    use crate::circuits::halo2_ivc::tests::common::asset_readers::{
+        load_embedded_recursive_chain_state_asset, load_embedded_verification_context_asset,
+    };
+    use crate::circuits::halo2_ivc::tests::common::public_input_layout::{
+        GLOBAL_SECTION_ROWS, STATE_SECTION_ROWS,
+    };
+    use crate::circuits::halo2_ivc::{
+        AssignedAccumulator, CERTIFICATE_FIXED_BASES_PREFIX, IVC_FIXED_BASES_PREFIX,
+        RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+    };
 
     #[test]
     fn recursive_verifying_key_newtype_round_trips_through_bytes() {
@@ -443,6 +485,99 @@ mod tests {
             ),
             "expected a degree mismatch, got: {error}"
         );
+    }
+
+    // The digest identifying a key does not cover its public input count.
+    #[test]
+    fn a_key_declaring_another_public_input_count_is_rejected() {
+        let mut bytes = RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION.to_vec();
+        // Past the architecture and the envelope degree lies the public input count.
+        let mut reader = RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
+        ZkStdLibArch::read_from_serialized_vk(&mut reader).expect("architecture should read");
+        let count_range = {
+            let start = bytes.len() - reader.len() + 1;
+            start..start + 4
+        };
+        assert_eq!(
+            u32::from_le_bytes(bytes[count_range.clone()].try_into().unwrap()) as usize,
+            RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT,
+            "the production key should declare the recursive count before it is mutated"
+        );
+        let other_count = RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT + 1;
+        bytes[count_range].copy_from_slice(&(other_count as u32).to_le_bytes());
+
+        let error = RecursiveCircuitVerifyingKey::try_from_bytes(&bytes)
+            .expect_err("a key declaring another public input count must be rejected");
+
+        assert!(
+            matches!(
+                error.downcast_ref::<IvcCircuitError>(),
+                Some(IvcCircuitError::RecursiveVerificationKeyPublicInputCountMismatch { actual, .. })
+                    if *actual == other_count
+            ),
+            "expected a public input count mismatch, got: {error}"
+        );
+    }
+
+    // The statement is the global root of trust, the next state and an accumulator carrying one
+    // scalar for each distinct fixed base of the two verified circuits, whose constraint systems are
+    // configured from the current architectures.
+    #[test]
+    fn the_pinned_public_input_count_follows_the_current_circuit_structure() {
+        let configured = |architecture, degree: u32| {
+            let mut constraint_system = ConstraintSystem::<NativeField>::default();
+            ZkStdLib::configure(&mut constraint_system, (architecture, (degree - 1) as u8));
+            constraint_system
+        };
+        let certificate_circuit = CertificateCircuit::try_new(
+            &Parameters {
+                k: 3,
+                m: 10,
+                phi_f: 0.2,
+            },
+            4,
+        )
+        .expect("the certificate circuit should build");
+        let certificate_circuit_degree =
+            MidnightCircuit::from_relation(&certificate_circuit, None).k();
+        let fixed_base_names = fixed_base_names_from_constraint_system(
+            CERTIFICATE_FIXED_BASES_PREFIX,
+            &configured(
+                certificate_circuit_architecture(),
+                certificate_circuit_degree,
+            ),
+        )
+        .into_iter()
+        .chain(fixed_base_names_from_constraint_system(
+            IVC_FIXED_BASES_PREFIX,
+            &configured(recursive_circuit_architecture(), RECURSIVE_CIRCUIT_DEGREE),
+        ))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+        let public_input_count = GLOBAL_SECTION_ROWS
+            + STATE_SECTION_ROWS
+            + AssignedAccumulator::as_public_input(&trivial_accumulator(&fixed_base_names)).len();
+
+        assert_eq!(public_input_count, RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT);
+    }
+
+    #[test]
+    fn the_pinned_public_input_count_is_the_committed_statement_length() {
+        let verification_context = load_embedded_verification_context_asset()
+            .expect("verification context asset should load");
+        let recursive_chain_state = load_embedded_recursive_chain_state_asset()
+            .expect("recursive chain state asset should load");
+
+        let statement = [
+            verification_context.global_field_elements.clone(),
+            recursive_chain_state.state.as_public_input(),
+            AssignedAccumulator::as_public_input(&recursive_chain_state.accumulator),
+        ]
+        .concat();
+
+        assert_eq!(statement.len(), RECURSIVE_CIRCUIT_PUBLIC_INPUT_COUNT);
     }
 
     // Deriving Deserialize would otherwise reach the dependency's reader without the guard, and

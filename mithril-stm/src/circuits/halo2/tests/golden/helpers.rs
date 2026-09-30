@@ -13,7 +13,7 @@ use midnight_zk_stdlib::MidnightCircuit;
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
 
-use crate::circuits::halo2::NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION;
+use crate::circuits::CircuitVerificationKeyDigest;
 use crate::circuits::halo2::circuit::CertificateCircuit;
 use crate::circuits::halo2::errors::CertificateCircuitError;
 use crate::circuits::halo2::keys::{
@@ -675,7 +675,7 @@ fn load_or_generate_params(circuit_degree: u32) -> StmResult<ParamsKZG<Bls12>> {
 /// Distinct configurations never share a directory, which is what lets [`KeyProvider`] be built
 /// with no expected verifying key.
 fn certificate_golden_key_cache(
-    production_verifying_key: &[u8],
+    certificate_circuit_digest: &CircuitVerificationKeyDigest,
     parameters: &Parameters,
     merkle_tree_depth: u32,
     circuit_degree: u32,
@@ -684,7 +684,7 @@ fn certificate_golden_key_cache(
     Ok(FileMutex::for_shared_cache(
         "certificate-golden-keys",
         &[
-            production_verifying_key,
+            certificate_circuit_digest.as_bytes(),
             &parameters.to_bytes()?,
             &merkle_tree_depth.to_le_bytes(),
             &circuit_degree.to_le_bytes(),
@@ -706,7 +706,7 @@ fn get_or_build_circuit_keys(
     srs: &ParamsKZG<Bls12>,
 ) -> StmResult<CircuitVerificationAndProvingKeyPair> {
     let key_cache = certificate_golden_key_cache(
-        NON_RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION,
+        &CircuitVerificationKeyDigest::for_production_certificate_circuit()?,
         parameters,
         merkle_tree_depth,
         circuit_degree,
@@ -715,7 +715,7 @@ fn get_or_build_circuit_keys(
     let key_provider = KeyProvider::new(
         key_cache.directory().to_path_buf(),
         "non-recursive",
-        &[],
+        None,
         relation.clone(),
     );
     let _key_cache_lock = key_cache.lock()?;
@@ -762,7 +762,7 @@ pub(crate) fn compute_unsafe_circuit_verification_key(
 mod tests {
     use super::*;
 
-    const BASELINE_PRODUCTION_KEY: &[u8] = b"production-verifying-key";
+    const BASELINE_DIGEST_SEED: u8 = 1;
     const BASELINE_DEPTH: u32 = 12;
     const BASELINE_DEGREE: u32 = 13;
     const BASELINE_SEED: u64 = 42;
@@ -775,15 +775,19 @@ mod tests {
         parameters(3, 30, 0.2)
     }
 
+    fn certificate_circuit_digest(byte: u8) -> CircuitVerificationKeyDigest {
+        hex::encode([byte; 32]).parse().unwrap()
+    }
+
     fn cache_directory(
-        production_verifying_key: &[u8],
+        certificate_circuit_digest: &CircuitVerificationKeyDigest,
         parameters: &Parameters,
         merkle_tree_depth: u32,
         circuit_degree: u32,
         unsafe_srs_seed: u64,
     ) -> PathBuf {
         certificate_golden_key_cache(
-            production_verifying_key,
+            certificate_circuit_digest,
             parameters,
             merkle_tree_depth,
             circuit_degree,
@@ -796,7 +800,7 @@ mod tests {
 
     fn baseline_cache_directory() -> PathBuf {
         cache_directory(
-            BASELINE_PRODUCTION_KEY,
+            &certificate_circuit_digest(BASELINE_DIGEST_SEED),
             &baseline_parameters(),
             BASELINE_DEPTH,
             BASELINE_DEGREE,
@@ -812,9 +816,9 @@ mod tests {
 
         let variations = [
             (
-                "production verifying key",
+                "certificate circuit digest",
                 cache_directory(
-                    b"a-different-production-verifying-key",
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED + 1),
                     &baseline_parameters(),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE,
@@ -824,7 +828,7 @@ mod tests {
             (
                 "quorum size",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &parameters(4, 30, 0.2),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE,
@@ -834,7 +838,7 @@ mod tests {
             (
                 "lottery count",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &parameters(3, 40, 0.2),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE,
@@ -844,7 +848,7 @@ mod tests {
             (
                 "phi_f",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &parameters(3, 30, 0.3),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE,
@@ -854,7 +858,7 @@ mod tests {
             (
                 "merkle tree depth",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &baseline_parameters(),
                     BASELINE_DEPTH + 1,
                     BASELINE_DEGREE,
@@ -864,7 +868,7 @@ mod tests {
             (
                 "circuit degree",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &baseline_parameters(),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE + 1,
@@ -874,7 +878,7 @@ mod tests {
             (
                 "unsafe srs seed",
                 cache_directory(
-                    BASELINE_PRODUCTION_KEY,
+                    &certificate_circuit_digest(BASELINE_DIGEST_SEED),
                     &baseline_parameters(),
                     BASELINE_DEPTH,
                     BASELINE_DEGREE,

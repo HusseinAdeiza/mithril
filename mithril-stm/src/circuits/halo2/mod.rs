@@ -44,6 +44,9 @@ pub(crate) const STM_PARAMETERS_FOR_PRODUCTION: Parameters = Parameters {
     phi_f: 0.2,
 };
 
+/// Number of public inputs of the certificate circuit: the Merkle tree commitment and the message.
+pub(crate) const CERTIFICATE_CIRCUIT_PUBLIC_INPUT_COUNT: usize = 2;
+
 /// Circuit verification key of the non-recursive circuit used for production.
 /// This key is generated using the Midnight's secure SRS and the following
 /// production parameters:

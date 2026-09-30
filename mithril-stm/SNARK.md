@@ -1041,15 +1041,15 @@ A verifier is handed a key and has to decide whether it is the key for the circu
 
 **The digest.** A circuit verification key digest is a domain-separated Poseidon hash of the key's _transcript representation_, the single field element the proof system derives from a key to seed its transcript. It is 32 bytes, serialized as lowercase hex. It therefore covers the constraint system, the evaluation domain and the commitments rather than the parameter triple. Identical transcript representations give identical digests; identical gates alone do not, because the commitments depend on the string the key was derived from.
 
-**The encoding.** Keys serialize in Midnight's `RawBytes` format, and a key carries its own architecture and degree in those bytes. Checking them is what makes a key position typed: the architecture separates the two positions, the recursive key's degree is pinned, and the certificate key's degree is bounded by the setup. Without the check, any Midnight circuit's key would decode in the certificate position, including the recursive circuit's, which this crate encodes the same way.
+**The encoding.** Keys serialize in Midnight's `RawBytes` format, and a key carries its own architecture and degree in those bytes. Checking them is what makes a key position typed: the architecture separates the two positions, the recursive key's degree is pinned, and the certificate key's degree is bounded by the setup. Without the check, any Midnight circuit's key would decode in the certificate position, including the recursive circuit's, which this crate encodes the same way. The encoding also declares the circuit's number of public inputs, which the digest does not cover, and both decoders check it against the pinned count: 2 for the certificate circuit, 120 for the recursive one.
 
 **Three identifiers.** Easy to confuse, and they serve different purposes.
 
-| Identifier           | What it is                                  | What it is for                 |
-| -------------------- | ------------------------------------------- | ------------------------------ |
-| Serialized key bytes | The key itself, in `RawBytes`               | Transport and storage          |
-| Circuit digest       | Poseidon over the transcript representation | Naming a circuit in a registry |
-| Cache fingerprint    | SHA-256 over a configuration                | Choosing a directory on disk   |
+| Identifier           | What it is                                  | What it is for                                             |
+| -------------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| Serialized key bytes | The key itself, in `RawBytes`               | Transport and storage                                      |
+| Circuit digest       | Poseidon over the transcript representation | Naming a circuit, in a registry and in a cache fingerprint |
+| Cache fingerprint    | SHA-256 over a configuration                | Choosing a directory on disk                               |
 
 **Decoding and approval are separate steps.** A key that decodes cleanly and declares the expected architecture is structurally acceptable. Nothing in that establishes that anyone authorized it.
 
@@ -1061,19 +1061,19 @@ A verifier is handed a key and has to decide whether it is the key for the circu
 
 Deriving a key pair for a production circuit is expensive, so caching avoids repeating it. Key material is cached at two levels. The recursive benchmark measures disk-cache setup cold against warm, using benchmark fixtures and a locally generated unsafe string; it does not measure production retrieval or a warmed process-wide slot.
 
-**The disk cache.** A key provider holds a directory per circuit configuration, storing the verifying and proving keys as a pair. The production configuration takes an early branch to a stable directory named after the circuit. Every other configuration gets a directory keyed by a fingerprint of itself: a SHA-256 over the cache schema version, the embedded certificate verifying key, the pinned SRS hash, the serialized protocol parameters and the tree depth, with the embedded recursive verifying key's bytes appended for recursive entries.
+**The disk cache.** A key provider holds a directory per circuit configuration, storing the verifying and proving keys as a pair. The production configuration takes an early branch to a stable directory named after the circuit. Every other configuration gets a directory keyed by a fingerprint of itself: a SHA-256 over the cache schema version, the digest of the embedded certificate verifying key, the pinned SRS hash, the serialized protocol parameters and the tree depth, with the digest of the embedded recursive verifying key appended for recursive entries. The digests identify the circuits, since they cover the constraint systems the key bytes omit; recursive entries take both, because the recursive circuit synthesizes the certificate circuit's gates.
 
-**What validates an entry.** A cached entry in the production directory is compared against the embedded production verifying key; differing bytes make it a miss, and the pair is regenerated and written over. A fingerprinted entry has no expected key to compare against, because its directory already isolates it. Both kinds still pass through their decoders on the way in.
+**What validates an entry.** A cached entry in the production directory is compared with the embedded production verifying key by digest; a cached key that does not decode or has another digest makes it a miss, and the pair is regenerated and written over. A fingerprinted entry has no expected digest to compare with, because its directory already isolates it. Both kinds still pass through their decoders on the way in.
 
-The schema version distinguishes fingerprinted directories written under different cache layouts. The production directory is not renamed by it and relies on its expected-key comparison instead.
+The schema version distinguishes fingerprinted directories written under different cache layouts. The production directory is not renamed by it and relies on its digest comparison instead.
 
-That comparison is between cached bytes and the embedded asset. It does not re-derive the asset from the current circuit, so it detects a stale cache rather than an embedded asset that no longer matches the relation. Part 7 covers the regeneration tests that check the second.
+That comparison is between the digests of the cached key and the embedded asset, both decoded by the current code. It checks cache freshness against the embedded asset; whether the asset still matches the current relation is what the regeneration tests in Part 7 check.
 
 Including the SRS hash in the fingerprint ties an entry to the artifact the crate pins, but it compares a constant rather than the bytes of any local file.
 
 **The process-wide setup.** Above the disk cache sit two setup slots, one per circuit, each holding the loaded string and keys for one configuration of protocol parameters and tree depth, so repeated callers in one process share them. A request for another configuration loads it and releases the previous one; the recursive flavor uses both slots. Warming enters the same path: an aggregator prepares the setups its flavor needs on its own thread ahead of the first signing round, and that warm-up is the step that downloads the string. Part 8 covers its retry behaviour.
 
-**What this constrains.** The cache is a performance mechanism, validating a production entry against a committed asset and a fingerprinted entry without an expected-key comparison. Nothing here decides whether a key may be used. Part 8 covers where the directories live.
+**What this constrains.** The cache is a performance mechanism, validating a production entry against a committed asset and a fingerprinted entry without an expected-digest comparison. Nothing here decides whether a key may be used. Part 8 covers where the directories live.
 
 ## The registry of trusted keys
 
@@ -1253,7 +1253,7 @@ Verifying a certificate proof on its own completes its opening check with nothin
 
 Three kinds of compatibility check, each protecting a different boundary.
 
-**Fixed vectors.** The aggregate verification key's CBOR and rigid-slot encodings are compared with literal byte vectors, so a change to either fails here. Its JSON golden is weaker: it checks that a committed representation is still readable and that the decoded value and the expected value serialize identically under the current serializer. It does not pin the literal JSON output, so a serializer change affecting both equally would pass.
+**Fixed vectors.** The aggregate verification key's CBOR and rigid-slot encodings are compared with literal byte vectors, so a change to either fails here. Its JSON golden is weaker: it checks that a committed representation is still readable and that the decoded value and the expected value serialize identically under the current serializer. It does not pin the literal JSON output, so a serializer change affecting both equally would pass. The circuit verification key digests are compared with literal values the same way: `golden_digests_of_production_circuit_keys` and `golden_digests_of_embedded_verification_context_keys` decode the committed production keys and the verification keys of the recursive test assets with the current code. A digest covers the constraint system, which the key bytes omit, so a change confined to a constraint system fails these tests even when the byte comparisons of the keys pass.
 
 **Round trips.** A proof and the ancillary verifier data are encoded, decoded and re-encoded, and the two encodings compared. This catches an encoder or decoder that has drifted from the other; a coordinated change to both would pass.
 
@@ -1483,8 +1483,8 @@ Four operations act on circuit keys, with different actors, inputs and effects.
 
 **Replacing circuit material and re-genesis.** Changing a circuit key requires a re-genesis of the certificate chain, for the reason Part 6 gives: a recursive chain's global anchor binds the verifying keys it started under, and no key-transition relation exists. The runbook's stages are:
 
-1. Circuit authors update the golden verification keys and the committed production keys, and the integrity tests are run against them once the production string is in the local cache.
-2. Reviewers confirm the circuit change is justified and that the circuit degree did not increase.
+1. Circuit authors update the golden verification keys, the committed production keys and the pinned verification key digests, and the integrity tests are run against them once the production string is in the local cache.
+2. Reviewers confirm the circuit change is justified and that the circuit degree did not increase, and review the updated digests.
 3. The release manager schedules the re-genesis alongside the distribution carrying the new circuit, environment by environment: testing, then pre-release, then the release networks.
 4. A genesis ceremony establishes the new chain, after which the old chain is not continued.
 
@@ -1627,4 +1627,4 @@ The table separates dated audit confirmations from the dependency versions pinne
 
 The confirmation is at release-track granularity. The June discussion names standard-library versions 1.2.0 and 2.3.0, and this baseline pins 2.3.3. For the 2.x track the maintainers [stated](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4715891520) that it is a minor release adding standard-library gadgets, with the proving system unchanged and still audited; the optimization work that would change it was [reported](https://github.com/IntersectMBO/mithril/issues/3122#issuecomment-4716425091) as not yet released. No audit status was stated for the gadgets 2.x adds, nor for the patch releases after 2.3.0. Two checks remain open: whether Mithril uses any gadget introduced on the 2.x track, and whether the pinned versions correspond to the audited code. These are statements from the auditors and the library's maintainers; the reports themselves are not public, and their scope is the library, not the circuits Mithril builds on it.
 
-**How a change is detected.** The versions are exact pins, so an upgrade is an explicit reviewed edit. A golden test derives the certificate circuit's verification key for a small fixed configuration and compares its bytes with a committed copy, and the production key integrity tests the update runbook requires do the same for the production keys, so a dependency change altering a derived key fails them. A change that leaves those bytes identical — in witness generation, host validation or verifier behaviour — falls to review, and audit coverage is the separate question recorded above. Part 6 covers key identity and Part 7 the tests.
+**How a change is detected.** The versions are exact pins, so an upgrade is an explicit reviewed edit. A golden test derives the certificate circuit's verification key for a small fixed configuration and compares its bytes with a committed copy, and the production key integrity tests the update runbook requires do the same for the production keys, so a dependency change altering a derived key fails them. The pinned digest tests decode the committed keys with the current code, so a dependency change reaching a constraint system fails them even when the key bytes stay identical. A change that leaves both the key bytes and the digests identical — in witness generation, host validation or verifier behaviour — falls to review, and audit coverage is the separate question recorded above. Part 6 covers key identity and Part 7 the tests.
