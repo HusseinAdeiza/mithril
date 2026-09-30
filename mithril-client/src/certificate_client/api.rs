@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+#[cfg(feature = "unstable")]
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[cfg(feature = "unstable")]
@@ -79,7 +81,7 @@ pub trait CertificateVerifier: Sync + Send {
 
 /// Certificate verifier cache mode.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CertificateVerifierCacheMode {
     /// Full verification mode
     ///

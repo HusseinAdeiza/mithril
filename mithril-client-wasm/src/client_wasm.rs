@@ -9,7 +9,7 @@ use mithril_client::{
     AggregatorDiscoveryType, CardanoBlocksProofs, CardanoTransactionsProofs,
     CardanoTransactionsProofsV2, Client, ClientBuilder, ClientOptions, GenesisVerificationKey,
     MessageBuilder, MithrilCertificate,
-    certificate_client::{CertificateVerifierCache, CertificateVerifierCacheMode},
+    certificate_client::CertificateVerifierCache,
     common::Epoch,
     feedback::{FeedbackReceiver, MithrilEvent},
 };
@@ -132,7 +132,7 @@ impl MithrilClient {
         .with_client_type(Some(CLIENT_TYPE_WASM.to_string()))
         .with_certificate_verifier_cache(
             certificate_verifier_cache.clone(),
-            CertificateVerifierCacheMode::FullVerification,
+            client_options.certificate_chain_verification_cache_mode,
         )
         .build()
         .map_err(|err| format!("{err:?}"))
@@ -688,6 +688,7 @@ mod tests {
     use std::collections::HashMap;
     use wasm_bindgen_test::*;
 
+    use mithril_client::certificate_client::CertificateVerifierCacheMode;
     use mithril_client::{
         CardanoBlocksTransactionsSnapshot, CardanoDatabaseSnapshot,
         CardanoDatabaseSnapshotListItem, CardanoStakeDistribution,
@@ -724,6 +725,11 @@ mod tests {
     fn get_mithril_client_unstable() -> MithrilClient {
         let options = ClientOptions::new(None).with_unstable_features(true);
         get_mithril_client(options)
+    }
+
+    fn parse_client_options(options_json: &str) -> ClientOptions {
+        let options_js_value = js_sys::JSON::parse(options_json).unwrap();
+        serde_wasm_bindgen::from_value(options_js_value).unwrap()
     }
 
     fn get_mithril_client_with_certificate_verifier_cache() -> MithrilClient {
@@ -907,6 +913,28 @@ mod tests {
             .expect("verify_certificate_chain should not fail");
         serde_wasm_bindgen::from_value::<MithrilCertificate>(certificate_js_value)
             .expect("conversion should not fail");
+    }
+
+    #[wasm_bindgen_test]
+    fn the_certificate_chain_verification_cache_mode_defaults_to_early_stop_verification() {
+        let options = parse_client_options("{}");
+
+        assert_eq!(
+            CertificateVerifierCacheMode::EarlyStopVerification,
+            options.certificate_chain_verification_cache_mode
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn the_certificate_chain_verification_cache_mode_is_parsed_from_the_client_options() {
+        let options = parse_client_options(
+            r#"{"certificate_chain_verification_cache_mode": "FullVerification"}"#,
+        );
+
+        assert_eq!(
+            CertificateVerifierCacheMode::FullVerification,
+            options.certificate_chain_verification_cache_mode
+        );
     }
 
     #[cfg(not(feature = "test-node"))]
