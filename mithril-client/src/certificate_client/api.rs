@@ -2,6 +2,8 @@ use async_trait::async_trait;
 #[cfg(feature = "unstable")]
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+#[cfg(feature = "unstable")]
+use strum::{Display, EnumString};
 
 #[cfg(feature = "unstable")]
 use mithril_common::crypto_helper::GenesisVerifier;
@@ -81,7 +83,9 @@ pub trait CertificateVerifier: Sync + Send {
 
 /// Certificate verifier cache mode.
 #[cfg(feature = "unstable")]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString,
+)]
 pub enum CertificateVerifierCacheMode {
     /// Full verification mode
     ///
@@ -154,4 +158,30 @@ pub trait CertificateVerifierCache: Sync + Send {
 
     /// Reset the stored values of all the spaces
     async fn reset(&self) -> MithrilResult<()>;
+}
+
+#[cfg(all(test, feature = "unstable"))]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn certificate_verifier_cache_mode_is_parsed_from_its_display_name() {
+        for mode in [
+            CertificateVerifierCacheMode::FullVerification,
+            CertificateVerifierCacheMode::EarlyStopVerification,
+        ] {
+            assert_eq!(
+                mode,
+                CertificateVerifierCacheMode::from_str(&mode.to_string()).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn certificate_verifier_cache_mode_rejects_an_unknown_name() {
+        CertificateVerifierCacheMode::from_str("UnknownVerification")
+            .expect_err("parsing an unknown mode should fail");
+    }
 }
