@@ -17,13 +17,80 @@ use mithril_circuit_key_registry::{
     SignedCircuitVerificationKeyRegistry,
 };
 use mithril_common::{
-    StdResult,
+    AggregateSignatureType, StdResult,
     crypto_helper::{CircuitVerificationKeyDigest, GenesisSigner, TrustedSetupProvider},
     entities::{Epoch, ProtocolParameters},
 };
 
 /// Version of the first registry of a Mithril network.
 const INITIAL_REGISTRY_VERSION: u64 = 1;
+
+/// Circuit whose verification key is certified by the registry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Circuit {
+    /// Circuit proving the aggregate signature of a certificate.
+    Certificate,
+
+    /// Circuit proving the certificate chain recursively.
+    Ivc,
+}
+
+impl Circuit {
+    /// List the circuits whose verification keys are carried by the certificates of the given
+    /// aggregate signature type.
+    fn list_for(aggregate_signature_type: AggregateSignatureType) -> StdResult<Vec<Self>> {
+        match aggregate_signature_type {
+            AggregateSignatureType::Snark => Ok(vec![Self::Certificate]),
+            AggregateSignatureType::IvcSnark => Ok(vec![Self::Certificate, Self::Ivc]),
+            AggregateSignatureType::Concatenation => Err(anyhow!(
+                "The '{aggregate_signature_type}' aggregate signature type does not use circuit verification keys"
+            )),
+        }
+    }
+
+    /// Name of the circuit in the registry entries.
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Certificate => "certificate-circuit",
+            Self::Ivc => "ivc-circuit",
+        }
+    }
+
+    /// Compute the digest of the verification key of the circuit.
+    ///
+    /// With protocol parameters, the key is derived from the trusted setup when it is not cached
+    /// yet: the IVC circuit key follows the certificate circuit key, so both depend on the
+    /// parameters, and deriving the IVC circuit key takes minutes. Without parameters, the
+    /// embedded production key is used.
+    fn compute_verification_key_digest(
+        &self,
+        protocol_parameters: Option<&ProtocolParameters>,
+        trusted_setup_provider: &TrustedSetupProvider,
+    ) -> StdResult<CircuitVerificationKeyDigest> {
+        match (self, protocol_parameters) {
+            (Self::Certificate, Some(parameters)) => {
+                CircuitVerificationKeyDigest::compute_for_certificate_circuit(
+                    &parameters.clone().into(),
+                    trusted_setup_provider,
+                )
+            }
+            (Self::Certificate, None) => {
+                CircuitVerificationKeyDigest::for_production_certificate_circuit()
+            }
+            (Self::Ivc, Some(parameters)) => CircuitVerificationKeyDigest::compute_for_ivc_circuit(
+                &parameters.clone().into(),
+                trusted_setup_provider,
+            ),
+            (Self::Ivc, None) => CircuitVerificationKeyDigest::for_ivc_circuit(),
+        }
+        .with_context(|| {
+            format!(
+                "Failed to compute the '{}' verification key digest for protocol parameters {protocol_parameters:?}",
+                self.name()
+            )
+        })
+    }
+}
 
 /// Digests of the circuit verification keys a network signs with.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,31 +103,18 @@ pub struct CircuitVerificationKeyDigests {
 }
 
 impl CircuitVerificationKeyDigests {
-    /// Compute the digests for the given protocol parameters, deriving the certificate circuit key
-    /// from the trusted setup when it is not cached yet, or using the embedded production
-    /// certificate circuit key when no parameters are given.
-    pub fn compute(protocol_parameters: Option<&ProtocolParameters>) -> StdResult<Self> {
-        let certificate_circuit = match protocol_parameters {
-            Some(parameters) => CircuitVerificationKeyDigest::compute_for_certificate_circuit(
-                &parameters.clone().into(),
-                &TrustedSetupProvider::default(),
-            )
-            .with_context(|| {
-                format!(
-                    "Failed to compute the certificate circuit verification key digest for protocol parameters {parameters:?}"
-                )
-            })?,
-            None => CircuitVerificationKeyDigest::for_production_certificate_circuit()
-                .with_context(|| {
-                    "Failed to compute the production certificate circuit verification key digest"
-                })?,
-        };
-        let ivc_circuit = CircuitVerificationKeyDigest::for_ivc_circuit()
-            .with_context(|| "Failed to compute the IVC circuit verification key digest")?;
-
+    /// Compute the digests for the given protocol parameters, deriving the circuit keys from the
+    /// trusted setup when they are not cached yet, or using the embedded production circuit keys
+    /// when no parameters are given.
+    pub fn compute(
+        protocol_parameters: Option<&ProtocolParameters>,
+        trusted_setup_provider: &TrustedSetupProvider,
+    ) -> StdResult<Self> {
         Ok(Self {
-            certificate_circuit,
-            ivc_circuit,
+            certificate_circuit: Circuit::Certificate
+                .compute_verification_key_digest(protocol_parameters, trusted_setup_provider)?,
+            ivc_circuit: Circuit::Ivc
+                .compute_verification_key_digest(protocol_parameters, trusted_setup_provider)?,
         })
     }
 }
@@ -73,9 +127,11 @@ impl CircuitKeyRegistryTools {
     /// file.
     pub fn export_digests(
         protocol_parameters: Option<&ProtocolParameters>,
+        trusted_setup_provider: &TrustedSetupProvider,
         target_path: &Path,
     ) -> StdResult<CircuitVerificationKeyDigests> {
-        let digests = CircuitVerificationKeyDigests::compute(protocol_parameters)?;
+        let digests =
+            CircuitVerificationKeyDigests::compute(protocol_parameters, trusted_setup_provider)?;
         std::fs::write(target_path, serde_json::to_string_pretty(&digests)?).with_context(
             || {
                 format!(
@@ -320,22 +376,27 @@ impl CircuitKeyRegistryTools {
     }
 
     /// Create and sign the circuit verification key registry, whitelisting from epoch 0 the
-    /// certificate circuit key of every given protocol parameter set (or of the production
-    /// parameters when none is given) and the IVC circuit key, and write the signed registry
-    /// JSON. For test only.
+    /// circuit keys carried by the certificates of the given aggregate signature type for every
+    /// given protocol parameter set (or for the production parameters when none is given), and
+    /// write the signed registry JSON. For test only.
     pub fn bootstrap(
         genesis_secret_key: &str,
         protocol_parameters: &[ProtocolParameters],
+        aggregate_signature_type: AggregateSignatureType,
+        trusted_setup_provider: &TrustedSetupProvider,
         target_registry_path: &Path,
     ) -> StdResult<()> {
         let genesis_signer = GenesisSigner::try_from_hex(genesis_secret_key)
             .with_context(|| "hex decode of genesis secret key failure")?;
         let registry = CircuitVerificationKeyRegistry {
             version: INITIAL_REGISTRY_VERSION,
-            entries: Self::bootstrap_entries(&Self::compute_bootstrap_digests(
+            entries: Self::bootstrap_entries(
+                &Circuit::list_for(aggregate_signature_type)?,
                 protocol_parameters,
-                CircuitVerificationKeyDigests::compute,
-            )?),
+                |circuit, parameters| {
+                    circuit.compute_verification_key_digest(parameters, trusted_setup_provider)
+                },
+            )?,
         };
 
         Self::sign_and_write_json(
@@ -345,57 +406,43 @@ impl CircuitKeyRegistryTools {
         )
     }
 
-    /// Compute with the given function the named circuit verification key digests of each
-    /// protocol parameter set, or of the production parameters when none is given.
-    fn compute_bootstrap_digests(
-        protocol_parameters: &[ProtocolParameters],
-        compute_digests: impl Fn(
-            Option<&ProtocolParameters>,
-        ) -> StdResult<CircuitVerificationKeyDigests>,
-    ) -> StdResult<Vec<(String, CircuitVerificationKeyDigests)>> {
-        if protocol_parameters.is_empty() {
-            return Ok(vec![(
-                "certificate-circuit".to_string(),
-                compute_digests(None)?,
-            )]);
-        }
-
-        protocol_parameters
-            .iter()
-            .map(|parameters| {
-                Ok((
-                    format!("certificate-circuit k={} m={}", parameters.k, parameters.m),
-                    compute_digests(Some(parameters))?,
-                ))
-            })
-            .collect()
-    }
-
-    /// Build the entries allowing from epoch 0 each distinct certificate circuit key digest under
-    /// its name, then the IVC circuit key digest, which does not depend on the parameters.
+    /// Build the entries allowing from epoch 0 the distinct verification key digests of each
+    /// circuit, computed with the given function for each protocol parameter set, or for the
+    /// production parameters when none is given.
+    ///
+    /// An entry is named after its circuit and the `k` and `m` of its protocol parameters.
     fn bootstrap_entries(
-        named_digests: &[(String, CircuitVerificationKeyDigests)],
-    ) -> Vec<CircuitVerificationKeyEntry> {
+        circuits: &[Circuit],
+        protocol_parameters: &[ProtocolParameters],
+        compute_digest: impl Fn(
+            Circuit,
+            Option<&ProtocolParameters>,
+        ) -> StdResult<CircuitVerificationKeyDigest>,
+    ) -> StdResult<Vec<CircuitVerificationKeyEntry>> {
+        let protocol_parameters: Vec<Option<&ProtocolParameters>> =
+            if protocol_parameters.is_empty() {
+                vec![None]
+            } else {
+                protocol_parameters.iter().map(Some).collect()
+            };
+
         let mut entries: Vec<CircuitVerificationKeyEntry> = Vec::new();
-        for (name, digests) in named_digests {
-            if !entries
-                .iter()
-                .any(|entry| entry.digest == digests.certificate_circuit)
-            {
-                entries.push(Self::allowed_circuit_key_entry(
-                    digests.certificate_circuit,
-                    name,
-                ));
+        for circuit in circuits {
+            for parameters in &protocol_parameters {
+                let digest = compute_digest(*circuit, *parameters)?;
+                if !entries.iter().any(|entry| entry.digest == digest) {
+                    let name = match parameters {
+                        Some(parameters) => {
+                            format!("{} k={} m={}", circuit.name(), parameters.k, parameters.m)
+                        }
+                        None => circuit.name().to_string(),
+                    };
+                    entries.push(Self::allowed_circuit_key_entry(digest, &name));
+                }
             }
         }
-        if let Some((_, digests)) = named_digests.first() {
-            entries.push(Self::allowed_circuit_key_entry(
-                digests.ivc_circuit,
-                "ivc-circuit",
-            ));
-        }
 
-        entries
+        Ok(entries)
     }
 
     /// Read the signed registry at the given path, verify it with the verifier of the genesis
@@ -552,9 +599,12 @@ impl CircuitKeyRegistryTools {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{path::PathBuf, sync::Arc};
 
-    use mithril_common::{crypto_helper::GenesisEd25519Signer, test::TempDir};
+    use mithril_common::{
+        crypto_helper::{GenesisEd25519Signer, NoTrustedSetupDownload, TrustedSetupError},
+        test::TempDir,
+    };
 
     use super::*;
 
@@ -603,6 +653,81 @@ mod tests {
         registry_path
     }
 
+    fn trusted_setup_provider_without_srs(dir_name: &str) -> TrustedSetupProvider {
+        TrustedSetupProvider::new(
+            get_temp_dir(dir_name),
+            "expected srs hash",
+            Arc::new(NoTrustedSetupDownload),
+        )
+    }
+
+    mod circuit {
+        use super::*;
+
+        #[test]
+        fn lists_the_certificate_circuit_only_for_snark() {
+            assert_eq!(
+                vec![Circuit::Certificate],
+                Circuit::list_for(AggregateSignatureType::Snark).unwrap()
+            );
+        }
+
+        #[test]
+        fn lists_the_certificate_circuit_then_the_ivc_circuit_for_ivc_snark() {
+            assert_eq!(
+                vec![Circuit::Certificate, Circuit::Ivc],
+                Circuit::list_for(AggregateSignatureType::IvcSnark).unwrap()
+            );
+        }
+
+        #[test]
+        fn lists_no_circuit_for_concatenation() {
+            let error = Circuit::list_for(AggregateSignatureType::Concatenation)
+                .expect_err("the concatenation aggregate signature type has no circuit key");
+
+            assert!(
+                error.to_string().contains("does not use circuit verification keys"),
+                "unexpected error: {error:?}"
+            );
+        }
+
+        #[test]
+        fn computes_the_production_verification_key_digests_without_protocol_parameters() {
+            let trusted_setup_provider = TrustedSetupProvider::default();
+
+            assert_eq!(
+                CircuitVerificationKeyDigest::for_production_certificate_circuit().unwrap(),
+                Circuit::Certificate
+                    .compute_verification_key_digest(None, &trusted_setup_provider)
+                    .unwrap()
+            );
+            assert_eq!(
+                CircuitVerificationKeyDigest::for_ivc_circuit().unwrap(),
+                Circuit::Ivc
+                    .compute_verification_key_digest(None, &trusted_setup_provider)
+                    .unwrap()
+            );
+        }
+
+        #[test]
+        fn fails_to_derive_the_verification_keys_of_protocol_parameters_without_the_srs() {
+            for circuit in [Circuit::Certificate, Circuit::Ivc] {
+                let error = circuit
+                    .compute_verification_key_digest(
+                        Some(&ProtocolParameters::new(5, 9, 0.95)),
+                        &trusted_setup_provider_without_srs("circuit_digest_without_srs"),
+                    )
+                    .expect_err("the key cannot be derived without the SRS");
+
+                assert_eq!(
+                    Some(&TrustedSetupError::DownloadUnavailable),
+                    error.downcast_ref::<TrustedSetupError>(),
+                    "unexpected error for {circuit:?}: {error:?}"
+                );
+            }
+        }
+    }
+
     mod export_digests {
         use super::*;
 
@@ -611,7 +736,12 @@ mod tests {
             let temp_dir = get_temp_dir("export_digests_production");
             let target_path = temp_dir.join("digests.json");
 
-            let digests = CircuitKeyRegistryTools::export_digests(None, &target_path).unwrap();
+            let digests = CircuitKeyRegistryTools::export_digests(
+                None,
+                &TrustedSetupProvider::default(),
+                &target_path,
+            )
+            .unwrap();
 
             let expected = CircuitVerificationKeyDigests {
                 certificate_circuit:
@@ -622,6 +752,21 @@ mod tests {
             let exported: CircuitVerificationKeyDigests =
                 serde_json::from_str(&read_to_string(&target_path).unwrap()).unwrap();
             assert_eq!(expected, exported);
+        }
+
+        #[test]
+        fn fails_to_export_the_digests_of_protocol_parameters_without_the_srs() {
+            let temp_dir = get_temp_dir("export_digests_without_srs");
+            let target_path = temp_dir.join("digests.json");
+
+            CircuitKeyRegistryTools::export_digests(
+                Some(&ProtocolParameters::new(5, 9, 0.95)),
+                &trusted_setup_provider_without_srs("export_digests_without_srs_provider"),
+                &target_path,
+            )
+            .expect_err("the keys cannot be derived without the SRS");
+
+            assert!(!target_path.exists());
         }
     }
 
@@ -1339,6 +1484,8 @@ mod tests {
                     .to_json_hex()
                     .unwrap(),
                 &[],
+                AggregateSignatureType::IvcSnark,
+                &TrustedSetupProvider::default(),
                 &registry_path,
             )
             .unwrap();
@@ -1352,75 +1499,51 @@ mod tests {
     mod bootstrap {
         use super::*;
 
-        fn digests(certificate_circuit_byte: u8) -> CircuitVerificationKeyDigests {
-            CircuitVerificationKeyDigests {
-                certificate_circuit: hex::encode([certificate_circuit_byte; 32]).parse().unwrap(),
-                ivc_circuit: hex::encode([9; 32]).parse().unwrap(),
-            }
+        fn digest(byte: u8) -> CircuitVerificationKeyDigest {
+            hex::encode([byte; 32]).parse().unwrap()
         }
 
-        fn named_digests(
-            name: &str,
-            certificate_circuit_byte: u8,
-        ) -> (String, CircuitVerificationKeyDigests) {
-            (name.to_string(), digests(certificate_circuit_byte))
-        }
-
-        fn digests_from_k(
+        fn digest_from_circuit_and_k(
+            circuit: Circuit,
             protocol_parameters: Option<&ProtocolParameters>,
-        ) -> StdResult<CircuitVerificationKeyDigests> {
-            Ok(digests(
-                protocol_parameters.map_or(0, |parameters| parameters.k as u8),
-            ))
+        ) -> StdResult<CircuitVerificationKeyDigest> {
+            let k = protocol_parameters.map_or(0, |parameters| parameters.k as u8);
+
+            Ok(match circuit {
+                Circuit::Certificate => digest(k),
+                Circuit::Ivc => digest(k + 100),
+            })
+        }
+
+        fn entry_names_and_digests(
+            entries: &[CircuitVerificationKeyEntry],
+        ) -> Vec<(&str, [u8; 32])> {
+            entries
+                .iter()
+                .map(|entry| (entry.name.as_str(), *entry.digest.as_bytes()))
+                .collect()
         }
 
         #[test]
-        fn digests_of_each_protocol_parameter_set_are_computed_from_it_and_named_after_its_k_and_m()
-        {
-            let computed = CircuitKeyRegistryTools::compute_bootstrap_digests(
+        fn entries_allow_the_key_of_each_circuit_for_each_protocol_parameter_set() {
+            let entries = CircuitKeyRegistryTools::bootstrap_entries(
+                &[Circuit::Certificate, Circuit::Ivc],
                 &[
                     ProtocolParameters::new(5, 9, 0.5),
                     ProtocolParameters::new(7, 10, 0.5),
                 ],
-                digests_from_k,
+                digest_from_circuit_and_k,
             )
             .unwrap();
 
             assert_eq!(
                 vec![
-                    named_digests("certificate-circuit k=5 m=9", 5),
-                    named_digests("certificate-circuit k=7 m=10", 7),
+                    ("certificate-circuit k=5 m=9", [5; 32]),
+                    ("certificate-circuit k=7 m=10", [7; 32]),
+                    ("ivc-circuit k=5 m=9", [105; 32]),
+                    ("ivc-circuit k=7 m=10", [107; 32]),
                 ],
-                computed
-            );
-        }
-
-        #[test]
-        fn digests_without_protocol_parameters_are_the_production_ones() {
-            let computed =
-                CircuitKeyRegistryTools::compute_bootstrap_digests(&[], digests_from_k).unwrap();
-
-            assert_eq!(vec![named_digests("certificate-circuit", 0)], computed);
-        }
-
-        #[test]
-        fn entries_allow_each_distinct_certificate_circuit_key_then_the_ivc_circuit_key() {
-            let entries = CircuitKeyRegistryTools::bootstrap_entries(&[
-                named_digests("certificate-circuit k=5 m=9", 1),
-                named_digests("certificate-circuit k=7 m=10", 2),
-                named_digests("certificate-circuit k=5 m=9 again", 1),
-            ]);
-
-            assert_eq!(
-                vec![
-                    ("certificate-circuit k=5 m=9", [1; 32]),
-                    ("certificate-circuit k=7 m=10", [2; 32]),
-                    ("ivc-circuit", [9; 32]),
-                ],
-                entries
-                    .iter()
-                    .map(|entry| (entry.name.as_str(), *entry.digest.as_bytes()))
-                    .collect::<Vec<_>>()
+                entry_names_and_digests(&entries)
             );
             assert!(entries.iter().all(|entry| {
                 entry.status == CircuitVerificationKeyStatus::Allowed
@@ -1430,26 +1553,112 @@ mod tests {
         }
 
         #[test]
-        fn bootstraps_a_verifiable_registry_whitelisting_the_production_circuit_keys_without_protocol_parameters()
-         {
-            let temp_dir = get_temp_dir("bootstrap");
+        fn entries_allow_the_keys_of_the_given_circuits_only() {
+            let entries = CircuitKeyRegistryTools::bootstrap_entries(
+                &[Circuit::Certificate],
+                &[
+                    ProtocolParameters::new(5, 9, 0.5),
+                    ProtocolParameters::new(7, 10, 0.5),
+                ],
+                digest_from_circuit_and_k,
+            )
+            .unwrap();
+
+            assert_eq!(
+                vec![
+                    ("certificate-circuit k=5 m=9", [5; 32]),
+                    ("certificate-circuit k=7 m=10", [7; 32]),
+                ],
+                entry_names_and_digests(&entries)
+            );
+        }
+
+        #[test]
+        fn entries_allow_a_key_shared_by_several_protocol_parameter_sets_once() {
+            let entries = CircuitKeyRegistryTools::bootstrap_entries(
+                &[Circuit::Certificate, Circuit::Ivc],
+                &[
+                    ProtocolParameters::new(5, 9, 0.5),
+                    ProtocolParameters::new(7, 10, 0.5),
+                ],
+                |circuit, parameters| match circuit {
+                    Circuit::Certificate => digest_from_circuit_and_k(circuit, parameters),
+                    Circuit::Ivc => Ok(digest(100)),
+                },
+            )
+            .unwrap();
+
+            assert_eq!(
+                vec![
+                    ("certificate-circuit k=5 m=9", [5; 32]),
+                    ("certificate-circuit k=7 m=10", [7; 32]),
+                    ("ivc-circuit k=5 m=9", [100; 32]),
+                ],
+                entry_names_and_digests(&entries)
+            );
+        }
+
+        #[test]
+        fn entries_without_protocol_parameters_allow_the_production_keys_named_after_their_circuit()
+        {
+            let entries = CircuitKeyRegistryTools::bootstrap_entries(
+                &[Circuit::Certificate, Circuit::Ivc],
+                &[],
+                digest_from_circuit_and_k,
+            )
+            .unwrap();
+
+            assert_eq!(
+                vec![("certificate-circuit", [0; 32]), ("ivc-circuit", [100; 32])],
+                entry_names_and_digests(&entries)
+            );
+        }
+
+        #[test]
+        fn entries_fail_when_a_digest_cannot_be_computed() {
+            CircuitKeyRegistryTools::bootstrap_entries(
+                &[Circuit::Certificate, Circuit::Ivc],
+                &[ProtocolParameters::new(5, 9, 0.5)],
+                |circuit, parameters| match circuit {
+                    Circuit::Certificate => digest_from_circuit_and_k(circuit, parameters),
+                    Circuit::Ivc => Err(anyhow!("digest error")),
+                },
+            )
+            .expect_err("a digest computation failure must fail the bootstrap");
+        }
+
+        fn bootstrap_production_registry(
+            dir_name: &str,
+            aggregate_signature_type: AggregateSignatureType,
+        ) -> StdResult<CircuitVerificationKeyRegistry> {
+            let temp_dir = get_temp_dir(dir_name);
             let genesis_secret_key_hex = GenesisEd25519Signer::create_deterministic_signer()
                 .secret_key()
                 .to_json_hex()
                 .unwrap();
             let target_registry_path = temp_dir.join("registry.json");
 
-            CircuitKeyRegistryTools::bootstrap(&genesis_secret_key_hex, &[], &target_registry_path)
-                .unwrap();
+            CircuitKeyRegistryTools::bootstrap(
+                &genesis_secret_key_hex,
+                &[],
+                aggregate_signature_type,
+                &TrustedSetupProvider::default(),
+                &target_registry_path,
+            )?;
 
-            let verified_registry = read_signed_registry(&target_registry_path)
-                .verify(
-                    &GenesisSigner::from_ed25519(
-                        GenesisEd25519Signer::create_deterministic_signer(),
-                    )
+            read_signed_registry(&target_registry_path).verify(
+                &GenesisSigner::from_ed25519(GenesisEd25519Signer::create_deterministic_signer())
                     .create_verifier(),
-                )
-                .expect("the bootstrapped registry must carry a valid genesis signature");
+            )
+        }
+
+        #[test]
+        fn bootstraps_a_verifiable_registry_whitelisting_the_production_circuit_keys_without_protocol_parameters()
+         {
+            let verified_registry =
+                bootstrap_production_registry("bootstrap", AggregateSignatureType::IvcSnark)
+                    .expect("the bootstrapped registry must carry a valid genesis signature");
+
             assert_eq!(INITIAL_REGISTRY_VERSION, verified_registry.version);
             assert_eq!(
                 vec![
@@ -1473,6 +1682,34 @@ mod tests {
                     && entry.start_epoch == Epoch(0)
                     && entry.end_epoch.is_none()
             }));
+        }
+
+        #[test]
+        fn bootstraps_a_registry_whitelisting_the_certificate_circuit_key_only_for_snark() {
+            let verified_registry =
+                bootstrap_production_registry("bootstrap_snark", AggregateSignatureType::Snark)
+                    .expect("the bootstrapped registry must carry a valid genesis signature");
+
+            assert_eq!(
+                vec![(
+                    "certificate-circuit",
+                    CircuitVerificationKeyDigest::for_production_certificate_circuit().unwrap()
+                )],
+                verified_registry
+                    .entries
+                    .iter()
+                    .map(|entry| (entry.name.as_str(), entry.digest))
+                    .collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn fails_to_bootstrap_a_registry_for_concatenation() {
+            bootstrap_production_registry(
+                "bootstrap_concatenation",
+                AggregateSignatureType::Concatenation,
+            )
+            .expect_err("the concatenation aggregate signature type has no circuit key");
         }
     }
 }
