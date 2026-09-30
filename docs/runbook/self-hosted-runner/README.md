@@ -140,8 +140,25 @@ runner starts at every boot:
 
 ```bash
 sudo bash -c 'cd /home/runner/actions-runner && ./svc.sh install runner && ./svc.sh start'
+```
+
+The machine only runs for the duration of a job, so the daily `unattended-upgrades` run it missed
+while stopped fires a few minutes after every boot, during a job. When it upgrades a library the
+runner uses, `needrestart` restarts the runner service and the job is cancelled with
+`The runner has received a shutdown signal`. Keep the upgrades, and exclude the runner service from
+the automatic restarts:
+
+```bash
+sudo mkdir -p /etc/needrestart/conf.d
+sudo tee /etc/needrestart/conf.d/actions-runner.conf > /dev/null <<'EOF'
+$nrconf{override_rc}{qr(^actions\.runner)} = 0;
+EOF
+sudo needrestart -r l -b
 exit
 ```
+
+The last command lists the services `needrestart` would restart now, without restarting them: the
+runner service must not be listed.
 
 ## Verify the setup
 
