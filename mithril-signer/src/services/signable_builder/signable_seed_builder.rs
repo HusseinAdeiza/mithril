@@ -15,7 +15,7 @@ use mithril_common::{
     protocol::SignerBuilder,
     signable_builder::SignableSeedBuilder,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::{crypto_helper::ProtocolKey, entities::SupportedEra};
 
 use crate::{services::EpochService, store::ProtocolInitializerStorer};
@@ -61,7 +61,7 @@ impl SignerSignableSeedBuilder {
         Ok(encoded_avk)
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn compute_encode_snark_avk(
         &self,
         protocol_initializer: ProtocolInitializer,
@@ -114,7 +114,7 @@ impl SignableSeedBuilder for SignerSignableSeedBuilder {
     async fn compute_next_aggregate_verification_key_for_snark(
         &self,
     ) -> StdResult<Option<ProtocolMessagePartValue>> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let epoch_service = self.epoch_service.read().await;
 
@@ -140,7 +140,7 @@ impl SignableSeedBuilder for SignerSignableSeedBuilder {
             Ok(next_snark_aggregate_verification_key)
         }
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             Ok(None)
         }
@@ -291,7 +291,7 @@ mod tests {
         assert_eq!(current_epoch, expected_current_epoch);
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark_aggregate_verification_key {
         use mithril_common::entities::SupportedEra;
 

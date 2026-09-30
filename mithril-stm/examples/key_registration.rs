@@ -137,14 +137,14 @@ fn main() {
             AncillaryProofInput::new(
                 None,
                 AncillaryGenesisData::new(
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     Vec::new(),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 ),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
             ),
         ) {
@@ -173,14 +173,14 @@ fn main() {
             AncillaryProofInput::new(
                 None,
                 AncillaryGenesisData::new(
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     Vec::new(),
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 ),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
             ),
         ) {
@@ -208,14 +208,14 @@ fn main() {
         AncillaryProofInput::new(
             None,
             AncillaryGenesisData::new(
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Vec::new(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Vec::new(),
         ),
     );
@@ -240,7 +240,7 @@ fn local_reg(
             .register(
                 1,
                 pk,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             )
             .unwrap();

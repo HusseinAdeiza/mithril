@@ -4,7 +4,7 @@
 
 mod api_version;
 mod certificate_retriever;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod circuit_key_registry_certifier;
 mod dummies;
 pub mod fake_data;
@@ -13,7 +13,7 @@ pub(super) mod precomputed_kes_key;
 
 pub use api_version::DummyApiVersionDiscriminantSource;
 pub use certificate_retriever::FakeCertificaterRetriever;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use circuit_key_registry_certifier::FakeCircuitVerificationKeyCertifier;
 
 /// A trait for giving a type a dummy value.

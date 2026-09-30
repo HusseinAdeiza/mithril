@@ -4,7 +4,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::StdError;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::GenesisSchnorrSignature;
 use crate::entities::{
     Certificate, CertificateMetadata, CertificateSignature, Epoch, ProtocolMessage,
@@ -52,7 +52,7 @@ pub struct CertificateMessage {
     /// Aggregate verification key for SNARK
     /// The AVK used to sign for SNARK during the current epoch
     /// aka AVKS(n-2)
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub aggregate_verification_key_snark: Option<String>,
 
@@ -78,7 +78,7 @@ pub struct CertificateMessage {
     /// Empty string for Pythagoras and non-genesis certificates. Legacy clients deserialising
     /// this message ignore the field entirely (default to empty), so the wire format remains a
     /// strict superset of the pre-Lagrange one.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub genesis_schnorr_signature: String,
 }
@@ -107,12 +107,12 @@ impl CertificateMessage {
     /// Yields a dual signature when the SNARK half is present, a single Ed25519 signature otherwise.
     fn genesis_signature_from_message(
         genesis_signature: String,
-        #[cfg(feature = "future_snark")] genesis_schnorr_signature: String,
+        #[cfg(feature = "snark")] genesis_schnorr_signature: String,
     ) -> Result<CertificateSignature, StdError> {
         let concatenation_signature = genesis_signature.try_into().with_context(
             || "Can not convert message to certificate: can not decode the genesis signature",
         )?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             if genesis_schnorr_signature.is_empty() {
                 Ok(CertificateSignature::GenesisSignature(
@@ -132,7 +132,7 @@ impl CertificateMessage {
                 ))
             }
         }
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             Ok(CertificateSignature::GenesisSignature(
                 concatenation_signature,
@@ -166,7 +166,7 @@ impl Debug for CertificateMessage {
                     "aggregate_verification_key",
                     &self.aggregate_verification_key,
                 );
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 debug.field(
                     "aggregate_verification_key_snark",
                     &self.aggregate_verification_key_snark,
@@ -176,7 +176,7 @@ impl Debug for CertificateMessage {
                 debug
                     .field("multi_signature", &self.multi_signature)
                     .field("genesis_signature", &self.genesis_signature);
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 debug.field("genesis_schnorr_signature", &self.genesis_schnorr_signature);
                 debug.finish()
             }
@@ -211,7 +211,7 @@ impl TryFrom<CertificateMessage> for Certificate {
                 .with_context(|| {
                 "Can not convert message to certificate: can not decode the aggregate verification key for Concatenation"
             })?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: certificate_message
                 .aggregate_verification_key_snark
                 .map(|avk| avk.try_into())
@@ -241,7 +241,7 @@ impl TryFrom<CertificateMessage> for Certificate {
             } else {
                 CertificateMessage::genesis_signature_from_message(
                     certificate_message.genesis_signature,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     certificate_message.genesis_schnorr_signature,
                 )?
             },
@@ -265,7 +265,7 @@ impl TryFrom<Certificate> for CertificateMessage {
             signers: certificate.metadata.signers,
         };
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let mut genesis_schnorr_signature = String::new();
         let (multi_signature, genesis_signature) = match certificate.signature {
             CertificateSignature::GenesisSignature(signature) => (
@@ -274,7 +274,7 @@ impl TryFrom<Certificate> for CertificateMessage {
                     "Can not convert certificate to message: can not encode the genesis signature"
                 })?,
             ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(ed_signature, schnorr_signature) => {
                 genesis_schnorr_signature = hex::encode(schnorr_signature.to_bytes());
                 (
@@ -304,7 +304,7 @@ impl TryFrom<Certificate> for CertificateMessage {
                 .with_context(|| {
                     "Can not convert certificate to message: can not encode aggregate verification key for Concatenation"
                 })?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: certificate
                 .aggregate_verification_key_snark
                 .map(String::try_from)
@@ -328,7 +328,7 @@ impl TryFrom<Certificate> for CertificateMessage {
                 })?,
             multi_signature,
             genesis_signature,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_signature,
         };
 
@@ -393,13 +393,13 @@ mod tests {
             },
             signed_message: "signed_message".to_string(),
             aggregate_verification_key: "aggregate_verification_key".to_string(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: None,
             ancillary_prover_data: None,
             ancillary_verifier_data: None,
             multi_signature: "multi_signature".to_string(),
             genesis_signature: "genesis_signature".to_string(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_signature: String::new(),
         }
     }
@@ -520,7 +520,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod certificate_with_snark_avk {
             use super::*;
 
@@ -564,7 +564,7 @@ mod tests {
             }
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod dual_genesis_certificate {
             use rand_chacha::ChaCha20Rng;
             use rand_core::SeedableRng;
@@ -713,7 +713,7 @@ mod tests {
             assert_eq!(expected_json_hex, message.multi_signature);
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[test]
         fn snark_multi_signature_is_encoded_as_bytes_hex() {
             let snark_signature = fake_data::snark_aggregate_signature();

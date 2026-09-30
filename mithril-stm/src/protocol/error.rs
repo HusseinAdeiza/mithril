@@ -1,6 +1,6 @@
 use crate::VerificationKeyForConcatenation;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::VerificationKeyForSnark;
 
 /// Errors which can be outputted by key registration.
@@ -22,7 +22,7 @@ pub enum RegisterError {
     #[error("The verification of correctness of the supplied concatenation key is invalid.")]
     ConcatenationKeyInvalid(Box<VerificationKeyForConcatenation>),
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     /// The supplied snark key is not valid
     #[error("The verification of correctness of the supplied SNARK key is invalid.")]
     SnarkKeyInvalid(Box<VerificationKeyForSnark>),
@@ -40,7 +40,7 @@ pub enum RegisterError {
     UnregisteredIndex,
 
     /// Snark proof signer creation from initializer failed
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[error("Unable to create SNARK proof signer.")]
     SnarkProofSignerCreation,
 

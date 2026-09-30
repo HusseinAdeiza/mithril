@@ -31,7 +31,7 @@ The following table lists every type's legacy first byte and why it is safe:
 | `Parameters`                               | `u64 m` → `0x00`                                        | `m` is a protocol parameter (tens of thousands)                              |
 | `SingleSignature`                          | `u64 nr_indexes` → `0x00`                               | Bounded by `m`                                                               |
 | `SingleSignatureWithRegisteredParty`       | `u64 size` → `0x00`                                     | Byte length of inner struct                                                  |
-| `AggregateSignature`                       | Discriminator `0x00` or `0x01` (Snark)                  | **Ambiguous when `future_snark` — uses try-CBOR-then-fallback**              |
+| `AggregateSignature`                       | Discriminator `0x00` or `0x01` (Snark)                  | **Ambiguous when `snark` — uses try-CBOR-then-fallback**                     |
 | `Initializer`                              | `u64 stake` → `0x00`                                    | Stake fits in 6 bytes                                                        |
 | `ClosedRegistrationEntry`                  | BLS compressed key → `≥ 0x80`                           | BLS12-381 compressed points set bit 7                                        |
 | `AggregateVerificationKeyForConcatenation` | `u64 nr_leaves` → `0x00`                                | Few thousand leaves                                                          |
@@ -46,7 +46,7 @@ The following table lists every type's legacy first byte and why it is safe:
 
 ### Special case: `MerkleTreeCommitment` and `AggregateVerificationKeyForSnark`
 
-`MerkleTreeCommitment` (gated behind `future_snark`) stores its legacy format
+`MerkleTreeCommitment` (gated behind `snark`) stores its legacy format
 as the raw Merkle root hash with no length prefix. The first byte of a hash
 digest is pseudo-random and can be `0x01` (~0.4% probability). Because the
 legacy encoding of `AggregateVerificationKeyForSnark` begins with a
@@ -66,7 +66,7 @@ if codec::has_cbor_v1_prefix(bytes) {
 ### Special case: `AggregateSignature`
 
 `AggregateSignature` uses a type-discriminator byte as its legacy first byte:
-`0x00` for `Concatenation` and `0x01` for `Snark` (gated behind `future_snark`).
+`0x00` for `Concatenation` and `0x01` for `Snark` (gated behind `snark`).
 The `Snark` discriminator collides with the CBOR version byte `0x01`. To handle
 this ambiguity, its `from_bytes` method uses the same try-CBOR-then-fallback
 pattern as `MerkleTreeCommitment`.
@@ -110,7 +110,7 @@ still be read by an older version that does not know about those fields.
 > newer code will see the additional fields missing.
 >
 > The same applies to **feature-gated fields** (`#[cfg(feature = "...")]`):
-> if data is serialized with a feature enabled (e.g. `future_snark`) and
+> if data is serialized with a feature enabled (e.g. `snark`) and
 > then deserialized by a binary compiled **without** that feature, the
 > gated fields are silently dropped at compile time — the struct simply
 > does not have them. Re-serializing will permanently lose those fields.
@@ -207,8 +207,8 @@ assertions:
 
 Types whose serialization differs depending on cargo features (e.g.
 `SingleSignature`, `ClosedRegistrationEntry`, `SingleSignatureWithRegisteredParty`)
-have two `GOLDEN_CBOR_BYTES` constants gated with `#[cfg(not(feature = "future_snark"))]`
-and `#[cfg(feature = "future_snark")]`.
+have two `GOLDEN_CBOR_BYTES` constants gated with `#[cfg(not(feature = "snark"))]`
+and `#[cfg(feature = "snark")]`.
 
 Types whose encoding is non-deterministic (e.g. `AggregateSignature::Snark`,
 because the underlying SNARK proof is non-deterministic) replace the stability
@@ -216,19 +216,19 @@ test with a legacy-to-CBOR roundtrip test.
 
 The following table lists every type with its golden byte size(s):
 
-| Type                                 | Bytes      | Feature-gated       |
-| ------------------------------------ | ---------- | ------------------- |
-| `MerkleBatchPath`                    | 155        | No                  |
-| `MerklePath`                         | 149        | `future_snark` only |
-| `MerkleTree`                         | 485        | No                  |
-| `SingleSignature`                    | 131 / 396  | Yes                 |
-| `ClosedRegistrationEntry`            | 219 / 433  | Yes                 |
-| `SingleSignatureWithRegisteredParty` | 730 / 1721 | Yes                 |
-| `Initializer`                        | 490        | No                  |
-| `ConcatenationProof`                 | 2974       | No                  |
-| `AggregateVerificationKeyForSnark`   | 115        | `future_snark` only |
-| `AggregateSignature` (Concatenation) | 5937       | No                  |
-| `AggregateSignature` (Snark)         | 19234      | `future_snark` only |
+| Type                                 | Bytes      | Feature-gated |
+| ------------------------------------ | ---------- | ------------- |
+| `MerkleBatchPath`                    | 155        | No            |
+| `MerklePath`                         | 149        | `snark` only  |
+| `MerkleTree`                         | 485        | No            |
+| `SingleSignature`                    | 131 / 396  | Yes           |
+| `ClosedRegistrationEntry`            | 219 / 433  | Yes           |
+| `SingleSignatureWithRegisteredParty` | 730 / 1721 | Yes           |
+| `Initializer`                        | 490        | No            |
+| `ConcatenationProof`                 | 2974       | No            |
+| `AggregateVerificationKeyForSnark`   | 115        | `snark` only  |
+| `AggregateSignature` (Concatenation) | 5937       | No            |
+| `AggregateSignature` (Snark)         | 19234      | `snark` only  |
 
 When adding a field with `#[serde(default)]`, the existing golden bytes remain
 valid (the new field is absent and defaults). However, the **encoding** of the

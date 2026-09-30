@@ -5,14 +5,14 @@
 
 use serde::{Deserialize, Serialize};
 
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 use rand_chacha::ChaCha20Rng;
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 use rand_core::SeedableRng;
 
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 use crate::{BaseFieldElement, SchnorrSigningKey, circuits::halo2_ivc::PREIMAGE_SIZE};
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{
     SchnorrVerificationKey, StandardSchnorrSignature,
     circuits::CircuitVerificationKeyDigest,
@@ -29,9 +29,9 @@ use crate::{StmResult, codec};
 #[cfg_attr(test, allow(clippy::large_enum_variant))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AncillaryProverData {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     IvcSnark(IvcRollingState),
-    #[cfg(all(feature = "future_snark", test))]
+    #[cfg(all(feature = "snark", test))]
     Future,
 }
 
@@ -55,7 +55,7 @@ impl AncillaryProverData {
     }
 
     /// Returns a reference to the wrapped IvcRollingState of an AncillaryProverData if it exists.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn as_ivc_rolling_state(&self) -> Option<&IvcRollingState> {
         match self {
             Self::IvcSnark(state) => Some(state),
@@ -65,7 +65,7 @@ impl AncillaryProverData {
     }
 
     /// Consumes self and returns the wrapped IvcRollingState of an AncillaryProverData if it exists.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn into_ivc_rolling_state(self) -> Option<IvcRollingState> {
         match self {
             Self::IvcSnark(state) => Some(state),
@@ -84,11 +84,11 @@ impl AncillaryProverData {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AncillaryVerifierData {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     IvcSnark(IvcVerifierData),
     /// Non-recursive SNARK: carries the certificate circuit verifying key, which is fixed for a
     /// given circuit configuration and shared across the proofs it verifies.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     Snark(SnarkVerifierData),
 }
 
@@ -112,7 +112,7 @@ impl AncillaryVerifierData {
     }
 
     /// Returns the wrapped IvcVerifierData of an AncillaryVerifierData.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn as_ivc_verifier_data(&self) -> Option<&IvcVerifierData> {
         match self {
             Self::IvcSnark(state) => Some(state),
@@ -121,7 +121,7 @@ impl AncillaryVerifierData {
     }
 
     /// Returns the wrapped SnarkVerifierData of a non-recursive SNARK AncillaryVerifierData.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn as_snark_verifier_data(&self) -> Option<&SnarkVerifierData> {
         match self {
             Self::Snark(snark_verifier_data) => Some(snark_verifier_data),
@@ -134,7 +134,7 @@ impl AncillaryVerifierData {
     ///
     /// These are the keys the proof is verified against, so certifying them certifies the
     /// circuits used to produce the aggregate signature.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn circuit_verification_key_digests(&self) -> Vec<CircuitVerificationKeyDigest> {
         match self {
             Self::IvcSnark(ivc_verifier_data) => vec![
@@ -156,64 +156,60 @@ impl AncillaryVerifierData {
 
 /// Genesis-related data carried into aggregate signature creation.
 ///
-/// Under `future_snark`, holds the genesis message preimage, the genesis Schnorr signature and the
+/// Under `snark`, holds the genesis message preimage, the genesis Schnorr signature and the
 /// genesis Schnorr verification key when the genesis certificate carries them. It is a transient
 /// input to proof creation, never stored on a certificate.
 #[derive(Clone, Debug)]
 pub struct AncillaryGenesisData {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     genesis_message_preimage: GenesisMessagePreimage,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     genesis_schnorr_signature: Option<StandardSchnorrSignature>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     genesis_schnorr_verification_key: Option<SchnorrVerificationKey>,
 }
 
 impl AncillaryGenesisData {
-    /// Build the genesis ancillary data. Under `future_snark`, from the genesis message preimage,
+    /// Build the genesis ancillary data. Under `snark`, from the genesis message preimage,
     /// the genesis Schnorr signature and the genesis Schnorr verification key (the signature absent
     /// for a legacy, non-dual genesis certificate).
-    #[cfg_attr(not(feature = "future_snark"), allow(clippy::new_without_default))]
+    #[cfg_attr(not(feature = "snark"), allow(clippy::new_without_default))]
     pub fn new(
-        #[cfg(feature = "future_snark")] genesis_message_preimage: Vec<u8>,
-        #[cfg(feature = "future_snark")] genesis_schnorr_signature: Option<
-            StandardSchnorrSignature,
-        >,
-        #[cfg(feature = "future_snark")] genesis_schnorr_verification_key: Option<
-            SchnorrVerificationKey,
-        >,
+        #[cfg(feature = "snark")] genesis_message_preimage: Vec<u8>,
+        #[cfg(feature = "snark")] genesis_schnorr_signature: Option<StandardSchnorrSignature>,
+        #[cfg(feature = "snark")] genesis_schnorr_verification_key: Option<SchnorrVerificationKey>,
     ) -> Self {
         Self {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_message_preimage: GenesisMessagePreimage::from(genesis_message_preimage),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_signature,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_schnorr_verification_key,
         }
     }
 
     /// Return the genesis message preimage.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn genesis_message_preimage(&self) -> &GenesisMessagePreimage {
         &self.genesis_message_preimage
     }
 
     /// Return the genesis Schnorr signature, absent for a legacy (non-dual) genesis certificate.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn genesis_schnorr_signature(&self) -> Option<&StandardSchnorrSignature> {
         self.genesis_schnorr_signature.as_ref()
     }
 
     /// Return the genesis Schnorr verification key, absent for a legacy (non-dual) genesis
     /// certificate.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn genesis_schnorr_verification_key(&self) -> Option<&SchnorrVerificationKey> {
         self.genesis_schnorr_verification_key.as_ref()
     }
 
     /// Builds deterministic genesis ancillary data for tests.
-    #[cfg(all(test, feature = "future_snark"))]
+    #[cfg(all(test, feature = "snark"))]
     pub fn dummy() -> Self {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
         let signing_key = SchnorrSigningKey::generate(&mut rng);
@@ -228,7 +224,7 @@ impl AncillaryGenesisData {
     }
 
     /// Build genesis ancillary data carrying no data, for use in tests.
-    #[cfg(all(test, not(feature = "future_snark")))]
+    #[cfg(all(test, not(feature = "snark")))]
     pub fn dummy() -> Self {
         Self::new()
     }
@@ -237,29 +233,29 @@ impl AncillaryGenesisData {
 /// Ancillary input to one aggregate signature creation.
 ///
 /// Carries the prover data from the previous certificate, the genesis data from the genesis
-/// certificate and, under `future_snark`, the rigid preimage of the protocol message being
+/// certificate and, under `snark`, the rigid preimage of the protocol message being
 /// aggregated, the state the proof system needs at creation. It is always supplied to the clerk;
 /// each proof system decides whether to consume it.
 #[derive(Clone, Debug)]
 pub struct AncillaryProofInput {
     prover_data: Option<AncillaryProverData>,
     genesis_data: AncillaryGenesisData,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     message_preimage: Vec<u8>,
 }
 
 impl AncillaryProofInput {
     /// Build the ancillary proof input from the prover data, the genesis data and, under
-    /// `future_snark`, the rigid preimage of the protocol message being aggregated.
+    /// `snark`, the rigid preimage of the protocol message being aggregated.
     pub fn new(
         prover_data: Option<AncillaryProverData>,
         genesis_data: AncillaryGenesisData,
-        #[cfg(feature = "future_snark")] message_preimage: Vec<u8>,
+        #[cfg(feature = "snark")] message_preimage: Vec<u8>,
     ) -> Self {
         Self {
             prover_data,
             genesis_data,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             message_preimage,
         }
     }
@@ -280,7 +276,7 @@ impl AncillaryProofInput {
     }
 
     /// Return the rigid preimage of the protocol message being aggregated.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn message_preimage(&self) -> &[u8] {
         &self.message_preimage
     }
@@ -292,7 +288,7 @@ impl AncillaryProofInput {
         Self::new(
             None,
             AncillaryGenesisData::dummy(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Vec::new(),
         )
     }
@@ -335,13 +331,13 @@ impl AncillaryProofOutput {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_chacha::ChaCha20Rng;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_core::SeedableRng;
 
     use crate::codec::CODEC_VERSION_CBOR_V1;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::{
         BaseFieldElement, SchnorrSigningKey,
         circuits::halo2_ivc::{
@@ -353,7 +349,7 @@ mod tests {
     use super::*;
 
     // Duplicate from rolling_state.rs tests
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn build_genesis_signature() -> StandardSchnorrSignature {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
         let signing_key = SchnorrSigningKey::generate(&mut rng);
@@ -383,7 +379,7 @@ mod tests {
         assert!(output.verifier_data().is_none());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn genesis_data_getters_return_the_values_it_was_built_with() {
         let preimage = vec![1u8, 2, 3];
@@ -398,7 +394,7 @@ mod tests {
         assert!(genesis_data.genesis_schnorr_verification_key().is_none());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn proof_input_returns_the_message_preimage_it_was_built_with() {
         let message_preimage = vec![9u8, 8, 7];
@@ -414,7 +410,7 @@ mod tests {
 
     /// The genesis accumulator's bases are the identity, so this is also what pins that the
     /// checked point reader behind `AncillaryProverData::from_bytes` keeps accepting them.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn ancillary_prover_data_to_from_bytes_round_trip() {
         let genesis_signature = build_genesis_signature();
@@ -428,7 +424,7 @@ mod tests {
         assert_eq!(bytes, reconstructed.to_bytes().unwrap());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn ancillary_verifier_data_to_from_bytes_round_trip() {
         let context = load_embedded_verification_context_asset()
@@ -446,7 +442,7 @@ mod tests {
         assert_eq!(bytes, reconstructed.to_bytes().unwrap());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn ancillary_snark_verifier_data_to_from_bytes_round_trip() {
         let context = load_embedded_verification_context_asset()
@@ -462,7 +458,7 @@ mod tests {
         assert!(reconstructed.as_ivc_verifier_data().is_none());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn ivc_verifier_data_exposes_certificate_then_ivc_circuit_verification_key_digests() {
         let context = load_embedded_verification_context_asset()
@@ -493,7 +489,7 @@ mod tests {
     /// certificates. ciborium tags enum variants by name, so the encoding is independent of variant
     /// order. The digest pins the complete encoded bytes, embedded verifying keys included, so it
     /// legitimately moves whenever a circuit changes and must be recomputed with those keys.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn ivc_ancillary_encoding_is_byte_stable() {
         use sha2::{Digest, Sha256};

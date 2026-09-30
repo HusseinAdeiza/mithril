@@ -1,7 +1,7 @@
 //! Schnorr cryptographic helpers (Schnorr over Jubjub).
 //!
 //! SNARK-friendly primitives provable inside the Halo2 IVC circuit. Mirrors the legacy
-//! [ed25519](super::ed25519) family and is gated behind the `future_snark` feature so
+//! [ed25519](super::ed25519) family and is gated behind the `snark` feature so
 //! non-SNARK builds compile unchanged.
 
 use anyhow::{Context, anyhow};

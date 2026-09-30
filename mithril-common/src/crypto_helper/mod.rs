@@ -6,7 +6,7 @@ mod conversions;
 pub mod ed25519;
 mod ed25519_alias;
 mod genesis;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub mod schnorr;
 mod types;
 
@@ -25,7 +25,7 @@ pub use mithril_merkle_tree::{
     Bytes, MKMap, MKMapKey, MKMapNode, MKMapProof, MKMapValue, MKProof, MKTree, MKTreeLeafIndexer,
     MKTreeLeafPosition, MKTreeNode, MKTreeStoreInMemory, MKTreeStorer,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use mithril_stm::{
     CIRCUIT_VERIFICATION_KEY_DIGEST_SIZE, CircuitVerificationKeyDigest, MIDNIGHT_SRS_URL_K22,
     NoTrustedSetupDownload, SnarkProverSetupWarmer, TrustedSetupDownloader, TrustedSetupError,

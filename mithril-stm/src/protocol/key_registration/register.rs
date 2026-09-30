@@ -9,7 +9,7 @@ use crate::{
     protocol::key_registration::ClosedRegistrationEntry,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::VerificationKeyForSnark;
 
 use super::RegistrationEntry;
@@ -19,7 +19,7 @@ use super::RegistrationEntry;
 pub struct KeyRegistration {
     registration_entries: BTreeSet<RegistrationEntry>,
     registered_keys_for_concatenation: HashSet<VerificationKeyForConcatenation>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     registered_keys_for_snark: HashSet<VerificationKeyForSnark>,
 }
 
@@ -29,7 +29,7 @@ impl KeyRegistration {
         Self {
             registration_entries: Default::default(),
             registered_keys_for_concatenation: Default::default(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             registered_keys_for_snark: Default::default(),
         }
     }
@@ -50,7 +50,7 @@ impl KeyRegistration {
         let is_already_registered =
             self.registered_keys_for_concatenation.contains(&vk_concatenation);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let is_already_registered = is_already_registered
             || entry
                 .get_verification_key_for_snark()
@@ -61,7 +61,7 @@ impl KeyRegistration {
         }
 
         self.registered_keys_for_concatenation.insert(vk_concatenation);
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(vk_snark) = entry.get_verification_key_for_snark() {
             self.registered_keys_for_snark.insert(vk_snark);
         }
@@ -77,12 +77,12 @@ impl KeyRegistration {
         &mut self,
         stake: Stake,
         vk_pop: &VerificationKeyProofOfPossessionForConcatenation,
-        #[cfg(feature = "future_snark")] schnorr_verification_key: Option<VerificationKeyForSnark>,
+        #[cfg(feature = "snark")] schnorr_verification_key: Option<VerificationKeyForSnark>,
     ) -> StmResult<()> {
         let entry = RegistrationEntry::new(
             *vk_pop,
             stake,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr_verification_key,
         )?;
         self.register_by_entry(&entry)
@@ -171,7 +171,7 @@ impl ClosedKeyRegistration {
     }
 
     /// Check if any registration entry has a SNARK verification key.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub(crate) fn has_snark_verification_keys(&self) -> bool {
         self.closed_registration_entries
             .iter()
@@ -179,7 +179,7 @@ impl ClosedKeyRegistration {
     }
 
     /// Return the number of registered parties.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub(crate) fn number_of_registered_parties(&self) -> usize {
         self.closed_registration_entries.len()
     }
@@ -200,12 +200,12 @@ impl ClosedKeyRegistration {
 #[cfg(test)]
 mod tests {
     use proptest::{collection::vec, prelude::*};
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand::random_range;
     use rand_chacha::ChaCha20Rng;
     use rand_core::SeedableRng;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::{
         Initializer, MithrilMembershipDigest, SchnorrSigningKey, SchnorrVerificationKey,
         proof_system::compute_target_value_for_snark_lottery,
@@ -217,7 +217,7 @@ mod tests {
 
     use super::*;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn prepare_key_registration_with_stakes(stakes: Vec<u64>) -> KeyRegistration {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
         let mut kr = KeyRegistration::initialize();
@@ -235,7 +235,7 @@ mod tests {
         kr
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn close_registration_computes_same_target_value() {
         let nb_entries = 5;
@@ -275,7 +275,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn close_registration_zero_total_stake_fails() {
         let nb_entries = 5;
@@ -291,7 +291,7 @@ mod tests {
         assert!(closed_registration.is_err());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn closing_registration_without_entries_fails() {
         let kr = KeyRegistration::initialize();
@@ -306,7 +306,7 @@ mod tests {
         assert!(closed_registration.is_err());
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn signer_creation_fails_for_initializer_with_diff_param() {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
@@ -367,7 +367,7 @@ mod tests {
         let first_entry = RegistrationEntry::new(
             vk_pop,
             100,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
         )
         .unwrap();
@@ -377,7 +377,7 @@ mod tests {
         let second_entry = RegistrationEntry::new(
             vk_pop,
             200,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             None,
         )
         .unwrap();
@@ -389,7 +389,7 @@ mod tests {
         ));
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn register_by_entry_rejects_same_snark_key_with_different_concatenation_key() {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
@@ -454,7 +454,7 @@ mod tests {
                 }
 
                 let entry_result = RegistrationEntry::new(pk, stake,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     None,
                 );
 
@@ -506,7 +506,7 @@ mod tests {
 
         use super::*;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_JSON: &str = r#"
         {
             "root":[4, 3, 108, 183, 145, 65, 166, 69, 250, 202, 51, 64, 90, 232, 45, 103, 56, 138, 102, 63, 209, 245, 81, 22, 120, 16, 6, 96, 140, 204, 210, 55],
@@ -514,7 +514,7 @@ mod tests {
             "hasher":null
         }"#;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_JSON: &str = r#"
         {
             "root":[158, 184, 253, 192, 166, 114, 131, 175, 47, 113, 177, 244, 199, 200, 209, 129, 182, 191, 192, 91, 213, 10, 28, 172, 164, 139, 212, 51, 248, 66, 158, 36],
@@ -558,7 +558,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod golden_snark {
 
         use crate::{

@@ -1,4 +1,4 @@
-//! Recursive (IVC) SNARK circuit for STM certificate-chain aggregation (feature-gated by `future_snark`).
+//! Recursive (IVC) SNARK circuit for STM certificate-chain aggregation (feature-gated by `snark`).
 //!
 //! At each step the circuit verifies, in-circuit, the previous IVC proof and the current certificate proof
 //! (the certificate being aggregated at that step), folding their KZG openings into a running accumulator so

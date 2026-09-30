@@ -1,6 +1,6 @@
 [package]
 name = "mithril-client-wasm"
-version = "0.10.9"
+version = "0.10.10"
 description = "Mithril client WASM"
 authors = { workspace = true }
 edition = { workspace = true }
@@ -25,7 +25,7 @@ crate-type = ["cdylib"]
 default = ["rustls"]
 rustls = ["mithril-client/rustls"]
 test-node = []
-future_snark = ["mithril-client/future_snark"]
+snark = ["mithril-client/snark"]
 
 [dependencies]
 async-trait = { workspace = true }
@@ -38,10 +38,10 @@ wasm-bindgen-futures = "0.4.76"
 web-sys = { version = "0.3.103", features = ["BroadcastChannel"] }
 
 [target.'cfg(all(target_family = "wasm"))'.dependencies]
-# This getrandom version is required without the future_snark feature, and it can be removed once the future_snark feature is enabled.
+# This getrandom version is required without the snark feature, and it can be removed once the snark feature is enabled.
 getrandom = { version = "0.2", features = ["js"] }
-# This getrandom version is required with the future_snark feature (because of Midnight ZK dependency)
-getrandom-future-snark = { package = "getrandom", version = "0.4.3", features = ["wasm_js"] }
+# This getrandom version is required with the snark feature (because of Midnight ZK dependency)
+getrandom-snark = { package = "getrandom", version = "0.4.3", features = ["wasm_js"] }
 
 [build-dependencies]
 mithril-build-script = { path = "../internal/mithril-build-script" }

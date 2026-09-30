@@ -13,7 +13,7 @@ use mithril_common::{
     signable_builder::SignableSeedBuilder,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::entities::SupportedEra;
 
 use crate::services::EpochService;
@@ -52,7 +52,7 @@ impl SignableSeedBuilder for AggregatorSignableSeedBuilder {
     async fn compute_next_aggregate_verification_key_for_snark(
         &self,
     ) -> StdResult<Option<ProtocolMessagePartValue>> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let epoch_service = self.epoch_service.read().await;
             if epoch_service.mithril_era()? == SupportedEra::Pythagoras {
@@ -72,7 +72,7 @@ impl SignableSeedBuilder for AggregatorSignableSeedBuilder {
             Ok(Some(next_aggregate_verification_key))
         }
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             Ok(None)
         }
@@ -95,7 +95,7 @@ impl SignableSeedBuilder for AggregatorSignableSeedBuilder {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::entities::SignerWithStake;
     use mithril_common::{
         entities::{Epoch, SupportedEra},
@@ -168,7 +168,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[tokio::test]
     async fn compute_next_snark_avk_returns_none_during_pythagoras_era() {
         let epoch = Epoch(5);
@@ -192,7 +192,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[tokio::test]
     async fn compute_next_snark_avk_returns_none_when_snark_avk_unavailable_during_lagrange_era() {
         let epoch = Epoch(5);
@@ -234,7 +234,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[tokio::test]
     async fn compute_next_snark_avk_returns_value_during_lagrange_era() {
         let epoch = Epoch(5);

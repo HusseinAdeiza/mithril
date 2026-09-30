@@ -33,19 +33,19 @@ impl InsertOrReplaceSignerRegistrationRecordQuery {
                     .stake
                     .map(|s| Value::Integer(i64::try_from(s).unwrap()))
                     .unwrap_or(Value::Null),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 signer_registration_record
                     .verification_key_for_snark
                     .map(Value::String)
                     .unwrap_or(Value::Null),
-                #[cfg(not(feature = "future_snark"))]
+                #[cfg(not(feature = "snark"))]
                 Value::Null,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 signer_registration_record
                     .verification_key_signature_for_snark
                     .map(Value::String)
                     .unwrap_or(Value::Null),
-                #[cfg(not(feature = "future_snark"))]
+                #[cfg(not(feature = "snark"))]
                 Value::Null,
                 Value::String(signer_registration_record.created_at.to_rfc3339()),
             ],

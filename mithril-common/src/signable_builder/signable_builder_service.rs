@@ -41,7 +41,7 @@ pub struct MithrilSignableBuilderService {
         Arc<dyn SignableBuilder<(BlockNumber, BlockNumberOffset)>>,
     cardano_stake_distribution_builder: Arc<dyn SignableBuilder<Epoch>>,
     cardano_database_signable_builder: Arc<dyn SignableBuilder<CardanoDbBeacon>>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     era_fetcher: Arc<dyn SignableBuilderServiceEraFetcher>,
     logger: Logger,
 }
@@ -54,7 +54,7 @@ pub struct SignableBuilderServiceDependencies {
         Arc<dyn SignableBuilder<(BlockNumber, BlockNumberOffset)>>,
     cardano_stake_distribution_builder: Arc<dyn SignableBuilder<Epoch>>,
     cardano_database_signable_builder: Arc<dyn SignableBuilder<CardanoDbBeacon>>,
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     era_fetcher: Arc<dyn SignableBuilderServiceEraFetcher>,
 }
 
@@ -68,7 +68,7 @@ impl SignableBuilderServiceDependencies {
         >,
         cardano_stake_distribution_builder: Arc<dyn SignableBuilder<Epoch>>,
         cardano_database_signable_builder: Arc<dyn SignableBuilder<CardanoDbBeacon>>,
-        #[cfg(feature = "future_snark")] era_fetcher: Arc<dyn SignableBuilderServiceEraFetcher>,
+        #[cfg(feature = "snark")] era_fetcher: Arc<dyn SignableBuilderServiceEraFetcher>,
     ) -> Self {
         Self {
             mithril_stake_distribution_builder,
@@ -76,7 +76,7 @@ impl SignableBuilderServiceDependencies {
             cardano_blocks_transactions_signable_builder,
             cardano_stake_distribution_builder,
             cardano_database_signable_builder,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             era_fetcher,
         }
     }
@@ -98,7 +98,7 @@ impl MithrilSignableBuilderService {
                 .cardano_blocks_transactions_signable_builder,
             cardano_stake_distribution_builder: dependencies.cardano_stake_distribution_builder,
             cardano_database_signable_builder: dependencies.cardano_database_signable_builder,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             era_fetcher: dependencies.era_fetcher,
             logger: logger.new_with_component_name::<Self>(),
         }
@@ -161,15 +161,15 @@ impl MithrilSignableBuilderService {
             next_aggregate_verification_key,
         );
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let next_snark_aggregate_verification_key = self
             .seed_signable_builder
             .compute_next_aggregate_verification_key_for_snark()
             .await?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let has_next_snark_aggregate_verification_key =
             next_snark_aggregate_verification_key.is_some();
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(snark_avk) = next_snark_aggregate_verification_key {
             protocol_message.set_message_part(
                 ProtocolMessagePartKey::NextSnarkAggregateVerificationKey,
@@ -186,7 +186,7 @@ impl MithrilSignableBuilderService {
         let current_epoch = self.seed_signable_builder.compute_current_epoch().await?;
         protocol_message.set_message_part(ProtocolMessagePartKey::CurrentEpoch, current_epoch);
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             let era = self.era_fetcher.compute_current_era().await?;
             match era {
@@ -217,7 +217,7 @@ impl SignableBuilderService for MithrilSignableBuilderService {
             .compute_signed_entity_protocol_message(signed_entity_type)
             .await?;
         let protocol_message = self.compute_seeded_protocol_message(protocol_message).await?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         protocol_message.check_rigid_integrity().with_context(
             || "Signable builder service produced a protocol message that violates the rigid layout",
         )?;
@@ -258,7 +258,7 @@ mod tests {
             MockSignableBuilderImpl<(BlockNumber, BlockNumberOffset)>,
         mock_cardano_stake_distribution_signable_builder: MockSignableBuilderImpl<Epoch>,
         mock_cardano_database_signable_builder: MockSignableBuilderImpl<CardanoDbBeacon>,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mock_era_fetcher: MockSignableBuilderServiceEraFetcher,
     }
 
@@ -271,7 +271,7 @@ mod tests {
                 mock_cardano_blocks_transactions_signable_builder: MockSignableBuilderImpl::new(),
                 mock_cardano_stake_distribution_signable_builder: MockSignableBuilderImpl::new(),
                 mock_cardano_database_signable_builder: MockSignableBuilderImpl::new(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 mock_era_fetcher: MockSignableBuilderServiceEraFetcher::new(),
             }
         }
@@ -283,7 +283,7 @@ mod tests {
                 Arc::new(self.mock_cardano_blocks_transactions_signable_builder),
                 Arc::new(self.mock_cardano_stake_distribution_signable_builder),
                 Arc::new(self.mock_cardano_database_signable_builder),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Arc::new(self.mock_era_fetcher),
             );
 
@@ -302,7 +302,7 @@ mod tests {
             .expect_compute_next_aggregate_verification_key_for_concatenation()
             .once()
             .return_once(move || Ok("next-avk-123".to_string()));
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mock_container
             .mock_signable_seed_builder
             .expect_compute_next_aggregate_verification_key_for_snark()
@@ -318,7 +318,7 @@ mod tests {
             .expect_compute_current_epoch()
             .once()
             .return_once(move || Ok("epoch-123".to_string()));
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mock_container
             .mock_era_fetcher
             .expect_compute_current_era()
@@ -420,7 +420,7 @@ mod tests {
             .unwrap();
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod era_dispatch {
         use super::*;
 

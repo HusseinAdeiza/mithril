@@ -610,7 +610,7 @@ impl RuntimeTester {
     ) -> StdResult<Option<SignedEntityRecord>> {
         let signed_entity = match &certificate.signature {
             CertificateSignature::GenesisSignature(..) => None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(..) => None,
             CertificateSignature::MultiSignature(..) => {
                 let record = self

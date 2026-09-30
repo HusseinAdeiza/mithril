@@ -50,11 +50,11 @@ pub fn generate_register_signer_message(
                 .operational_certificate
                 .map(|o| o.to_json_hex().unwrap()),
             kes_evolutions: signer.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: signer
                 .verification_key_for_snark
                 .map(|k| k.to_json_hex().unwrap()),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: signer
                 .verification_key_signature_for_snark
                 .map(|s| s.to_json_hex().unwrap()),

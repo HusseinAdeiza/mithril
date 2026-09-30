@@ -10,7 +10,7 @@
 /// `::{{closure}}`) and path slicing to extract the function name. This depends on
 /// compiler-generated type names and is therefore not guaranteed to be stable across compiler
 /// versions. Intended for test use only.
-#[cfg(all(test, feature = "future_snark"))]
+#[cfg(all(test, feature = "snark"))]
 macro_rules! current_function {
     () => {{
         fn f() {}
@@ -25,10 +25,10 @@ macro_rules! current_function {
     }};
 }
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub mod circuits;
 pub(crate) mod codec;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod hash;
 mod membership_commitment;
 mod proof_system;
@@ -58,34 +58,34 @@ pub use signature_scheme::{
     BlsVerificationKeyProofOfPossession,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use signature_scheme::{
     BaseFieldElement, SchnorrSigningKey, SchnorrVerificationKey, StandardSchnorrSignature,
     UniqueSchnorrSignature,
 };
 
-#[cfg(all(feature = "future_snark", not(feature = "benchmark-internals")))]
+#[cfg(all(feature = "snark", not(feature = "benchmark-internals")))]
 use hash::poseidon::MidnightPoseidonDigest;
 
 #[cfg(feature = "benchmark-internals")]
 pub use hash::poseidon::MidnightPoseidonDigest;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use circuits::{CIRCUIT_VERIFICATION_KEY_DIGEST_SIZE, CircuitVerificationKeyDigest};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use circuits::trusted_setup::{
     MIDNIGHT_SRS_URL_K22, NoTrustedSetupDownload, TrustedSetupDownloader, TrustedSetupError,
     TrustedSetupProvider,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use proof_system::{
     AggregateVerificationKeyForSnark, MERKLE_TREE_DEPTH_FOR_SNARK, SnarkProof,
     SnarkProverSetupWarmer, SnarkVerifierData,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use protocol::{RegistrationEntryForSnark, VerificationKeyForSnark};
 
 /// The quantity of stake held by a party, represented as a `u64`.
@@ -107,8 +107,8 @@ pub type StmError = anyhow::Error;
 /// Mithril-stm result type
 pub type StmResult<T> = anyhow::Result<T, StmError>;
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 /// Target value type used in the lottery for snark proof system
 pub type LotteryTargetValue = crate::signature_scheme::BaseFieldElement;
@@ -116,7 +116,7 @@ pub type LotteryTargetValue = crate::signature_scheme::BaseFieldElement;
 /// Trait defining the different hash types for different proof systems.
 pub trait MembershipDigest: Clone {
     type ConcatenationHash: Digest + FixedOutput + Clone + Debug + Send + Sync;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     type SnarkHash: Digest + FixedOutput + Clone + Debug + Send + Sync;
 }
 
@@ -130,6 +130,6 @@ pub struct MithrilMembershipDigest {}
 /// Halo2 circuit hashing.
 impl MembershipDigest for MithrilMembershipDigest {
     type ConcatenationHash = Blake2b<U32>;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     type SnarkHash = MidnightPoseidonDigest;
 }

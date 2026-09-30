@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use sha2::{Digest, Sha256};
 
 use crate::StdResult;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::{
     BUNDLE_FIRST_HEX_CHAR, GenesisSchnorrSignature, GenesisSchnorrVerificationKey,
     GenesisSchnorrVerifier, GenesisVerificationKeyBundle,
@@ -34,7 +34,7 @@ pub struct GenesisVerifier {
 
     /// Schnorr-genesis verifier (Schnorr over Jubjub). `None` when the operator loaded a legacy
     /// single-Ed25519 verification key.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub schnorr: Option<GenesisSchnorrVerifier>,
 }
 
@@ -43,7 +43,7 @@ impl GenesisVerifier {
     pub fn from_ed25519(verification_key: GenesisEd25519VerificationKey) -> Self {
         Self {
             ed25519: GenesisEd25519Verifier::from_verification_key(verification_key),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr: None,
         }
     }
@@ -58,7 +58,7 @@ impl GenesisVerifier {
     }
 
     /// Build a verifier wrapper from a dual verification-key bundle.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn from_bundle(bundle: GenesisVerificationKeyBundle) -> Self {
         Self {
             ed25519: GenesisEd25519Verifier::from_verification_key(bundle.ed25519),
@@ -74,7 +74,7 @@ impl GenesisVerifier {
         let trimmed = raw.trim();
         match trimmed.as_bytes().first() {
             None => Err(anyhow!("genesis verification key input is empty")),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Some(&BUNDLE_FIRST_HEX_CHAR) => Ok(Self::from_bundle(
                 GenesisVerificationKeyBundle::try_from_hex(trimmed)?,
             )),
@@ -106,7 +106,7 @@ impl GenesisVerifier {
     /// the SHA-256 digest of the protocol-message rigid preimage.
     ///
     /// Errors when the verifier holds no SNARK verification key (legacy single-Ed25519 input).
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verify_schnorr(
         &self,
         sha256_digest: &[u8],
@@ -125,7 +125,7 @@ impl GenesisVerifier {
 
     /// Return the SNARK-friendly (Schnorr) genesis verification key, absent for a legacy
     /// single-Ed25519 verifier.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn to_schnorr_verification_key(&self) -> Option<GenesisSchnorrVerificationKey> {
         self.schnorr.as_ref().map(|schnorr| schnorr.to_verification_key())
     }
@@ -137,7 +137,7 @@ impl GenesisVerifier {
         let mut hasher = Sha256::new();
         hasher.update(GENESIS_VERIFICATION_KEY_FINGERPRINT_TAG);
         hasher.update(self.to_ed25519_verification_key().as_bytes());
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(schnorr_verification_key) = self.to_schnorr_verification_key() {
             hasher.update(schnorr_verification_key.to_bytes());
         }
@@ -148,7 +148,7 @@ impl GenesisVerifier {
     /// Derive the matching dual verification-key bundle, suitable for serialisation to disk by the
     /// genesis import and `upgrade-key-to-dual` aggregator subcommands. Returns `None` for a legacy
     /// single-Ed25519 verifier, which has no Schnorr half to bundle.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_bundle(&self) -> Option<GenesisVerificationKeyBundle> {
         self.schnorr.as_ref().map(|schnorr| GenesisVerificationKeyBundle {
             ed25519: self.ed25519.to_verification_key(),
@@ -161,7 +161,7 @@ impl GenesisVerifier {
 mod tests {
     use super::*;
     use crate::crypto_helper::GenesisEd25519Signer;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::crypto_helper::GenesisSchnorrSigner;
     use crate::temp_dir_create;
 
@@ -169,7 +169,7 @@ mod tests {
         GenesisEd25519Signer::create_deterministic_signer()
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn verify_schnorr_errors_when_verifier_holds_no_schnorr_key() {
         let signer = deterministic_signer();
@@ -192,7 +192,7 @@ mod tests {
             verifier.ed25519.to_verification_key().as_bytes(),
             signer.verification_key().as_bytes()
         );
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert!(verifier.schnorr.is_none());
     }
 
@@ -207,7 +207,7 @@ mod tests {
             verifier.ed25519.to_verification_key().as_bytes(),
             signer.verification_key().as_bytes()
         );
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert!(verifier.schnorr.is_none());
     }
 
@@ -311,7 +311,7 @@ mod tests {
             assert!(fingerprint.chars().all(|c| c.is_ascii_hexdigit()));
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[test]
         fn differs_between_a_dual_and_a_legacy_verification_key() {
             let dual_verifier = GenesisSigner::create_deterministic_signer().create_verifier();
@@ -325,7 +325,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod schnorr {
         use rand_chacha::ChaCha20Rng;
         use rand_core::SeedableRng;

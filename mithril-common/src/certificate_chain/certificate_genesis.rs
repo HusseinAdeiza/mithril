@@ -1,11 +1,11 @@
 //! A module used to create a Genesis Certificate
 //!
 use chrono::prelude::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use slog::warn;
 use slog::{Logger, o};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::{GenesisSchnorrSignature, ProtocolAggregateVerificationKeyForSnark};
 use crate::{
     StdResult,
@@ -58,9 +58,9 @@ impl CertificateGenesisProducer {
             genesis_aggregate_verification_key_for_concatenation.to_json_hex()?;
         let mut protocol_message = match mithril_era {
             SupportedEra::Pythagoras => ProtocolMessage::new(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => ProtocolMessage::new_rigid(),
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             SupportedEra::Lagrange => ProtocolMessage::new(),
         };
         protocol_message.set_message_part(
@@ -69,7 +69,7 @@ impl CertificateGenesisProducer {
         );
 
         if mithril_era != SupportedEra::Pythagoras {
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             match genesis_avk.to_snark_aggregate_verification_key() {
                 Some(snark_avk) => {
                     let genesis_snark_avk: ProtocolAggregateVerificationKeyForSnark =
@@ -97,7 +97,7 @@ impl CertificateGenesisProducer {
             genesis_epoch.to_string(),
         );
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         protocol_message.check_rigid_integrity()?;
 
         Ok(protocol_message)
@@ -131,7 +131,7 @@ impl CertificateGenesisProducer {
     ///
     /// Signing is performed upstream by [`GenesisSigner`][crate::crypto_helper::GenesisSigner];
     /// this only builds the certificate body.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[allow(clippy::too_many_arguments)]
     pub fn create_genesis_certificate<T: Into<String>>(
         &self,
@@ -201,7 +201,7 @@ mod tests {
     use crate::entities::ProtocolMessagePartKey;
     use crate::test::TestLogger;
     use crate::test::builder::MithrilFixtureBuilder;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::test::double::fake_keys;
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn genesis_protocol_message_includes_snark_aggregate_verification_key() {
         let fixture = MithrilFixtureBuilder::default().with_signers(5).build();
@@ -268,7 +268,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod era_dispatched_genesis_certificate {
         use crate::crypto_helper::{
             GenesisBundleError, GenesisEd25519Signer, GenesisSchnorrVerifier, GenesisSigner,

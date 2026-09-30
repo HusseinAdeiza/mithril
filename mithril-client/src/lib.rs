@@ -185,7 +185,7 @@ cfg_unstable! {
     pub mod cardano_transaction_v2_client;
 }
 pub mod certificate_client;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub mod circuit_key_registry;
 mod client;
 pub mod era;

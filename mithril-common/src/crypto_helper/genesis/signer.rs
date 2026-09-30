@@ -11,7 +11,7 @@ use crate::StdResult;
 use crate::crypto_helper::GenesisEd25519SecretKey;
 use crate::crypto_helper::GenesisEd25519Signer;
 use crate::crypto_helper::GenesisVerifier;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::{
     BUNDLE_FIRST_HEX_CHAR, GenesisBundleError, GenesisSchnorrSigner, GenesisSigningKeyBundle,
     GenesisVerificationKeyBundle, LEGACY_FIRST_HEX_CHAR, PREIMAGE_SIZE, ProtocolKey, sha256_digest,
@@ -27,7 +27,7 @@ pub struct GenesisSigner {
 
     /// Schnorr-genesis signer (Schnorr over Jubjub). `None` when the operator loaded a legacy
     /// single-Ed25519 file.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub schnorr: Option<GenesisSchnorrSigner>,
 }
 
@@ -36,7 +36,7 @@ impl GenesisSigner {
     pub fn from_ed25519(ed25519: GenesisEd25519Signer) -> Self {
         Self {
             ed25519,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr: None,
         }
     }
@@ -48,13 +48,13 @@ impl GenesisSigner {
     pub fn create_deterministic_signer() -> Self {
         Self {
             ed25519: GenesisEd25519Signer::create_deterministic_signer(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr: Some(GenesisSchnorrSigner::create_deterministic_signer()),
         }
     }
 
     /// Build a signer wrapper from a dual signing-key bundle.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn from_bundle(bundle: GenesisSigningKeyBundle) -> Self {
         Self {
             ed25519: GenesisEd25519Signer::from_secret_key(bundle.ed25519),
@@ -66,7 +66,7 @@ impl GenesisSigner {
     pub fn create_verifier(&self) -> GenesisVerifier {
         GenesisVerifier {
             ed25519: self.ed25519.create_verifier(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             schnorr: self.schnorr.as_ref().map(|schnorr| schnorr.create_verifier()),
         }
     }
@@ -78,7 +78,7 @@ impl GenesisSigner {
         if trimmed.is_empty() {
             return Err(anyhow!("genesis signer input is empty"));
         }
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             match trimmed.as_bytes().first() {
                 Some(&BUNDLE_FIRST_HEX_CHAR) => {
@@ -96,7 +96,7 @@ impl GenesisSigner {
                 )),
             }
         }
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         {
             let secret_key = GenesisEd25519SecretKey::from_json_hex(trimmed)?;
             Ok(Self::from_ed25519(GenesisEd25519Signer::from_secret_key(
@@ -120,14 +120,14 @@ impl GenesisSigner {
         &self,
         protocol_message: &ProtocolMessage,
         mithril_era: SupportedEra,
-        #[cfg_attr(not(feature = "future_snark"), allow(unused_variables))] rng: &mut R,
+        #[cfg_attr(not(feature = "snark"), allow(unused_variables))] rng: &mut R,
     ) -> StdResult<CertificateSignature> {
         let ed25519_signature = self.ed25519.sign(protocol_message.to_message().as_bytes());
         match mithril_era {
             SupportedEra::Pythagoras => {
                 Ok(CertificateSignature::GenesisSignature(ed25519_signature))
             }
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => {
                 let schnorr_signer =
                     self.schnorr.as_ref().ok_or(GenesisBundleError::LegacySigningKey)?;
@@ -150,7 +150,7 @@ impl GenesisSigner {
                     schnorr_signature,
                 ))
             }
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             SupportedEra::Lagrange => Ok(CertificateSignature::GenesisSignature(ed25519_signature)),
         }
     }
@@ -179,7 +179,7 @@ impl GenesisSigner {
 
     /// Derive the matching dual verification-key bundle. Returns `None` for a legacy single-Ed25519
     /// signer, which has no Schnorr half to bundle.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn verification_key_bundle(&self) -> Option<GenesisVerificationKeyBundle> {
         self.schnorr.as_ref().map(|schnorr| GenesisVerificationKeyBundle {
             ed25519: self.ed25519.verification_key(),
@@ -190,7 +190,7 @@ impl GenesisSigner {
     /// Write the wrapped signer to disk in its native hex form (bundle bytes-hex when the SNARK
     /// half is present, legacy JSON-hex otherwise).
     pub fn write_to_file(&self, path: &Path) -> StdResult<()> {
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         {
             if let Some(schnorr) = self.schnorr.as_ref() {
                 let bundle =
@@ -220,7 +220,7 @@ mod tests {
             parsed.ed25519.secret_key().to_bytes(),
             signer.secret_key().to_bytes()
         );
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         assert!(parsed.schnorr.is_none());
     }
 
@@ -267,7 +267,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod schnorr {
         use rand_chacha::ChaCha20Rng;
         use rand_core::SeedableRng;

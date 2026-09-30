@@ -73,7 +73,7 @@ impl<'a> CertificateChainBuilderContext<'a> {
                 .compute_and_encode_concatenation_aggregate_verification_key(),
         );
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(snark_avk) = self
             .next_fixture
             .compute_and_encode_snark_aggregate_verification_key()
@@ -487,7 +487,7 @@ impl<'a> CertificateChainBuilder<'a> {
                 .to_concatenation_aggregate_verification_key()
                 .to_owned()
                 .into(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark: avk
                 .to_snark_aggregate_verification_key()
                 .map(|snark_avk| snark_avk.to_owned().into()),
@@ -536,7 +536,7 @@ impl<'a> CertificateChainBuilder<'a> {
                     genesis_signature,
                     mithril_era,
                 ),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(
                 genesis_signature,
                 genesis_signature_snark,
@@ -744,7 +744,7 @@ mod test {
             ProtocolMessagePartKey::NextAggregateVerificationKey,
             expected_next_avk_part_value,
         );
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         if let Some(snark_avk) = next_fixture.compute_and_encode_snark_aggregate_verification_key()
         {
             expected_protocol_message.set_message_part(
@@ -910,7 +910,7 @@ mod test {
         let expected_protocol_message_legacy = context.compute_protocol_message_seed();
         let (protocol_genesis_signer, _) = CertificateChainBuilder::setup_genesis();
 
-        let mithril_era = if cfg!(feature = "future_snark") {
+        let mithril_era = if cfg!(feature = "snark") {
             SupportedEra::Lagrange
         } else {
             SupportedEra::Pythagoras
@@ -921,7 +921,7 @@ mod test {
 
         let expected_protocol_message = match mithril_era {
             SupportedEra::Pythagoras => expected_protocol_message_legacy,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             SupportedEra::Lagrange => {
                 let mut message = ProtocolMessage::new_rigid();
                 for (key, value) in &expected_protocol_message_legacy.message_parts {
@@ -929,7 +929,7 @@ mod test {
                 }
                 message
             }
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             SupportedEra::Lagrange => expected_protocol_message_legacy,
         };
         let expected_signed_message = expected_protocol_message.compute_hash();

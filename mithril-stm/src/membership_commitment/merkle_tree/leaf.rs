@@ -2,18 +2,18 @@ use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::{LotteryTargetValue, VerificationKeyForSnark};
 
 use crate::{Stake, VerificationKeyForConcatenation};
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 use crate::StmResult;
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 use super::MerkleTreeError;
 
@@ -42,8 +42,8 @@ impl MerkleTreeConcatenationLeaf {
         result.to_vec()
     }
 
-    #[cfg(feature = "future_snark")]
-    // TODO: remove this allow dead_code directive when function is called or future_snark is activated
+    #[cfg(feature = "snark")]
+    // TODO: remove this allow dead_code directive when function is called or snark is activated
     #[allow(dead_code)]
     pub(crate) fn from_bytes(bytes: &[u8]) -> StmResult<Self> {
         let pk = VerificationKeyForConcatenation::from_bytes(bytes)
@@ -79,16 +79,16 @@ impl Ord for MerkleTreeConcatenationLeaf {
     }
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 /// The values that are committed in the Merkle Tree for `SnarkProof`.
 /// Namely, a verified `SchnorrVerificationKey` and its corresponding target value.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct MerkleTreeSnarkLeaf(pub VerificationKeyForSnark, pub LotteryTargetValue);
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl MerkleTreeLeaf for MerkleTreeSnarkLeaf {
     fn as_bytes_for_merkle_tree(&self) -> Vec<u8> {
@@ -96,8 +96,8 @@ impl MerkleTreeLeaf for MerkleTreeSnarkLeaf {
     }
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl MerkleTreeSnarkLeaf {
     fn to_bytes(self) -> Vec<u8> {
@@ -121,8 +121,8 @@ impl MerkleTreeSnarkLeaf {
     }
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl From<MerkleTreeSnarkLeaf> for (VerificationKeyForSnark, LotteryTargetValue) {
     fn from(leaf: MerkleTreeSnarkLeaf) -> (VerificationKeyForSnark, LotteryTargetValue) {
@@ -130,8 +130,8 @@ impl From<MerkleTreeSnarkLeaf> for (VerificationKeyForSnark, LotteryTargetValue)
     }
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl PartialOrd for MerkleTreeSnarkLeaf {
     /// Ordering of MT Values.
@@ -143,8 +143,8 @@ impl PartialOrd for MerkleTreeSnarkLeaf {
     }
 }
 
-#[cfg(feature = "future_snark")]
-// TODO: remove this allow dead_code directive when function is called or future_snark is activated
+#[cfg(feature = "snark")]
+// TODO: remove this allow dead_code directive when function is called or snark is activated
 #[allow(dead_code)]
 impl Ord for MerkleTreeSnarkLeaf {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -164,7 +164,7 @@ mod tests {
     mod concatenation {
         use super::*;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         mod golden {
             use super::*;
             const GOLDEN_BYTES: &[u8; 104] = &[
@@ -231,7 +231,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod snark {
         use midnight_curves::Fq as JubjubBase;
 

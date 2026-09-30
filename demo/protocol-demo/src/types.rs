@@ -1,4 +1,4 @@
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_stm::VerificationKeyForSnark;
 use mithril_stm::{
     AggregateSignature, Clerk, Initializer, KeyRegistration, MithrilMembershipDigest, Parameters,
@@ -40,5 +40,5 @@ pub type ProtocolSignerVerificationKeyForConcatenation =
     VerificationKeyProofOfPossessionForConcatenation;
 
 /// Alias of [MithrilStm:VerificationKeyProofOfPossessionForSnark](type@mithril_stm::VerificationKeyProofOfPossessionForSnark).
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub type ProtocolSignerVerificationKeyForSnark = VerificationKeyForSnark;

@@ -9,7 +9,7 @@
 //!
 //! Each service is defined by a public API (a trait) that is used in the controllers (runtimes).
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod aggregate_signature_prover_warmer;
 mod aggregator_client;
 mod certificate_chain_synchronizer;
@@ -26,12 +26,12 @@ mod signed_entity;
 mod signer_registration;
 mod snapshotter;
 mod stake_distribution;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod trusted_setup_downloader;
 mod upkeep;
 mod usage_reporter;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use aggregate_signature_prover_warmer::*;
 pub use certificate_chain_synchronizer::*;
 pub use certifier::*;
@@ -47,7 +47,7 @@ pub use signed_entity::*;
 pub use signer_registration::*;
 pub use snapshotter::*;
 pub use stake_distribution::*;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use trusted_setup_downloader::*;
 pub use upkeep::*;
 pub use usage_reporter::*;

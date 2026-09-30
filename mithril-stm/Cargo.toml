@@ -1,6 +1,6 @@
 [package]
 name = "mithril-stm"
-version = "0.12.25"
+version = "0.12.26"
 edition = { workspace = true }
 authors = { workspace = true }
 homepage = { workspace = true }
@@ -30,7 +30,7 @@ include = [
 ]
 
 [package.metadata.docs.rs]
-features = ["future_snark"]
+features = ["snark"]
 
 [package.metadata.cargo-machete]
 # `serde_bytes` is used for proof bytes serialization
@@ -44,7 +44,7 @@ default = ["num-integer-backend"]
 # For benchmarking
 benchmark-internals = []
 # Enable experimental SNARK support 
-future_snark = [
+snark = [
     "dep:ff",
     "dep:group",
     "dep:midnight-circuits",
@@ -115,11 +115,11 @@ tempfile = "3.27.0"
 
 [[example]]
 name = "non_recursive_snark_aggregate_signature"
-required-features = ["future_snark"]
+required-features = ["snark"]
 
 [[example]]
 name = "recursive_snark_aggregate_signature"
-required-features = ["future_snark"]
+required-features = ["snark"]
 
 [[bench]]
 name = "multi_sig"
@@ -129,22 +129,22 @@ required-features = ["benchmark-internals"]
 [[bench]]
 name = "schnorr_sig"
 harness = false
-required-features = ["future_snark", "benchmark-internals"]
+required-features = ["snark", "benchmark-internals"]
 
 [[bench]]
 name = "halo2_snark"
 harness = false
-required-features = ["future_snark", "benchmark-internals"]
+required-features = ["snark", "benchmark-internals"]
 
 [[bench]]
 name = "halo2_prover_modes"
 harness = false
-required-features = ["future_snark", "benchmark-internals"]
+required-features = ["snark", "benchmark-internals"]
 
 [[bench]]
 name = "halo2_ivc_snark"
 harness = false
-required-features = ["future_snark", "benchmark-internals"]
+required-features = ["snark", "benchmark-internals"]
 
 [[bench]]
 name = "stm"

@@ -55,7 +55,7 @@ impl GenesisKeys {
             .is_above_or_equal(MIN_AGGREGATOR_VERSION_WITH_DUAL_KEYS)
             && client_version.is_above_or_equal(MIN_CLIENT_VERSION_WITH_DUAL_KEYS);
 
-        if cfg!(feature = "future_snark") && runs_lagrange && nodes_accept_dual_keys {
+        if cfg!(feature = "snark") && runs_lagrange && nodes_accept_dual_keys {
             Self::DUAL
         } else {
             Self::LEGACY
@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(GenesisKeys::LEGACY, genesis_keys);
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn dual_keys_for_lagrange_on_nodes_accepting_them() {
         let genesis_keys =
@@ -121,7 +121,7 @@ mod tests {
         assert_eq!(GenesisKeys::DUAL, genesis_keys);
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn dual_keys_when_lagrange_is_the_next_era() {
         let genesis_keys = GenesisKeys::select(
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(GenesisKeys::DUAL, genesis_keys);
     }
 
-    #[cfg(not(feature = "future_snark"))]
+    #[cfg(not(feature = "snark"))]
     #[test]
     fn legacy_keys_for_lagrange_without_the_snark_feature() {
         let genesis_keys =

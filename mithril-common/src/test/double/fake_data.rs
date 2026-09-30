@@ -140,7 +140,7 @@ pub fn certificate<T: Into<String>>(certificate_hash: T) -> entities::Certificat
         protocol_message,
         signed_message: "".to_string(),
         aggregate_verification_key,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         aggregate_verification_key_snark: None,
         ancillary_prover_data: None,
         ancillary_verifier_data: None,

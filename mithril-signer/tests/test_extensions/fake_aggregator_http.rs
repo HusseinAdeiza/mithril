@@ -264,9 +264,9 @@ async fn register_signer(
             .verification_key_signature_for_concatenation,
         operational_certificate: message.operational_certificate,
         kes_evolutions: message.kes_evolutions,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         verification_key_for_snark: None,
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         verification_key_signature_for_snark: None,
     };
     store.entry(message.epoch).or_default().push(signer);
@@ -334,9 +334,9 @@ mod tests {
                 .clone(),
             operational_certificate: signer_msg.operational_certificate.clone(),
             kes_evolutions: signer_msg.kes_evolutions,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_for_snark: signer_msg.verification_key_for_snark.clone(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             verification_key_signature_for_snark: signer_msg
                 .verification_key_signature_for_snark
                 .clone(),

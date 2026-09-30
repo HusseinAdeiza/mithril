@@ -4,9 +4,9 @@ use sha2::{Digest, Sha256};
 
 use mithril_stm::AggregateSignatureType;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::GenesisSchnorrSignature;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::crypto_helper::ProtocolAggregateVerificationKeyForSnark;
 use crate::crypto_helper::{
     GenesisEd25519Signature, ProtocolAggregateVerificationKey,
@@ -29,7 +29,7 @@ pub enum CertificateSignature {
     /// The Schnorr part is deliberately excluded from
     /// [CertificateSignature::to_bytes_hex_for_certificate_hash] so a Lagrange genesis cert
     /// hashes byte-identically to a legacy `GenesisSignature(ed)` cert with the same `ed`.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     GenesisDualSignature(GenesisEd25519Signature, GenesisSchnorrSignature),
 
     /// STM multi signature created from a quorum of single signatures from the signers
@@ -44,7 +44,7 @@ impl CertificateSignature {
     pub fn aggregate_signature_type(&self) -> Option<AggregateSignatureType> {
         match self {
             CertificateSignature::GenesisSignature(_) => None,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(_, _) => None,
             CertificateSignature::MultiSignature(_, multi_signature) => {
                 Some((&multi_signature.key).into())
@@ -59,7 +59,7 @@ impl CertificateSignature {
     pub fn to_bytes_hex_for_certificate_hash(&self) -> crate::StdResult<String> {
         match self {
             CertificateSignature::GenesisSignature(signature) => signature.to_bytes_hex(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(ed_signature, _schnorr_signature) => {
                 ed_signature.to_bytes_hex()
             }
@@ -105,7 +105,7 @@ pub struct Certificate {
     /// Aggregate verification key for SNARK
     /// The AVK used to sign for SNARK during the current epoch
     /// aka AVKS(n-2)
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub aggregate_verification_key_snark: Option<ProtocolAggregateVerificationKeyForSnark>,
 
     /// Ancillary data used by the prover to produce the next certificate.
@@ -133,7 +133,7 @@ impl Certificate {
     ) -> crate::StdResult<Certificate> {
         let signed_message = protocol_message.compute_hash();
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let aggregate_verification_key_snark = aggregate_verification_key
             .to_snark_aggregate_verification_key()
             .map(|avk| avk.to_owned().into());
@@ -149,7 +149,7 @@ impl Certificate {
                 .to_concatenation_aggregate_verification_key()
                 .to_owned()
                 .into(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             aggregate_verification_key_snark,
             ancillary_prover_data,
             ancillary_verifier_data,
@@ -195,7 +195,7 @@ impl Certificate {
     pub fn is_genesis(&self) -> bool {
         match self.signature {
             CertificateSignature::GenesisSignature(_) => true,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(_, _) => true,
             CertificateSignature::MultiSignature(_, _) => false,
         }
@@ -234,7 +234,7 @@ impl Certificate {
     pub fn signed_entity_type(&self) -> SignedEntityType {
         match &self.signature {
             CertificateSignature::GenesisSignature(_) => SignedEntityType::genesis(self.epoch),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             CertificateSignature::GenesisDualSignature(_, _) => {
                 SignedEntityType::genesis(self.epoch)
             }
@@ -245,14 +245,14 @@ impl Certificate {
     /// Create the aggregate verification key from the certificate.
     pub fn create_aggregate_verification_key(&self) -> ProtocolAggregateVerificationKey {
         let aggregate_verification_key_for_concatenation = &self.aggregate_verification_key;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let snark_aggregate_verification_key = self
             .aggregate_verification_key_snark
             .as_ref()
             .map(|avk| avk.to_owned().into());
         ProtocolAggregateVerificationKey::new(
             aggregate_verification_key_for_concatenation.to_owned().into(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             snark_aggregate_verification_key,
         )
     }
@@ -285,7 +285,7 @@ impl Debug for Certificate {
                     "aggregate_verification_key",
                     &format_args!("{:?}", self.aggregate_verification_key.to_json_hex()),
                 );
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 debug.field(
                     "aggregate_verification_key_snark",
                     &format_args!(
@@ -309,12 +309,12 @@ impl Debug for Certificate {
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Duration, Utc};
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_chacha::ChaCha20Rng;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use rand_core::SeedableRng;
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use crate::crypto_helper::GenesisSchnorrSigner;
     use crate::entities::SignedEntityType::CardanoStakeDistribution;
     use crate::{
@@ -383,7 +383,7 @@ mod tests {
                 )
                 .unwrap()
                 .into(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             ),
             CertificateSignature::MultiSignature(
@@ -488,7 +488,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn snark_aggregate_verification_key_does_not_affect_certificate_hash() {
         use crate::test::builder::MithrilFixtureBuilder;
@@ -499,7 +499,7 @@ mod tests {
 
         assert!(
             certificate.aggregate_verification_key_snark.is_some(),
-            "Certificate should have a SNARK AVK when future_snark is enabled"
+            "Certificate should have a SNARK AVK when snark is enabled"
         );
 
         let mut certificate_without_snark_avk = certificate;
@@ -540,7 +540,7 @@ mod tests {
                 )
                 .unwrap()
                 .into(),
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 None,
             ),
             CertificateSignature::GenesisSignature(
@@ -569,7 +569,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn dual_signature_does_not_change_the_certificate_hash() {
         let initiated_at = DateTime::parse_from_rfc3339("2024-02-12T13:11:47.0123043Z")
@@ -642,7 +642,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn certificate_hash_is_independent_of_schnorr_signature_bytes() {
         let initiated_at = DateTime::parse_from_rfc3339("2024-02-12T13:11:47.0123043Z")
@@ -694,7 +694,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn build_genesis_certificate_for_test(signature: CertificateSignature) -> Certificate {
         let initiated_at = DateTime::parse_from_rfc3339("2024-02-12T13:11:47.0123043Z")
             .unwrap()
@@ -727,7 +727,7 @@ mod tests {
         .unwrap()
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     #[test]
     fn is_genesis_returns_true_for_both_genesis_variants() {
         let ed_signature: GenesisEd25519Signature =
@@ -783,7 +783,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         #[test]
         fn only_a_dual_genesis_certificate_is_compatible_with_ivc_snark() {
             let ed_signature: GenesisEd25519Signature =

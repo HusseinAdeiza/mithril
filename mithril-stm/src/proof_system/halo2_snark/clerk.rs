@@ -224,7 +224,7 @@ mod tests {
             let entry = RegistrationEntry::new(
                 init.get_verification_key_proof_of_possession_for_concatenation(),
                 init.stake,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 init.schnorr_verification_key,
             )
             .unwrap();

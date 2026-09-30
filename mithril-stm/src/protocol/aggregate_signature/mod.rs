@@ -3,7 +3,7 @@ mod ancillary_data;
 mod clerk;
 mod error;
 mod genesis;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 mod preimage;
 mod signature;
 
@@ -16,7 +16,7 @@ pub use clerk::Clerk;
 pub use error::{AggregateSignatureError, AggregationError};
 pub use genesis::GenesisVerificationKeyBundle;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub use preimage::GenesisMessagePreimage;
 pub use signature::{AggregateSignature, AggregateSignatureType};
 
@@ -86,7 +86,7 @@ mod tests {
             .collect()
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub(crate) fn setup_party_without_snark_keys(params: Parameters, stake: Stake) -> Signer<D> {
         let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
         let mut initializer = Initializer::new(params, stake, &mut rng);
@@ -296,7 +296,7 @@ mod tests {
             let avk: AggregateVerificationKey<D> = clerk.compute_aggregate_verification_key();
 
             if let Ok(sig) = ps[0].create_single_signature(&msg) {
-                assert!(sig.verify(&params, &ps[0].get_bls_verification_key(), &ps[0].concatenation_proof_signer.stake, &avk, &msg, #[cfg(feature = "future_snark")] None).is_ok());
+                assert!(sig.verify(&params, &ps[0].get_bls_verification_key(), &ps[0].concatenation_proof_signer.stake, &avk, &msg, #[cfg(feature = "snark")] None).is_ok());
             }
         }
     }
@@ -333,7 +333,7 @@ mod tests {
             if let Ok(sig) = ps[0].create_single_signature(&msg) {
                 let bytes = sig.to_bytes().expect("SingleSignature serialization should not fail");
                 let sig_deser = SingleSignature::from_bytes::<D>(&bytes).unwrap();
-                assert!(sig_deser.verify(&params, &ps[0].get_bls_verification_key(), &ps[0].concatenation_proof_signer.stake, &avk, &msg, #[cfg(feature = "future_snark")] None).is_ok());
+                assert!(sig_deser.verify(&params, &ps[0].get_bls_verification_key(), &ps[0].concatenation_proof_signer.stake, &avk, &msg, #[cfg(feature = "snark")] None).is_ok());
             }
         }
 

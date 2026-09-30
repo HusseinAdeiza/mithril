@@ -1,28 +1,28 @@
 use anyhow::Context;
 use std::sync::Arc;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use tokio::runtime::Handle;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use std::path::PathBuf;
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_circuit_key_registry::{
     CachedCircuitVerificationKeyCertifier, CircuitVerificationKeyRegistryRetriever,
     FileCircuitVerificationKeyRegistryRetriever, HttpCircuitVerificationKeyRegistryRetriever,
     MithrilCircuitVerificationKeyCertifier, UnconfiguredCircuitVerificationKeyRegistryRetriever,
 };
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::certificate_chain::CircuitVerificationKeyCertifier;
 use mithril_common::certificate_chain::{CertificateVerifier, MithrilCertificateVerifier};
 use mithril_common::crypto_helper::GenesisVerifier;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_common::crypto_helper::{MIDNIGHT_SRS_URL_K22, TrustedSetupProvider};
 
 use crate::database::repository::{BufferedSingleSignatureRepository, SingleSignatureRepository};
 use crate::dependency_injection::{DependenciesBuilder, DependenciesBuilderError, Result};
 use crate::get_dependency;
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use crate::services::{
     AggregateSignatureProverWarmer, ReqwestTrustedSetupDownloader,
     SnarkAggregateSignatureProverWarmer, TrustedSetupDownloadRetryPolicy,
@@ -63,7 +63,7 @@ impl DependenciesBuilder {
             Arc::new(SingleSignatureRepository::new(sqlite_connection.clone()));
         let certificate_repository = self.get_certificate_repository().await?;
         let certificate_verifier = self.get_certificate_verifier().await?;
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         let genesis_verifier = self.get_genesis_verifier().await?;
         let multi_signer = self.get_multi_signer().await?;
         let epoch_service = self.get_epoch_service().await?;
@@ -75,7 +75,7 @@ impl DependenciesBuilder {
             single_signature_repository,
             certificate_repository,
             certificate_verifier,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             genesis_verifier,
             multi_signer,
             epoch_service,
@@ -110,7 +110,7 @@ impl DependenciesBuilder {
     }
 
     /// Builds an [AggregateSignatureProverWarmer]
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub async fn create_aggregate_signature_prover_warmer(
         &mut self,
     ) -> Result<Arc<dyn AggregateSignatureProverWarmer>> {
@@ -150,7 +150,7 @@ impl DependenciesBuilder {
                     self.root_logger(),
                     certificate_chain_aggregator_client.clone(),
                     self.get_genesis_verifier().await?,
-                    #[cfg(feature = "future_snark")]
+                    #[cfg(feature = "snark")]
                     self.get_circuit_verification_key_certifier().await?,
                 ));
 
@@ -181,7 +181,7 @@ impl DependenciesBuilder {
             self.root_logger(),
             self.get_certificate_repository().await?,
             self.get_genesis_verifier().await?,
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             self.get_circuit_verification_key_certifier().await?,
         ));
 
@@ -190,7 +190,7 @@ impl DependenciesBuilder {
 
     /// Build the certifier enforcing the signed circuit verification key registry read from the
     /// configured registry path, with a caching decorator refreshing it periodically.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     async fn build_circuit_verification_key_certifier(
         &mut self,
     ) -> Result<Arc<dyn CircuitVerificationKeyCertifier>> {
@@ -206,7 +206,7 @@ impl DependenciesBuilder {
     /// Build the retriever of the signed circuit verification key registry from the configured
     /// registry URL: downloaded over HTTP, or read from a local file for a `file://` URL. Without
     /// a URL, every retrieval fails so the certificates requiring the registry are rejected.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     async fn build_circuit_verification_key_registry_retriever(
         &mut self,
     ) -> Result<Arc<dyn CircuitVerificationKeyRegistryRetriever>> {
@@ -236,7 +236,7 @@ impl DependenciesBuilder {
     }
 
     /// [CircuitVerificationKeyRegistryRetriever] service.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub async fn get_circuit_verification_key_registry_retriever(
         &mut self,
     ) -> Result<Arc<dyn CircuitVerificationKeyRegistryRetriever>> {
@@ -244,7 +244,7 @@ impl DependenciesBuilder {
     }
 
     /// [CircuitVerificationKeyCertifier] service.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub async fn get_circuit_verification_key_certifier(
         &mut self,
     ) -> Result<Arc<dyn CircuitVerificationKeyCertifier>> {

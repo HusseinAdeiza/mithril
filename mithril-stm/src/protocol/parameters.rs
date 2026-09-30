@@ -7,7 +7,7 @@ use super::RegisterError;
 
 /// Byte width of the rigid-slot encoding produced by [Parameters::to_rigid_bytes]. Matches the
 /// rigid protocol message slot for the next protocol parameters.
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 pub const RIGID_PROTOCOL_PARAMETERS_BYTES: usize = 32;
 
 /// Used to set protocol parameters.
@@ -43,7 +43,7 @@ impl Parameters {
     ///
     /// Trailing zero padding rounds the slot out to 32 bytes so the IVC SNARK gadget can consume
     /// the parameters as a fixed-size word.
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     pub fn to_rigid_bytes(&self) -> [u8; RIGID_PROTOCOL_PARAMETERS_BYTES] {
         let mut buffer = [0u8; RIGID_PROTOCOL_PARAMETERS_BYTES];
         buffer[0..8].copy_from_slice(&self.m.to_le_bytes());
@@ -164,7 +164,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod rigid_slot {
         use super::*;
 

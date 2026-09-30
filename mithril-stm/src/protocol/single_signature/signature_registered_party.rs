@@ -116,7 +116,7 @@ mod tests {
             SingleSignatureWithRegisteredParty, VerificationKeyProofOfPossessionForConcatenation,
             proof_system::ConcatenationProofSigner, signature_scheme::BlsSigningKey,
         };
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         use crate::{
             MembershipDigest, VerificationKeyForSnark, proof_system::SnarkProofSigner,
             protocol::RegistrationEntryForSnark, signature_scheme::SchnorrSigningKey,
@@ -124,7 +124,7 @@ mod tests {
 
         type D = MithrilMembershipDigest;
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_JSON: &str = r#"
         [
             {
@@ -150,7 +150,7 @@ mod tests {
         ]
         "#;
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_JSON: &str = r#"
         [
             {
@@ -204,10 +204,10 @@ mod tests {
 
         fn golden_value() -> SingleSignatureWithRegisteredParty {
             let mut rng = ChaCha20Rng::from_seed([0u8; 32]);
-            #[cfg(not(feature = "future_snark"))]
+            #[cfg(not(feature = "snark"))]
             let message = [0u8; 16];
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let message = [0u8; 32];
 
             let params = Parameters {
@@ -220,13 +220,13 @@ mod tests {
             let pk_1 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_1);
             let pk_2 = VerificationKeyProofOfPossessionForConcatenation::from(&sk_2);
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let (schnorr_sk_1, schnorr_vk_1) = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 let vk = VerificationKeyForSnark::new_from_signing_key(sk.clone());
                 (sk, vk)
             };
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let schnorr_vk_2 = {
                 let sk = SchnorrSigningKey::generate(&mut rng);
                 VerificationKeyForSnark::new_from_signing_key(sk)
@@ -236,14 +236,14 @@ mod tests {
             let entry1 = RegistrationEntry::new(
                 pk_1,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_1),
             )
             .unwrap();
             let entry2 = RegistrationEntry::new(
                 pk_2,
                 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Some(schnorr_vk_2),
             )
             .unwrap();
@@ -265,7 +265,7 @@ mod tests {
             let concatenation_signature =
                 concatenation_proof_signer.create_single_signature(&message).unwrap();
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             let snark_signature = {
                 let key_registration_commitment = closed_key_reg
                     .to_merkle_tree::<<D as MembershipDigest>::SnarkHash, RegistrationEntryForSnark>(
@@ -295,7 +295,7 @@ mod tests {
             let signature = SingleSignature {
                 concatenation_signature,
                 signer_index: 1,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 snark_signature,
             };
 
@@ -319,7 +319,7 @@ mod tests {
             assert_eq!(golden_serialized, serialized);
         }
 
-        #[cfg(not(feature = "future_snark"))]
+        #[cfg(not(feature = "snark"))]
         const GOLDEN_CBOR_BYTES: &[u8; 730] = &[
             1, 162, 111, 115, 105, 103, 110, 97, 116, 117, 114, 101, 95, 98, 121, 116, 101, 115,
             152, 131, 1, 24, 191, 24, 101, 24, 115, 24, 105, 24, 103, 24, 109, 24, 97, 24, 152, 24,
@@ -359,7 +359,7 @@ mod tests {
             101, 24, 115, 24, 116, 24, 97, 24, 107, 24, 101, 1,
         ];
 
-        #[cfg(feature = "future_snark")]
+        #[cfg(feature = "snark")]
         const GOLDEN_CBOR_BYTES: &[u8; 1721] = &[
             1, 162, 111, 115, 105, 103, 110, 97, 116, 117, 114, 101, 95, 98, 121, 116, 101, 115,
             153, 1, 140, 1, 24, 191, 24, 101, 24, 115, 24, 105, 24, 103, 24, 109, 24, 97, 24, 152,

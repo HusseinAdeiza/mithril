@@ -19,7 +19,7 @@ use mithril_common::{
     logging::LoggerExtensions,
 };
 
-#[cfg(feature = "future_snark")]
+#[cfg(feature = "snark")]
 use mithril_circuit_key_registry::{
     CachedCircuitVerificationKeyCertifier, CircuitVerificationKeyRegistryRetriever,
     MithrilCircuitVerificationKeyCertifier,
@@ -97,7 +97,7 @@ impl MithrilCertificateVerifier {
         feedback_sender: FeedbackSender,
         #[cfg(feature = "unstable")] verifier_cache: Option<Arc<dyn CertificateVerifierCache>>,
         #[cfg(feature = "unstable")] cache_mode: CertificateVerifierCacheMode,
-        #[cfg(feature = "future_snark")] circuit_key_registry_retriever: Arc<
+        #[cfg(feature = "snark")] circuit_key_registry_retriever: Arc<
             dyn CircuitVerificationKeyRegistryRetriever,
         >,
         logger: Logger,
@@ -126,7 +126,7 @@ impl MithrilCertificateVerifier {
             logger.clone(),
             certificate_retriever,
             genesis_verifier.clone(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(CachedCircuitVerificationKeyCertifier::new(
                 Arc::new(MithrilCircuitVerificationKeyCertifier::new(
                     circuit_key_registry_retriever,
@@ -335,9 +335,9 @@ impl CertificateVerifier for MithrilCertificateVerifier {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_circuit_key_registry::test::double::FakeCircuitVerificationKeyRegistryRetriever;
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     use mithril_common::crypto_helper::{
         GenesisSchnorrSigner, GenesisVerificationKeyBundle, ProtocolKey,
     };
@@ -356,7 +356,7 @@ mod tests {
         genesis_verifier.to_ed25519_verification_key().try_into().unwrap()
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     fn dual_verification_key_hex(
         genesis_verifier: &GenesisVerifier,
         schnorr_signer: &GenesisSchnorrSigner,
@@ -446,7 +446,7 @@ mod tests {
             None,
             #[cfg(feature = "unstable")]
             CertificateVerifierCacheMode::default(),
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             Arc::new(FakeCircuitVerificationKeyRegistryRetriever::that_fails()),
             TestLogger::stdout(),
         )
@@ -471,7 +471,7 @@ mod tests {
             .expect_err("empty verification key must be rejected");
     }
 
-    #[cfg(feature = "future_snark")]
+    #[cfg(feature = "snark")]
     mod verification_key_formats {
         use super::*;
 
@@ -584,7 +584,7 @@ mod tests {
                 FeedbackSender::new(&[]),
                 Some(cache),
                 cache_mode,
-                #[cfg(feature = "future_snark")]
+                #[cfg(feature = "snark")]
                 Arc::new(FakeCircuitVerificationKeyRegistryRetriever::that_fails()),
                 TestLogger::stdout(),
             )
@@ -1194,7 +1194,7 @@ mod tests {
 
             use super::*;
 
-            #[cfg(feature = "future_snark")]
+            #[cfg(feature = "snark")]
             #[tokio::test]
             async fn commits_to_and_stops_in_the_space_of_a_dual_genesis_verification_key() {
                 let chain = CertificateChainBuilder::new()
