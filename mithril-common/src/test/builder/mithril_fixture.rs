@@ -35,6 +35,7 @@ pub struct MithrilFixture {
     protocol_parameters: ProtocolParameters,
     signers: Vec<SignerFixture>,
     stake_distribution: ProtocolStakeDistribution,
+    epoch: Epoch,
 }
 
 /// A signer fixture, containing a [signer entity][SignerWithStake] with its
@@ -111,11 +112,13 @@ impl MithrilFixture {
         protocol_parameters: ProtocolParameters,
         signers: Vec<SignerFixture>,
         stake_distribution: ProtocolStakeDistribution,
+        epoch: Epoch,
     ) -> Self {
         Self {
             protocol_parameters,
             signers,
             stake_distribution,
+            epoch,
         }
     }
 
@@ -184,9 +187,13 @@ impl MithrilFixture {
 
     /// Compute the Aggregate Verification Key for this fixture.
     pub fn compute_aggregate_verification_key(&self) -> ProtocolAggregateVerificationKey {
-        SignerBuilder::new(&self.signers_with_stake(), &self.protocol_parameters)
-            .unwrap()
-            .compute_aggregate_verification_key()
+        SignerBuilder::new(
+            &self.signers_with_stake(),
+            &self.protocol_parameters,
+            self.epoch,
+        )
+        .unwrap()
+        .compute_aggregate_verification_key()
     }
 
     /// Compute the Aggregate Verification Key for concatenation for this fixture.
