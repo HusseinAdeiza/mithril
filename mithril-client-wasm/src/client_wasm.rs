@@ -18,7 +18,7 @@ use crate::WasmResult;
 use crate::certificate_verifier_cache::IndexedDbCertificateVerifierCache;
 
 const CLIENT_TYPE_WASM: &str = "WASM";
-const CERTIFICATE_VERIFIER_CACHE_DATABASE_PREFIX: &str = "mithril-client-certificate-cache-";
+const CERTIFICATE_VERIFIER_CACHE_DATABASE_NAME: &str = "mithril-client-certificate-cache";
 
 #[wasm_bindgen]
 struct JSBroadcastChannelFeedbackReceiver {
@@ -110,12 +110,9 @@ impl MithrilClient {
             && client_options.enable_certificate_chain_verification_cache
             && IndexedDbCertificateVerifierCache::is_available()
         {
-            Some(Self::build_certificate_verifier_cache(
-                aggregator_endpoint,
-                TimeDelta::seconds(
-                    client_options.certificate_chain_verification_cache_duration_in_seconds as i64,
-                ),
-            ))
+            Some(Self::build_certificate_verifier_cache(TimeDelta::seconds(
+                client_options.certificate_chain_verification_cache_duration_in_seconds as i64,
+            )))
         } else {
             None
         };
@@ -145,12 +142,13 @@ impl MithrilClient {
         }
     }
 
+    /// Build the certificate verifier cache, a single IndexedDB database shared by all the
+    /// aggregators, whose certificates are partitioned by genesis verification key.
     fn build_certificate_verifier_cache(
-        aggregator_endpoint: &str,
         expiration_delay: TimeDelta,
     ) -> Arc<dyn CertificateVerifierCache> {
         Arc::new(IndexedDbCertificateVerifierCache::new(
-            &format!("{CERTIFICATE_VERIFIER_CACHE_DATABASE_PREFIX}{aggregator_endpoint}"),
+            CERTIFICATE_VERIFIER_CACHE_DATABASE_NAME,
             expiration_delay,
         ))
     }
@@ -689,6 +687,8 @@ mod tests {
     use wasm_bindgen_test::*;
 
     use mithril_client::certificate_client::CertificateVerifierCacheMode;
+    #[cfg(not(feature = "test-node"))]
+    use mithril_client::certificate_client::CertificateVerifierCacheSpace;
     use mithril_client::{
         CardanoBlocksTransactionsSnapshot, CardanoDatabaseSnapshot,
         CardanoDatabaseSnapshotListItem, CardanoStakeDistribution,
@@ -696,6 +696,9 @@ mod tests {
         MithrilStakeDistribution, MithrilStakeDistributionListItem, common::ProtocolMessage,
         common::SupportedEra, era::FetchedEra,
     };
+
+    #[cfg(not(feature = "test-node"))]
+    use mithril_common::crypto_helper::GenesisVerifier;
 
     use crate::test_data;
 
@@ -990,6 +993,34 @@ mod tests {
             serde_wasm_bindgen::from_value::<MithrilCertificate>(second_verification).unwrap()
         );
         client.reset_certificate_verifier_cache().await.unwrap();
+    }
+
+    #[cfg(not(feature = "test-node"))]
+    #[wasm_bindgen_test]
+    async fn verified_certificates_are_cached_in_the_genesis_verification_key_space() {
+        let client = get_mithril_client_with_certificate_verifier_cache();
+        client.reset_certificate_verifier_cache().await.unwrap();
+        let msd_js_value = client
+            .get_mithril_stake_distribution(test_data::mithril_stake_distribution_hashes()[0])
+            .await
+            .unwrap();
+        let msd = serde_wasm_bindgen::from_value::<MithrilStakeDistribution>(msd_js_value).unwrap();
+        client.verify_certificate_chain(&msd.certificate_hash).await.unwrap();
+
+        let shared_cache = IndexedDbCertificateVerifierCache::new(
+            CERTIFICATE_VERIFIER_CACHE_DATABASE_NAME,
+            TimeDelta::weeks(1),
+        );
+        let space = CertificateVerifierCacheSpace::from_genesis_verifier(
+            &GenesisVerifier::try_from_hex(GENESIS_VERIFICATION_KEY).unwrap(),
+        );
+        let cached_certificate = shared_cache
+            .get_certificate_by_hash(&space, &msd.certificate_hash)
+            .await
+            .unwrap();
+        client.reset_certificate_verifier_cache().await.unwrap();
+
+        assert!(cached_certificate.is_some());
     }
 
     #[wasm_bindgen_test]
