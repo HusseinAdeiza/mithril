@@ -45,6 +45,15 @@ impl AggregateSignatureType {
             .unwrap_or(Self::Concatenation)
     }
 
+    /// Whether the certificates of this aggregate signature type are verified against circuit
+    /// verification keys, which the nodes certify with the circuit verification key registry
+    pub fn uses_circuit_verification_keys(&self) -> bool {
+        match self {
+            Self::Concatenation => false,
+            Self::Snark | Self::IvcSnark => true,
+        }
+    }
+
     fn constraint_rank(&self) -> u8 {
         match self {
             Self::Concatenation => 0,
@@ -83,6 +92,13 @@ mod tests {
             AggregateSignatureType::Concatenation,
             AggregateSignatureType::most_constraining(&[])
         );
+    }
+
+    #[test]
+    fn only_the_snark_aggregate_signature_types_use_circuit_verification_keys() {
+        assert!(!AggregateSignatureType::Concatenation.uses_circuit_verification_keys());
+        assert!(AggregateSignatureType::Snark.uses_circuit_verification_keys());
+        assert!(AggregateSignatureType::IvcSnark.uses_circuit_verification_keys());
     }
 
     #[test]

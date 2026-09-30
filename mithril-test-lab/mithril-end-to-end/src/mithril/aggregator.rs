@@ -296,6 +296,22 @@ impl Aggregator {
         }
     }
 
+    /// Distinct protocol parameters the scenarios run with: the startup ones, then the updated ones
+    /// of the aggregate signature type.
+    fn scenarios_protocol_parameters(
+        startup_protocol_parameters: &ProtocolParameters,
+        aggregate_signature_type: AggregateSignatureType,
+    ) -> Vec<ProtocolParameters> {
+        let mut protocol_parameters = vec![startup_protocol_parameters.clone()];
+        let updated_protocol_parameters =
+            Self::updated_protocol_parameters(aggregate_signature_type);
+        if !protocol_parameters.contains(&updated_protocol_parameters) {
+            protocol_parameters.push(updated_protocol_parameters);
+        }
+
+        protocol_parameters
+    }
+
     pub fn copy_configuration(other: &Aggregator) -> Self {
         Self {
             index: other.index,
@@ -385,13 +401,6 @@ impl Aggregator {
             .with_context(|| "`mithril-aggregator genesis bootstrap` crashed")?;
 
         if exit_status.success() {
-            drop(command);
-            if matches!(
-                self.aggregate_signature_type,
-                AggregateSignatureType::Snark | AggregateSignatureType::IvcSnark
-            ) {
-                self.bootstrap_circuit_key_registry().await?;
-            }
             Ok(())
         } else {
             command.tail_logs(Some(command_name), 40).await?;
@@ -408,19 +417,40 @@ impl Aggregator {
         }
     }
 
-    async fn bootstrap_circuit_key_registry(&self) -> StdResult<()> {
-        let mut command = self.command.write().await;
-        let command_name = &format!(
-            "mithril-aggregator-circuit-key-registry-bootstrap-{}",
-            self.name_suffix,
-        );
+    /// Bootstrap the signed circuit verification key registry read by the nodes of the network,
+    /// whitelisting the circuit keys the given aggregate signature type certifies with for the
+    /// protocol parameters of the scenarios.
+    ///
+    /// The circuit keys not cached yet are derived, which takes minutes for the IVC circuit: this
+    /// must run before the devnet is bootstrapped, as its genesis is stamped a few seconds ahead
+    /// and the derivation would otherwise consume its first epoch.
+    pub async fn bootstrap_circuit_key_registry(
+        work_dir: &Path,
+        bin_dir: &Path,
+        genesis_keys: GenesisKeys,
+        startup_protocol_parameters: &ProtocolParameters,
+        aggregate_signature_type: AggregateSignatureType,
+    ) -> StdResult<()> {
+        let command_name = "mithril-aggregator-circuit-key-registry-bootstrap";
+        let mut command = MithrilCommand::new(
+            Self::BIN_NAME,
+            work_dir,
+            bin_dir,
+            EnvVars::from([("GENESIS_SECRET_KEY", genesis_keys.secret_key)]),
+            &["-vvv"],
+        )?;
         command.set_log_name(command_name);
 
-        let mut args = vec!["circuit-key-registry".to_string(), "bootstrap".to_string()];
-        for protocol_parameters in [
-            self.startup_protocol_parameters.clone(),
-            Self::updated_protocol_parameters(self.aggregate_signature_type),
-        ] {
+        let mut args = vec![
+            "circuit-key-registry".to_string(),
+            "bootstrap".to_string(),
+            "--aggregate-signature-type".to_string(),
+            aggregate_signature_type.to_string(),
+        ];
+        for protocol_parameters in Self::scenarios_protocol_parameters(
+            startup_protocol_parameters,
+            aggregate_signature_type,
+        ) {
             args.push("--protocol-parameters".to_string());
             args.push(serde_json::to_string(&protocol_parameters)?);
         }
@@ -656,5 +686,41 @@ impl Aggregator {
     pub async fn last_error_in_logs(&self, number_of_error: u64) -> StdResult<()> {
         let command = self.command.write().await;
         command.last_error_in_logs(Some(&self.name()), number_of_error).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scenarios_protocol_parameters_are_the_startup_ones_then_the_updated_ones() {
+        let startup_protocol_parameters = ProtocolParameters::new(5, 9, 0.95);
+
+        let protocol_parameters = Aggregator::scenarios_protocol_parameters(
+            &startup_protocol_parameters,
+            AggregateSignatureType::Snark,
+        );
+
+        assert_eq!(
+            vec![
+                startup_protocol_parameters,
+                Aggregator::updated_protocol_parameters(AggregateSignatureType::Snark),
+            ],
+            protocol_parameters
+        );
+    }
+
+    #[test]
+    fn scenarios_protocol_parameters_are_distinct() {
+        let startup_protocol_parameters =
+            Aggregator::updated_protocol_parameters(AggregateSignatureType::IvcSnark);
+
+        let protocol_parameters = Aggregator::scenarios_protocol_parameters(
+            &startup_protocol_parameters,
+            AggregateSignatureType::IvcSnark,
+        );
+
+        assert_eq!(vec![startup_protocol_parameters], protocol_parameters);
     }
 }

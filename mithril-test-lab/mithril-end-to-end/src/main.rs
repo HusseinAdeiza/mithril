@@ -540,6 +540,25 @@ impl App {
             args.cardano_devnet.cardano_epoch_length,
         ));
 
+        let aggregate_signature_type =
+            AggregateSignatureType::most_constraining(&args.mithril.aggregate_signature_types);
+        let startup_protocol_configuration =
+            Self::build_startup_protocol_configuration(&aggregate_signature_type);
+        if aggregate_signature_type.uses_circuit_verification_keys() {
+            info!(
+                "Bootstrapping the circuit verification key registry";
+                "aggregate_signature_type" => %aggregate_signature_type
+            );
+            Aggregator::bootstrap_circuit_key_registry(
+                &work_dir,
+                &args.bin_directory,
+                genesis_keys,
+                &startup_protocol_configuration.protocol_parameters,
+                aggregate_signature_type,
+            )
+            .await?;
+        }
+
         let devnet = Devnet::bootstrap(&DevnetBootstrapArgs {
             devnet_scripts_dir: args.cardano_devnet.devnet_scripts_directory,
             artifacts_target_dir: work_dir.join("devnet"),
@@ -580,10 +599,6 @@ impl App {
             None
         };
         *self.ipfs_devnet.lock().await = ipfs_devnet.clone();
-
-        let startup_protocol_configuration = Self::build_startup_protocol_configuration(
-            &AggregateSignatureType::most_constraining(&args.mithril.aggregate_signature_types),
-        );
 
         let infrastructure = Arc::new(
             MithrilInfrastructure::start(
