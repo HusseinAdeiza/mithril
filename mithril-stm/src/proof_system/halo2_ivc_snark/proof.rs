@@ -1808,7 +1808,6 @@ mod tests {
 
     mod try_from {
         use super::super::IvcGenesisBootstrapInput;
-        use super::*;
         use crate::{AncillaryGenesisData, circuits::halo2_ivc::PREIMAGE_SIZE};
 
         fn varied_bytes(len: usize) -> Vec<u8> {
