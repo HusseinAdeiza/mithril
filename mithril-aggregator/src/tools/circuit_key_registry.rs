@@ -18,7 +18,7 @@ use mithril_circuit_key_registry::{
 };
 use mithril_common::{
     StdResult,
-    crypto_helper::{CircuitVerificationKeyDigest, GenesisSigner},
+    crypto_helper::{CircuitVerificationKeyDigest, GenesisSigner, TrustedSetupProvider},
     entities::{Epoch, ProtocolParameters},
 };
 
@@ -43,6 +43,7 @@ impl CircuitVerificationKeyDigests {
         let certificate_circuit = match protocol_parameters {
             Some(parameters) => CircuitVerificationKeyDigest::compute_for_certificate_circuit(
                 &parameters.clone().into(),
+                &TrustedSetupProvider::default(),
             )
             .with_context(|| {
                 format!(

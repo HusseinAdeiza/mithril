@@ -23,14 +23,14 @@ use crate::circuits::halo2_ivc::{
     KZGCommitmentScheme, NativeField, PairingEngine,
     RECURSIVE_CIRCUIT_VERIFICATION_KEY_FOR_PRODUCTION, VerifyingKey,
 };
-use crate::proof_system::{
-    NonDeterministicSnarkProverFactory, SnarkProverFactory, SnarkProverSetupReuse,
-};
+use crate::circuits::trusted_setup::TrustedSetupProvider;
+use crate::proof_system::SnarkProverSetupReuse;
+use crate::proof_system::halo2_ivc_snark::IvcProverSetup;
 use crate::signature_scheme::{
     BaseFieldElement, DOMAIN_SEPARATION_TAG_CIRCUIT_VERIFICATION_KEY_DIGEST,
     compute_poseidon_digest,
 };
-use crate::{MithrilMembershipDigest, Parameters, StmError, StmResult, codec::TryFromBytes};
+use crate::{MERKLE_TREE_DEPTH_FOR_SNARK, Parameters, StmError, StmResult, codec::TryFromBytes};
 
 /// Byte length of a circuit verification key digest.
 pub const CIRCUIT_VERIFICATION_KEY_DIGEST_SIZE: usize = 32;
@@ -63,10 +63,12 @@ impl CircuitVerificationKeyDigest {
         Self(digest.to_bytes())
     }
 
-    /// Digest of the IVC circuit verification key.
+    /// Digest of the embedded IVC circuit verification key generated for the production protocol
+    /// parameters.
     ///
-    /// The IVC circuit does not depend on the protocol parameters, so its verification key is the
-    /// embedded production constant for every deployment.
+    /// The IVC circuit is built from the domain and the constraint system of the certificate circuit
+    /// it verifies, which depend on the protocol parameters, so this digest is only guaranteed for
+    /// the deployments running with the production parameters.
     pub fn for_ivc_circuit() -> StmResult<Self> {
         Ok(Self::from_verification_key(
             &RecursiveCircuitVerifyingKey::try_from_bytes(
@@ -89,24 +91,43 @@ impl CircuitVerificationKeyDigest {
     }
 
     /// Compute the digest of the certificate circuit verification key for the given protocol
-    /// parameters, deriving the key from the trusted setup read in the local cache.
+    /// parameters, deriving the key from the trusted setup of `trusted_setup_provider`.
     ///
-    /// The SRS is never downloaded here: a caller whose cache is empty gets
-    /// [`TrustedSetupError::DownloadUnavailable`](crate::TrustedSetupError::DownloadUnavailable).
-    ///
-    /// The key is derived through the same prover the clerk uses to aggregate signatures, so the
+    /// The key is derived through the same setup the prover aggregates signatures with, so the
     /// digest matches the one carried by the certificates produced with these parameters.
     ///
     /// The setup is not reused across calls: this computes a digest for the parameters it is given,
     /// which are not necessarily the ones the process signs with, and only the verifying key is kept.
-    pub fn compute_for_certificate_circuit(parameters: &Parameters) -> StmResult<Self> {
-        let prover =
-            SnarkProverFactory::<MithrilMembershipDigest>::snark_aggregate_signature_prover(
-                &NonDeterministicSnarkProverFactory::new(SnarkProverSetupReuse::Disabled),
-                parameters,
-            )?;
+    pub fn compute_for_certificate_circuit(
+        parameters: &Parameters,
+        trusted_setup_provider: &TrustedSetupProvider,
+    ) -> StmResult<Self> {
+        let setup = SnarkProverSetupReuse::Disabled.certificate_setup(
+            parameters,
+            MERKLE_TREE_DEPTH_FOR_SNARK,
+            trusted_setup_provider,
+        )?;
 
-        Ok(Self::from_verification_key(prover.verifying_key()))
+        Ok(Self::from_verification_key(&setup.verification_key))
+    }
+
+    /// Compute the digest of the IVC circuit verification key for the given protocol parameters,
+    /// deriving the key from the trusted setup of `trusted_setup_provider`.
+    ///
+    /// The IVC circuit is built from the certificate circuit of these parameters, so its key is
+    /// derived through the same key provider the prover folds the certificates with, and the
+    /// digest matches the one carried by the certificates produced with these parameters.
+    ///
+    /// Only the verifying key is loaded: on a cache miss the key pair is derived and stored, which
+    /// takes minutes.
+    pub fn compute_for_ivc_circuit(
+        parameters: &Parameters,
+        trusted_setup_provider: &TrustedSetupProvider,
+    ) -> StmResult<Self> {
+        let verification_key =
+            IvcProverSetup::try_new_ivc_verifying_key(parameters, trusted_setup_provider)?;
+
+        Ok(Self::from_verification_key(&verification_key))
     }
 
     /// Return the digest bytes.

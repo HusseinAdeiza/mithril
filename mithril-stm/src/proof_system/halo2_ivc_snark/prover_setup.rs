@@ -84,15 +84,53 @@ impl IvcProverSetup {
         parameters: &Parameters,
         trusted_setup_provider: &TrustedSetupProvider,
     ) -> StmResult<Self> {
+        Self::load(
+            trusted_setup_provider,
+            &Self::recursive_key_provider(parameters)?,
+        )
+    }
+
+    /// Builds the production recursive key provider derived from `parameters` and
+    /// [`MERKLE_TREE_DEPTH_FOR_SNARK`], then delegates to [`Self::load_ivc_verifying_key`] with
+    /// `trusted_setup_provider`.
+    pub(crate) fn try_new_ivc_verifying_key(
+        parameters: &Parameters,
+        trusted_setup_provider: &TrustedSetupProvider,
+    ) -> StmResult<RecursiveCircuitVerifyingKey> {
+        Self::load_ivc_verifying_key(
+            trusted_setup_provider,
+            &Self::recursive_key_provider(parameters)?,
+        )
+    }
+
+    /// Builds the production recursive key provider derived from `parameters` and
+    /// [`MERKLE_TREE_DEPTH_FOR_SNARK`].
+    fn recursive_key_provider(
+        parameters: &Parameters,
+    ) -> StmResult<KeyProvider<RecursiveCircuitKeyGenerator>> {
         let certificate_key_provider =
             KeyProvider::for_non_recursive_circuit(parameters, MERKLE_TREE_DEPTH_FOR_SNARK)?;
-        let recursive_key_provider = KeyProvider::for_recursive_circuit(
+
+        KeyProvider::for_recursive_circuit(
             certificate_key_provider,
             parameters,
             MERKLE_TREE_DEPTH_FOR_SNARK,
-        )?;
+        )
+    }
 
-        Self::load(trusted_setup_provider, &recursive_key_provider)
+    /// Derives the IVC verifying key alone, the one [`Self::load`] proves with, without decoding the
+    /// IVC proving key nor building the fixed-base maps.
+    ///
+    /// The SRS is kept at its full degree: a cached key needs none, and on a miss each key generator
+    /// downsizes it to the degree of its own circuit, the certificate circuit possibly being larger
+    /// than the recursive one.
+    pub(crate) fn load_ivc_verifying_key(
+        trusted_setup_provider: &TrustedSetupProvider,
+        recursive_key_provider: &KeyProvider<RecursiveCircuitKeyGenerator>,
+    ) -> StmResult<RecursiveCircuitVerifyingKey> {
+        let srs = trusted_setup_provider.get_trusted_setup_parameters()?;
+
+        recursive_key_provider.verification_key(&srs)
     }
 
     /// Derives the full IVC setup around a single SRS loaded once.
@@ -192,6 +230,21 @@ impl IvcProverSetup {
         merkle_tree_depth: u32,
         unsafe_srs_degree: u32,
     ) -> StmResult<Self> {
+        Self::load_for_test_degree(parameters, merkle_tree_depth, unsafe_srs_degree, Self::load)
+    }
+
+    /// Runs `load` with the deterministic unsafe SRS of degree `unsafe_srs_degree` and the recursive
+    /// key provider of the shared test key cache, holding both cache locks meanwhile.
+    #[cfg(test)]
+    fn load_for_test_degree<T>(
+        parameters: &Parameters,
+        merkle_tree_depth: u32,
+        unsafe_srs_degree: u32,
+        load: impl FnOnce(
+            &TrustedSetupProvider,
+            &KeyProvider<RecursiveCircuitKeyGenerator>,
+        ) -> StmResult<T>,
+    ) -> StmResult<T> {
         assert!(unsafe_srs_degree >= RECURSIVE_CIRCUIT_DEGREE);
         let seed_bytes = UNSAFE_SRS_SEED.to_le_bytes();
 
@@ -224,7 +277,7 @@ impl IvcProverSetup {
             None,
             RecursiveCircuitKeyGenerator::new(certificate_provider),
         );
-        Self::load(&trusted_setup_provider, &recursive_key_provider)
+        load(&trusted_setup_provider, &recursive_key_provider)
     }
 }
 
@@ -632,6 +685,36 @@ mod tests {
                 ivc_setup.srs.max_k(),
                 RECURSIVE_CIRCUIT_DEGREE,
                 "the proving SRS stored in IvcProverSetup must be downsized to the IVC circuit degree"
+            );
+        }
+
+        // Shares the configuration of `load_succeeds_with_unsafe_srs`, hence its key cache.
+        #[test]
+        fn ivc_verifying_key_loaded_alone_is_the_one_of_the_setup() {
+            let parameters = Parameters {
+                k: 3,
+                m: 10,
+                phi_f: 0.2,
+            };
+            let merkle_tree_depth = 4;
+            let setup = IvcProverSetup::build_for_test(&parameters, merkle_tree_depth)
+                .expect("IvcProverSetup::build_for_test should succeed");
+            let setup_transcript_representation =
+                setup.ivc_verifying_key.verifying_key().transcript_repr();
+            drop(setup);
+
+            let ivc_verifying_key = IvcProverSetup::load_for_test_degree(
+                &parameters,
+                merkle_tree_depth,
+                RECURSIVE_CIRCUIT_DEGREE,
+                IvcProverSetup::load_ivc_verifying_key,
+            )
+            .expect("the IVC verifying key should load alone");
+
+            assert_eq!(
+                setup_transcript_representation,
+                ivc_verifying_key.verifying_key().transcript_repr(),
+                "the IVC verifying key loaded alone must be the one the setup proves with"
             );
         }
     }
