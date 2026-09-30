@@ -251,7 +251,7 @@ impl<D: MembershipDigest, R: RngCore + CryptoRng> SnarkAggregateSignatureProver<
     }
 }
 
-#[cfg(feature = "snark")]
+#[cfg(feature = "future_snark")]
 #[cfg(test)]
 mod tests {
 
@@ -853,6 +853,31 @@ mod tests {
                         &verifier_setup.verifier_params,
                     )
                     .is_ok()
+            );
+        }
+
+        #[test]
+        fn into_circuit_proof_bytes_carries_the_proof_bytes_and_drops_params() {
+            // Bytes `0..64`, pairwise distinct: an all-zero or all-constant fixture makes the
+            // "carried across unchanged" assertion vacuous, since a conversion that zeroed,
+            // truncated or shifted its input would still pass.
+            let proof_bytes: Vec<u8> = (0..64).map(|i| i as u8).collect();
+            let proof = SnarkProof::<D>::new(
+                proof_bytes.clone(),
+                Parameters {
+                    k: 1,
+                    m: 10,
+                    phi_f: 0.9,
+                },
+                MERKLE_TREE_DEPTH_FOR_SNARK,
+            );
+
+            let circuit_proof_bytes = proof.into_circuit_proof_bytes();
+
+            assert_eq!(
+                circuit_proof_bytes.as_bytes(),
+                proof_bytes.as_slice(),
+                "the circuit proof bytes must be the prover output verbatim"
             );
         }
 
