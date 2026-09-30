@@ -92,13 +92,17 @@ The nodes enforce the following rules:
 - A registry signed with the genesis key of another Mithril network is rejected.
 
 The circuit verification key digests are Poseidon hashes of the transcript representation of the
-verification keys, which binds the circuit gates. The two circuits behave differently:
+verification keys, which binds the circuit gates. Both circuits depend on the protocol parameters:
 
-- The IVC circuit does not depend on the protocol parameters: its circuit verification key digest
-  is the same for every Mithril network.
 - The certificate circuit depends on the `k` and `m` protocol parameters: its circuit verification
-  key digest changes with them, so a change of `k` or `m` requires whitelisting the new digest,
-  published before the first epoch certified with the new parameters.
+  key digest changes with them.
+- The IVC circuit verifies the proofs of the certificate circuit, so it is built from the size and
+  the constraints of the certificate circuit: its circuit verification key digest changes whenever
+  they change, and is only shared by the Mithril networks whose certificate circuits have the same
+  ones.
+
+A change of `k` or `m` therefore requires exporting the digests again and whitelisting the ones
+that changed, published before the first epoch certified with the new parameters.
 
 ## Pre-requisites
 
@@ -155,10 +159,11 @@ The command prints the two digests and writes them to the target file:
 }
 ```
 
-> The certificate circuit verification key is derived from the trusted setup for the given
-> protocol parameters, which is fast for the small `k` of the test networks. Without
-> `--protocol-parameters`, the production certificate circuit verification key embedded in
-> `mithril-stm` is used.
+> The circuit verification keys are derived from the trusted setup for the given protocol
+> parameters, which the command downloads when it is not cached on the machine. The derivation of
+> the certificate circuit verification key is fast for the small `k` of the test networks, the one
+> of the IVC circuit verification key takes several minutes. Without `--protocol-parameters`, the
+> production circuit verification keys embedded in `mithril-stm` are used.
 
 ## Whitelist a circuit verification key
 
