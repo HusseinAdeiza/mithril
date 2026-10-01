@@ -268,6 +268,8 @@ async fn register_signer(
         verification_key_for_snark: None,
         #[cfg(feature = "snark")]
         verification_key_signature_for_snark: None,
+        #[cfg(feature = "snark")]
+        proof_of_bound_possession_for_snark: None,
     };
     store.entry(message.epoch).or_default().push(signer);
 
@@ -339,6 +341,10 @@ mod tests {
             #[cfg(feature = "snark")]
             verification_key_signature_for_snark: signer_msg
                 .verification_key_signature_for_snark
+                .clone(),
+            #[cfg(feature = "snark")]
+            proof_of_bound_possession_for_snark: signer_msg
+                .proof_of_bound_possession_for_snark
                 .clone(),
         }
     }

@@ -284,6 +284,8 @@ mod messages {
                 verification_key_for_snark: None,
                 #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
+                #[cfg(feature = "snark")]
+                proof_of_bound_possession_for_snark: None,
             }
         }
     }
@@ -304,6 +306,8 @@ mod messages {
                 verification_key_for_snark: None,
                 #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
+                #[cfg(feature = "snark")]
+                proof_of_bound_possession_for_snark: None,
             }
         }
     }
@@ -724,6 +728,8 @@ mod messages {
                 verification_key_for_snark: None,
                 #[cfg(feature = "snark")]
                 verification_key_signature_for_snark: None,
+                #[cfg(feature = "snark")]
+                proof_of_bound_possession_for_snark: None,
             }
         }
     }
