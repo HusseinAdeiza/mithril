@@ -1051,9 +1051,10 @@ dependencies = [
 
 [[package]]
 name = "client-cardano-block"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "mithril-client",
  "slog",
@@ -4444,7 +4445,7 @@ dependencies = [
 
 [[package]]
 name = "mithril-client"
-version = "0.14.30"
+version = "0.14.31"
 dependencies = [
  "anyhow",
  "async-trait",

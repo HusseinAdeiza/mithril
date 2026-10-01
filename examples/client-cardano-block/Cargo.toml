@@ -1,7 +1,7 @@
 [package]
 name = "client-cardano-block"
 description = "Mithril client cardano-block example"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["dev@iohk.io", "mithril-dev@iohk.io"]
 documentation = "https://mithril.network/doc"
 edition = "2021"
@@ -11,8 +11,9 @@ repository = "https://github.com/IntersectMBO/mithril/"
 
 [dependencies]
 anyhow = { workspace = true }
+chrono = { workspace = true }
 clap = { workspace = true }
-mithril-client = { path = "../../mithril-client", features = ["unstable", "rustls"] }
+mithril-client = { path = "../../mithril-client", features = ["fs", "unstable", "rustls"] }
 slog = { workspace = true }
 slog-async = { workspace = true }
 slog-term = { workspace = true }
