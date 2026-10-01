@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressDrawTarget};
 use mithril_common::{
     StdResult,
@@ -95,7 +94,6 @@ pub async fn download_latest_snasphot(
     }
 }
 
-#[async_recursion]
 pub async fn download_certificate_chain(
     http_client: Arc<reqwest::Client>,
     endpoint: &str,
@@ -119,7 +117,12 @@ pub async fn download_certificate_chain(
     }?;
 
     if certificate.previous_hash.is_empty() {
-        return download_certificate_chain(http_client, endpoint, &certificate.previous_hash).await;
+        return Box::pin(download_certificate_chain(
+            http_client,
+            endpoint,
+            &certificate.previous_hash,
+        ))
+        .await;
     }
 
     Ok(())

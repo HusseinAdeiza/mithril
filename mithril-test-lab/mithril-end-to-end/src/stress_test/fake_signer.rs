@@ -1,4 +1,3 @@
-use async_recursion::async_recursion;
 use indicatif::{ProgressBar, ProgressDrawTarget};
 use reqwest::{RequestBuilder, StatusCode};
 use slog_scope::{debug, info, warn};
@@ -37,7 +36,6 @@ pub enum LoadError {
     },
 }
 
-#[async_recursion]
 async fn send_signer_registration_request(
     party_id: PartyId,
     http_request: RequestBuilder,
@@ -54,7 +52,12 @@ async fn send_signer_registration_request(
                 "error_message" => &error_message
             );
             tokio::time::sleep(Duration::from_millis(250)).await;
-            send_signer_registration_request(party_id, http_request, true).await
+            Box::pin(send_signer_registration_request(
+                party_id,
+                http_request,
+                true,
+            ))
+            .await
         }
         status => Err(LoadError::SignerRegistrationError {
             expected_http_code: 201,
