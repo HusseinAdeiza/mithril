@@ -2,23 +2,23 @@
   "registry": {
   "entries": [
     {
-      "comment": "initial publication",
+      "comment": "initial publication (2026-10-01, commit a4230d113)",
       "digest": "21bd5482d438aec353d1349f5933db8b7f3b8a9894f4739eeec1d71dd7113b1f",
       "end_epoch": null,
-      "name": "certificate-circuit v1 (k=1054, m=8400)",
+      "name": "certificate-circuit v1 (k=1054)",
       "start_epoch": 0,
       "status": "allowed"
     },
     {
-      "comment": "initial publication",
-      "digest": "8a6b414e9b007a6c4ff68a349ea2a7447cb1c94cb7d3de59307197284a8db252",
+      "comment": "initial publication (2026-10-01, commit a4230d113)",
+      "digest": "d968e7da41bd1eb1b7f4c8567bafae6e87b4e12a4910572b0c1a5b14857c7340",
       "end_epoch": null,
-      "name": "ivc-circuit v1",
+      "name": "ivc-circuit v1 (k=1054)",
       "start_epoch": 0,
       "status": "allowed"
     }
   ],
   "version": 2
 },
-  "signature": "15c26ff2221a4ec2b58bbec56267c6de23466cc8b994863b5de578ed083adfddc2324373aa689fc9d148b15fdb5ae97b04ce15b289bbd4451c0cc134551df307"
+  "signature": "1f76a72e9caac7aced0ad1e2f7526f284740429737290c87dc724a8c2c07957c62cce74f1f2219da80243f9f0479dec0680005466568d8c11f6ef39b8f4eeb07"
 }
