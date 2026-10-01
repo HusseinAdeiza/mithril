@@ -116,7 +116,7 @@ pub async fn download_certificate_chain(
         Err(_) => Err(LoadError::UnreachableAggregatorList),
     }?;
 
-    if certificate.previous_hash.is_empty() {
+    if !certificate.previous_hash.is_empty() {
         return Box::pin(download_certificate_chain(
             http_client,
             endpoint,
