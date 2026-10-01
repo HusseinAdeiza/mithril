@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use async_recursion::async_recursion;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use slog_scope::warn;
@@ -17,7 +16,6 @@ use mithril_common::{
 
 use crate::Aggregator;
 
-#[async_recursion]
 async fn request_first_list_item_with_expected_size<I>(
     url: &str,
     expected_size: usize,
@@ -35,7 +33,13 @@ where
                     "Invalid size, expected {expected_size}, got {}",
                     list.len()
                 )),
-                Ok(_) => request_first_list_item_with_expected_size::<I>(url, expected_size).await,
+                Ok(_) => {
+                    Box::pin(request_first_list_item_with_expected_size::<I>(
+                        url,
+                        expected_size,
+                    ))
+                    .await
+                }
                 Err(err) => Err(anyhow!("Invalid list body : {err}")),
             },
             s if s.is_server_error() => {
@@ -44,7 +48,13 @@ where
                 warn!("{message}");
                 Err(anyhow!(message))
             }
-            _ => request_first_list_item_with_expected_size::<I>(url, expected_size).await,
+            _ => {
+                Box::pin(request_first_list_item_with_expected_size::<I>(
+                    url,
+                    expected_size,
+                ))
+                .await
+            }
         },
         Err(err) => Err(anyhow!(err).context(format!("Request to `{url}` failed"))),
     }
