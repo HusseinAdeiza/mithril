@@ -45,15 +45,9 @@ Three things worth knowing before choosing a route.
 
 Statements about the code are checked against one revision of `main`, named here.
 
-**Baseline: `6b60db68b`, 2026-09-28.**
+**Baseline: `e1c9a4cf1`, 2026-10-01.**
 
-A page describes what exists at that baseline unless it carries the **In review** marker: implemented in a named open pull request and not on `main` at the baseline. The marker does not mean approved, nor certain to ship as written. Open pull requests are rebased, so each was read at the head below, on the date given; a later head can carry the same change under another hash.
-
-| Pull request | Subject                                            | Head read   | Read on    |
-| ------------ | -------------------------------------------------- | ----------- | ---------- |
-| #3539        | Proof of bound possession                          | `3f3d0db00` | 2026-09-28 |
-| #3541        | Circuit key registry crate and publication tooling | `da8618a7a` | 2026-09-28 |
-| #3514        | Circuit key registry enforcement                   | `313cd2c38` | 2026-09-28 |
+A page describes what exists at that baseline unless it carries the **In review** marker: implemented in a named open pull request and not on `main` at the baseline. The marker does not mean approved, nor certain to ship as written. Open pull requests are rebased, so a page carrying the marker names the head it was read at. No page carries it in this edition.
 
 Where something is built but nothing calls it yet, the page says so. A feature gate is not a marker: whether code is merged and whether a distribution enables it are independent facts, and a page that depends on one states it in prose.
 
@@ -179,7 +173,7 @@ Both SNARK flavors require substantially more computation to produce an aggregat
 
 Given trusted [circuit verification keys](#term-circuit-verification-key) and the genesis trust anchor, only `IvcSnark` authenticates the full chain without fetching predecessor certificates. Chain verification therefore stops at the first valid certificate of that type.
 
-Both SNARK types use circuit verification keys carried in [ancillary verifier data](#term-ancillary-verifier-data), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. At this baseline the registry and certification primitives exist, but the standard certificate verifier does not yet invoke that certification check. Concatenation uses no circuit verification key.
+Both SNARK types use circuit verification keys carried in [ancillary verifier data](#term-ancillary-verifier-data), the certificate's proof-system-specific verification inputs. Those keys must be authenticated by a trusted authority before use. The standard certificate verifier checks their digests against a genesis-signed registry before accepting the certificate, which Part 6 covers. Concatenation uses no circuit verification key.
 
 | Type            | Flavor              | Compiled     | Tag | Certifies the full chain | Requires externally certified circuit keys |
 | --------------- | ------------------- | ------------ | --- | ------------------------ | ------------------------------------------ |
@@ -318,22 +312,23 @@ Registration fixes a signer set, and that set signs later. A round opened during
 | `kes_evolutions`                               | KES evolutions since the operational certificate's start period. Serialized as `kes_period`. At submission the aggregator authenticates with the value it derives from the chain's current KES period. |
 | `verification_key_for_snark`                   | The Schnorr verification key. Optional.                                                                                                                                                                |
 | `verification_key_signature_for_snark`         | A KES signature over the Schnorr verification key. Required whenever that key is present.                                                                                                              |
+| `proof_of_bound_possession_for_snark`          | A proof of bound possession for the Schnorr verification key. Required whenever that key is present.                                                                                                   |
 
-The two SNARK fields are everything the SNARK flavors add to a submission. A signer may omit them both, registering normally and taking part in concatenation aggregation alone. A Schnorr key supplied without its KES signature is rejected on the certified path.
+The three SNARK fields are everything the SNARK flavors add to a submission. A signer may omit them all, registering normally and taking part in concatenation aggregation alone. A Schnorr key supplied without its KES signature or its proof of bound possession is rejected on the certified path.
 
 Authentication happens in two layers. The operational certificate and the KES signatures tie each verification key to a [stake pool operator](https://mithril.network/doc/next/glossary#stake-pool-operator-spo), which is what gives `party_id` its meaning. The library then verifies the concatenation key's proof of possession and checks that the Schnorr key is a prime-order point on its curve. Each submission is authenticated on its own, against no other signer's keys.
 
 Stake never travels with the message. The aggregator associates each registered signer with the stake recorded for it in the [stake distribution](https://mithril.network/doc/next/glossary#stake-distribution) used for that registration round, which is what stops a signer from influencing its own [lottery target](#term-lottery-target) through what it sends.
 
-**In review: proof of bound possession.** Signers will also submit a proof of bound possession for the Schnorr verification key, binding it to the signer's stake and epoch as well as to its pool operator. At the baseline nothing in the crate implements it and the Schnorr key is authenticated by its KES signature alone; PR #3539 adds it. Part 9 gives the construction and what it defends against. The same pull request maps each signer's registration position to its position in the SNARK tree, which aggregation uses when some registered signers carry no Schnorr key.
+**Proof of bound possession.** The KES signature ties the Schnorr verification key to a pool operator. The proof of bound possession is a signature under the matching signing key, binding that key to the signer's stake, the round's recording label and its pool identifier. The aggregator checks it at submission and again each time it builds a signer set from the stored registrations, against the stake it records for that signer. Part 9 gives the construction and what it defends against.
 
-**What this constrains.** Both verification keys travel the same authentication path, so a pool already able to register for concatenation needs no new operator key material to register for SNARK. Because the Schnorr key is optional per signer, one epoch can hold registrations with and without one; proving over such an epoch uses the index mapping PR #3539 adds.
+**What this constrains.** Both verification keys travel the same authentication path, so a pool already able to register for concatenation needs no new operator key material to register for SNARK. Because the Schnorr key is optional per signer, one epoch can hold registrations with and without one. SNARK aggregation at the baseline assumes that every registered signer carries a Schnorr key: it reads a signer's position in the registration sequence as its position in the SNARK tree, and the two coincide only under that assumption. Proving over an epoch that mixes both kinds of registration is not supported yet.
 
 ### Closing: the Merkle tree and the aggregate verification key
 
 Closing freezes a registration set and produces the fixed objects that signing and aggregation read. It runs once, over the accumulated entries. Closing the STM set and closing the network's registration round are separate operations.
 
-Entries enter one shared registration set as they are added, and that set rejects an entry whose concatenation verification key, or whose Schnorr verification key when present, is already in it. Two signers cannot share a verification key in one set. The aggregator applies this check when it builds an epoch's signer set from the stored registrations, and a duplicate fails that build; Part 9 describes the collision resolution PR #3539 adds for Schnorr keys.
+Entries enter one shared registration set as they are added, and that set rejects an entry whose concatenation verification key, or whose Schnorr verification key when present, is already in it. Two signers cannot share a verification key in one set. The aggregator applies this check when it builds an epoch's signer set from the stored registrations, and a duplicate fails that build. Part 9 covers what the proof of bound possession changes for a duplicated Schnorr key.
 
 Closing sums the stake of every entry, rejecting both an overflow and a total of zero. It then converts each entry into a closed entry, computing that signer's [lottery target value](#term-lottery-target) from its stake, the total stake and [`phi_f`](#symbol-phi-f); the lottery page gives the derivation. Entries are held in a sorted set, so their order follows the entries themselves and not their arrival. A closed entry holds the concatenation verification key and the stake, plus the Schnorr verification key and the lottery target value when the signer registered one.
 
@@ -999,7 +994,7 @@ A key passes through five stages, and the sections follow them.
 
 The two sides have opposite runtime problems. A prover's material is large — the structured reference string runs to hundreds of megabytes and a proving key is larger — so its question is how not to derive it twice. A verifier's material is small: the KZG verifier parameters are a compile-time constant and the committed verifying keys are a few kilobytes each. Its question is whether the key may be used. Possession and permission are separate, and the middle sections keep them apart.
 
-**The registry sections describe work in progress.** The registry types and checking are on `main`. The tooling and the enforcement are implemented in two open pull requests, and the blocks describing them are marked **In review**.
+**The registry is enforced behind the `snark` feature.** The registry, its publication tooling and its enforcement in the certificate verifier are on `main`, and no distribution enables the feature at the baseline.
 
 ## Where key material comes from
 
@@ -1077,28 +1072,28 @@ Including the SRS hash in the fingerprint ties an entry to the artifact the crat
 
 ## The registry of trusted keys
 
-A verifier uses the circuit keys a certificate carries, and decoding checks only their structure. The registry adds authorization: a published list of permitted keys, checked at verification time. Its types and rules are on `main`; the tooling that produces one and the enforcement that consumes it are the next section.
+A verifier uses the circuit keys a certificate carries, and decoding checks only their structure. The registry adds authorization: a published list of permitted keys, checked at verification time. This section gives its types and rules, the next the enforcement that consumes it, and Part 8 the tooling that produces one.
 
 **The document.** A registry is a version and a list of entries, signed as a whole. Each entry is one statement about one digest.
 
-| Field         | Contents                                                                                 |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `digest`      | The circuit verification key digest the statement is about                               |
-| `name`        | A human-readable circuit label, for the audit trail                                      |
-| `status`      | `allowed` or `revoked`                                                                   |
-| `start_epoch` | First epoch covered, inclusive                                                           |
-| `end_epoch`   | Last epoch covered, inclusive; absent means open-ended                                   |
-| `comment`     | Free text, typically the reason for a revocation                                         |
-| `version`     | On the registry rather than the entry: monotonically increasing, for rollback protection |
+| Field         | Contents                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `digest`      | The circuit verification key digest the statement is about                                                            |
+| `name`        | A human-readable circuit label, for the audit trail                                                                   |
+| `status`      | `allowed` or `revoked`                                                                                                |
+| `start_epoch` | First epoch covered, inclusive                                                                                        |
+| `end_epoch`   | Last epoch an allowed entry covers, inclusive, absent meaning open-ended. On a revoked entry, the epoch of revocation |
+| `comment`     | Free text, typically the reason for a revocation                                                                      |
+| `version`     | On the registry rather than the entry: monotonically increasing, for rollback protection                              |
 
-**The rules.** A digest absent from the registry is rejected, so the list is a whitelist. An allowed entry accepts the epochs its range covers. A revoked entry rejects, and wins where an allowed entry covers the same epoch.
+**The rules.** A registry holds one entry per digest, which the publication tooling enforces. A digest absent from the registry is rejected, so the list is a whitelist. An allowed entry accepts the epochs its range covers. A revoked entry rejects at every epoch: its epochs record when the revocation happened and bound nothing. A digest listed more than once is rejected as soon as one of its entries is revoked, so a malformed registry cannot certify a revoked key.
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": false, "wrappingWidth": 400}}}%%
 flowchart TD
     D["A digest computed from<br/>a carried key"]
     E{"Listed in<br/>the registry?"}
-    R{"A revoked entry<br/>covers the epoch?"}
+    R{"One of its entries<br/>is revoked?"}
     C{"An allowed entry<br/>covers the epoch?"}
     OK[["Accepted"]]
     N1[["Rejected:<br/>not whitelisted"]]
@@ -1113,9 +1108,7 @@ flowchart TD
     C -->|yes| OK
 ```
 
-The decision above is the baseline's.
-
-> **In review** in PR #3541, the rules change. The registry is meant to hold **one entry per digest**, which its publication tooling enforces, and a revoked entry rejects at **every** epoch rather than within its range — the revocation epoch becomes an audit fact rather than a bound, so the middle decision above loses its epoch qualifier. A digest listed more than once is rejected as soon as one of its entries is revoked, so a malformed registry cannot certify a revoked key. What revoking a key does to certificates already produced changes with it; _Key changes and chain continuity_ returns to that.
+Revocation is therefore retroactive: it reaches the certificates a key already produced, and _Key changes and chain continuity_ returns to that.
 
 **The signature.** The registry travels as the exact JSON of the registry value, kept verbatim, with an Ed25519 signature over a domain separator followed by exactly those bytes — the nested registry, not the envelope carrying it. Signing the retained bytes rather than a re-serialization lets a verifier tolerate fields a later schema adds: unknown fields survive in the signed bytes and are ignored at parse time. It does not mean older code understands what they express.
 
@@ -1127,7 +1120,7 @@ The signer is the **Ed25519 half** of the genesis signer, the authority that sig
 
 ## Registry retrieval and enforcement
 
-A signed list is useful only once a node obtains it, checks it and applies it. Retrieval and verification are on `main`; the enforcement paths and tooling are in review.
+A signed list is useful only once a node obtains it, checks it and applies it.
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": false, "wrappingWidth": 400}}}%%
@@ -1141,15 +1134,13 @@ flowchart TD
     SRC --> RET --> SIG --> CACHE --> ENF
 ```
 
-This is the path the in-review stack implements, in PR #3514. At the baseline there is no HTTP source and no enforcement step, and every retrieval additionally checks the version against a compiled floor.
+**Retrieval.** A retriever returns the signed document unverified, so the transport is not mistaken for the authority: signature and version checks belong to the caller. One implementation reads a local file. Another downloads the document over HTTPS, refusing plain HTTP, within three attempts, a ten-second timeout and a 1 MiB body. A third stands for a node with no configured source and fails every retrieval.
 
-**Retrieval.** A retriever returns the signed document unverified, so the transport is not mistaken for the authority: signature and version checks belong to the caller. A file-reading implementation is on `main`; an HTTP downloader arrives with PR #3541.
+**Verification and caching.** A certifier verifies the genesis signature over the exact bytes, and without a verified registry the check fails. A caching decorator keeps the verified registry for one hour, checked when the registry is used rather than by a background task. Its refresh is tolerant rather than fail-closed: a failed refresh keeps serving the registry already verified, with a retry five minutes later, and a registry that neither has a higher version nor is identical to the cached one leaves the cached one in place. A refresh that fails to retrieve or verify returns an overdue error once the registry it retained was last verified more than 24 hours earlier. A refresh that succeeds without superseding the cached registry takes the retention branch instead, which does not consult that age.
 
-**Verification and caching.** A certifier verifies the genesis signature over the exact bytes and rejects a registry below a compiled minimum version, a floor bumped at release time when a revocation ships to bound replay of an older, genuinely signed registry. A caching decorator keeps the verified registry for one hour, checked when the registry is used rather than by a background task. A failed refresh fails the check, and a refresh returning a version below the cached one is a rollback error — a check held in one instance's memory, so it does not survive a restart.
+No minimum version is compiled in. The version comparison is held in one instance's memory, so it does not survive a restart, and a node starting afresh accepts any genuinely signed registry it is served. Neither refresh path is a general bound on how long a stale registry may be served.
 
-> **In review** in PR #3541, the compiled minimum version is removed and the refresh becomes tolerant rather than fail-closed: a failed refresh keeps serving the registry already verified, with a retry scheduled, and a registry that neither has a higher version nor is identical to the cached one leaves the cached one in place. A refresh that fails to retrieve or verify can return an overdue error once the registry it retained passes a configured age; a refresh that succeeds without superseding the cached registry takes the retention branch instead, which does not consult that age. Availability and revocation latency therefore trade differently from the baseline, and neither path is a general bound on how long a stale registry may be served.
-
-**Where the check runs.** Enforcement is implemented in PR #3514, whose base is #3541.
+**Where the check runs.** The certificate verifier applies it before the certificate's integrity checks, to the flavors that carry circuit keys.
 
 | Flavor                                    | Digests checked                                         | Epoch used            |
 | ----------------------------------------- | ------------------------------------------------------- | --------------------- |
@@ -1159,7 +1150,7 @@ This is the path the in-review stack implements, in PR #3514. At the baseline th
 
 Which flavors require certification is a property of the aggregate signature type, pinned by a golden test: concatenation uses no circuit and is exempt. The check runs in the certificate verifier on both the standard path and the full-chain shortcut. A client resolves its network's registry through the published networks file by matching its aggregator endpoint; an aggregator is configured with a registry URL, where `file://` reads a local file. That routing decides which document is offered, not whether it is trusted: a wrong entry affects availability and which version is seen, while the genesis signature decides acceptance.
 
-**The feature gate.** All of this sits behind the `snark` feature, which the distributions do not enable at the revisions described. A network enforces the registry once its distribution is built with the feature, a registry is published for it, and its nodes are configured with a source. Building with the feature is necessary and not sufficient.
+**The feature gate.** All of this sits behind the `snark` feature, which the distributions do not enable at the baseline. A network enforces the registry once its distribution is built with the feature, a registry is published for it, and its nodes are configured with a source. Building with the feature is necessary and not sufficient.
 
 **What this constrains.** Signature verification establishes that a registry is authentic, not that it is the latest published. What a node does about updates is the refresh policy and the version rules above; neither establishes that the registry in hand is current. Part 8 covers publication and deployment.
 
@@ -1181,7 +1172,7 @@ Changing a circuit changes its verifying key, its digest, and therefore its iden
 
 That is the mechanism behind the operational rule: the key-update runbook states that modifying any circuit key is a breaking change requiring a re-genesis of the certificate chain, scheduled by the release manager alongside the release carrying the new circuit. Part 8 covers the procedure.
 
-**What revocation reaches.** Enforcement checks the digests a certificate carries, at that certificate's own epoch. It does not walk the epochs a recursive certificate's ancestry covers, and the recursive circuit does not evaluate registry decisions inside itself. Under range-based revocation, rejecting a key for an earlier range does not by itself reject a later certificate whose ancestry passes through it; under the in-review all-epoch revocation, every certificate carrying that digest is rejected. Neither reaches inside a proof to repair a compromised history, which is why revocation and re-genesis answer different questions.
+**What revocation reaches.** Enforcement checks the digests a certificate carries, at that certificate's own epoch. It does not walk the epochs a recursive certificate's ancestry covers, and the recursive circuit does not evaluate registry decisions inside itself. Revoking a key rejects every certificate carrying its digest, whatever its epoch, and an allowed entry whose range has ended rejects only the certificates of the epochs after it. Neither reaches inside a proof to repair a compromised history, which is why revocation and re-genesis answer different questions.
 
 **What this constrains.** The registry can stop a key being used from now on. It cannot make an existing chain continue under a different key, and it cannot alter what a proof already attests. Part 9 analyses what an adversary gains in the window before a revocation is published and seen.
 
@@ -1405,20 +1396,20 @@ Switching to Lagrange is not a message-format change alone. With the feature com
 
 **One genesis certificate, two signatures.** A Lagrange genesis certificate is signed twice over the same genesis protocol message, with two independent key pairs held together in the genesis bundle: Ed25519 signs the hex encoding of the message's SHA-256 hash, and Schnorr signs the hash itself. An ordinary chain walk that reaches genesis checks the Ed25519 signature. The recursive circuit checks the Schnorr signature instead, in-circuit, at its genesis step.
 
-That is why the two SNARK flavors differ in what they need. A non-recursive SNARK proves STM validity for its message, and the chain behind it is established the ordinary way by verifying predecessors, ending at that Ed25519 check. A recursive proof establishes the chain relation back to genesis itself, so it fetches no predecessor and never reaches the genesis certificate; the Schnorr signature is the anchor it checks in its place. Under the in-review enforcement, a node verifying recursive certificates also uses Ed25519, to authenticate the circuit key registry that key signs.
+That is why the two SNARK flavors differ in what they need. A non-recursive SNARK proves STM validity for its message, and the chain behind it is established the ordinary way by verifying predecessors, ending at that Ed25519 check. A recursive proof establishes the chain relation back to genesis itself, so it fetches no predecessor and never reaches the genesis certificate; the Schnorr signature is the anchor it checks in its place. A node verifying recursive certificates still uses Ed25519, to authenticate the circuit key registry that key signs.
 
 The prerequisites divide by who is responsible for them.
 
-| Who                                                                | What they need                                                                                                           |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era                                  |
-| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                                                     |
-| A node verifying recursive certificates                            | The Schnorr genesis verification key; with **In review** registry enforcement, also the Ed25519 genesis verification key |
-| Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                                                 |
+| Who                                                                | What they need                                                                                                       |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| The operator                                                       | A genesis signing bundle with both halves, and a signed genesis certificate for the era                              |
+| A node verifying concatenation or non-recursive SNARK certificates | The Ed25519 genesis verification key                                                                                 |
+| A node verifying recursive certificates                            | The Schnorr genesis verification key, and the Ed25519 genesis verification key the circuit key registry is signed by |
+| Provers only                                                       | The trusted setup, the derived proving keys, and somewhere to cache them                                             |
 
 A node needs the material for every path it can reach, not the flavor it starts from: a chain walk that begins at a concatenation certificate can meet a recursive one, and that branch fails without the Schnorr half.
 
-Circuit verification keys are not a separate installation: a SNARK certificate carries the keys its proof is verified against in its ancillary verifier data. **In review** in PR #3514, the verifier checks the digests of those supplied keys against the signed registry it retrieves; at the baseline it performs no such check.
+Circuit verification keys are not a separate installation: a SNARK certificate carries the keys its proof is verified against in its ancillary verifier data. The verifier checks the digests of those supplied keys against the signed registry it retrieves.
 
 **Supplying a missing half.** A network that predates SNARK has only the Ed25519 half: the signer carries a Schnorr key optionally, and it is absent when an operator loaded a legacy single-key file. Lagrange signing needs both. Preparing a dual genesis separates the key upgrade from the certificate ceremony.
 
@@ -1430,7 +1421,7 @@ Circuit verification keys are not a separate installation: a SNARK certificate c
 
 An aggregator configured for a SNARK flavor starts preparing its prover on a background thread at startup, and this warm-up is where the trusted setup is downloaded. A failure another attempt can resolve, such as an unreachable source, is retried after a delay that doubles from one minute up to fifteen, with jitter; one that cannot, such as a downloaded string whose hash does not match, stops the warm-up; a cached string that fails its hash check is removed and downloaded again. Provers read only the local cache: an aggregation waits for an in-flight load of its setup slot, and one that has to load the setup itself while the string is absent fails. Concatenation prepares nothing.
 
-**What verification needs.** No secret key, no proving key and no SRS download: the embedded KZG verifier parameters, the certificate with its proof and public context, the genesis material its flavor requires, and, under enforcement, a registry it can retrieve. The proving side's cost falls on aggregators.
+**What verification needs.** No secret key, no proving key and no SRS download: the embedded KZG verifier parameters, the certificate with its proof and public context, the genesis material its flavor requires, and, for a SNARK certificate, a registry it can retrieve. The proving side's cost falls on aggregators.
 
 ## Certificate-chain continuity
 
@@ -1466,20 +1457,23 @@ A recursive certificate does not reach this check. Verification of one stops aft
 
 ## Registry publication, revocation, and re-genesis
 
-Four operations act on circuit keys, with different actors, inputs and effects.
+Five operations act on circuit keys, with different actors, inputs and effects.
 
-| Operation                | Who                                             | Effect                                    |
-| ------------------------ | ----------------------------------------------- | ----------------------------------------- |
-| Publish a registry       | The holder of the network's genesis Ed25519 key | A newer signed list of permitted digests  |
-| Revoke an entry          | The same                                        | A digest stops being permitted            |
-| Replace circuit material | Circuit authors, then the release manager       | New keys, new digests, a new distribution |
-| Establish a new genesis  | The operator                                    | A chain with no predecessor               |
+| Operation                | Who                                             | Effect                                           |
+| ------------------------ | ----------------------------------------------- | ------------------------------------------------ |
+| Publish a registry       | The holder of the network's genesis Ed25519 key | A newer signed list of permitted digests         |
+| Expire an entry          | The same                                        | A digest stops being permitted after a set epoch |
+| Revoke an entry          | The same                                        | A digest stops being permitted at every epoch    |
+| Replace circuit material | Circuit authors, then the release manager       | New keys, new digests, a new distribution        |
+| Establish a new genesis  | The operator                                    | A chain with no predecessor                      |
 
-**Publishing.** A registry is published per network, where that network's nodes can reach it. It takes effect once a distribution carries the enforcement implementation and nodes are configured to resolve a source. Under the in-review enforcement, an aggregator with no registry source configured fails closed and rejects every SNARK certificate it verifies.
+**Publishing.** A registry is published per network, where that network's nodes can reach it. It takes effect once a distribution is built with the `snark` feature and nodes are configured to resolve a source. An aggregator with no registry source configured fails closed and rejects every SNARK certificate it verifies.
 
-> **In review.** At the baseline the registry types, the signature and the certifier exist, but the standard certificate verifier has no registry dependency. Publication tooling arrives with PR #3541: an aggregator command exports the digests of a given protocol configuration and whitelists one in a signed registry. Enforcement and routing arrive with PR #3514: the aggregator takes a `circuit_verification_key_registry_url`, and the default client retriever resolves its network's registry from the published networks configuration. A baseline build with the feature enabled, a published registry and a configured source still enforces nothing.
+**Tooling and routing.** An aggregator command exports the digests of a given protocol configuration, whitelists, expires or revokes one in a signed registry, and signs a hand-authored registry. Each edit verifies the current signature, increments the version and signs the result. The aggregator takes a `circuit_verification_key_registry_url`, and the default client retriever resolves its network's registry from the published networks configuration. At the baseline signed registries are committed for `dev-preview` and `testing-preview` and `networks.json` references none, so a default client built with the feature rejects every SNARK certificate until its network's entry is added or another retriever is supplied.
 
-**Revoking** is publishing with an entry marked revoked. It does not change a proof's bytes or the relation that proof satisfies; it changes acceptance. Once a verifier applies the registry, a certificate carrying a revoked digest is rejected, including one produced before the revocation was published — bounded by the entry's epoch range at the baseline, at every epoch in the reviewed revision, as Part 6 sets out. How quickly nodes act depends on the refresh policy. In PR #3541 a failed refresh keeps the last verified registry and schedules another attempt; if that verification is already older than the maximum age, the failed refresh rejects the check it lands on. The age limit does not bound how long the cached registry is served afterwards. Part 6 covers the branches. Neither revision gives a deadline by which a revocation is universally seen. Part 9 covers what an adversary gains in that window.
+**Expiring** closes an allowed entry's range at an end epoch. Certificates carrying that digest keep verifying up to that epoch and are rejected after it, so it retires a key without invalidating what the key certified. An end epoch earlier than the last epoch certified with the key rejects the certificates of the epochs in between.
+
+**Revoking** is publishing with an entry marked revoked. It does not change a proof's bytes or the relation that proof satisfies; it changes acceptance. Once a verifier applies the registry, a certificate carrying a revoked digest is rejected at every epoch, including one produced before the revocation was published, as Part 6 sets out. That reaches the network's current chain, which stops certifying until a re-genesis with replacement keys. How quickly nodes act depends on the refresh policy. A failed refresh keeps the last verified registry and schedules another attempt; if that verification is already older than the maximum age, the failed refresh rejects the check it lands on. The age limit does not bound how long the cached registry is served afterwards. Part 6 covers the branches. Nothing gives a deadline by which a revocation is universally seen. Part 9 covers what an adversary gains in that window.
 
 **Replacing circuit material and re-genesis.** Changing a circuit key requires a re-genesis of the certificate chain, for the reason Part 6 gives: a recursive chain's global anchor binds the verifying keys it started under, and no key-transition relation exists. The runbook's stages are:
 
@@ -1488,9 +1482,9 @@ Four operations act on circuit keys, with different actors, inputs and effects.
 3. The release manager schedules the re-genesis alongside the distribution carrying the new circuit, environment by environment: testing, then pre-release, then the release networks.
 4. A genesis ceremony establishes the new chain, after which the old chain is not continued.
 
-Where the registry is enforced, the replacement keys also have to be permitted before certificates carrying them are accepted, so these steps are coordinated with stage 3 and not left until after it: export the digests for the target protocol parameters, authorize them and revoke the superseded ones in a newer signed registry, publish it, and point aggregators and clients at it. Once a verifier applies the updated registry, it rejects SNARK certificates carrying the superseded digests. The abandoned chain's genesis and concatenation certificates carry no circuit key, and under the same genesis keys verification does not pin a particular genesis certificate. They belong to the in-review stack.
+Where the registry is enforced, the replacement keys also have to be permitted before certificates carrying them are accepted, so these steps are coordinated with stage 3 and not left until after it: export the digests for the target protocol parameters, whitelist them from the epoch of the re-genesis, expire the superseded ones at the epoch preceding it, or revoke them when the change answers a vulnerability, in a newer signed registry, publish it, and point aggregators and clients at it. Once a verifier applies the updated registry, it rejects SNARK certificates carrying the superseded digests after their end epoch, or at every epoch when they are revoked. The abandoned chain's genesis and concatenation certificates carry no circuit key, and under the same genesis keys verification does not pin a particular genesis certificate.
 
-The [key-update runbook](../docs/runbook/update-circuit-keys/README.md) and the [manual-genesis runbook](../docs/runbook/genesis-manually/README.md) hold the commands and the environment ordering.
+The [key-update runbook](../docs/runbook/update-circuit-keys/README.md), the [registry runbook](../docs/runbook/circuit-key-registry/README.md) and the [manual-genesis runbook](../docs/runbook/genesis-manually/README.md) hold the commands and the environment ordering.
 
 ## Certificate consumption and client compatibility
 
@@ -1504,11 +1498,11 @@ Using a certificate takes two checks: the certificate is verified, and the data 
 | Predecessors fetched      | Walks predecessors to genesis              | The same                                              | None, after its own checks                 |
 | Circuit verification keys | None                                       | The certificate circuit's, carried by the certificate | Both circuits', carried by the certificate |
 | Genesis chain anchor      | Ed25519, verifying the genesis certificate | The same                                              | Schnorr, verified inside the proof         |
-| Registry consulted        | No                                         | Yes, in review                                        | Yes, in review                             |
+| Registry consulted        | No                                         | Yes                                                   | Yes                                        |
 
-A chain can mix flavors, and a client's requirements follow every certificate the walk reaches, not the one it starts from: walking back from a concatenation certificate can land on a recursive one, which stops the walk there and needs the Schnorr half and, under enforcement, certified circuit keys.
+A chain can mix flavors, and a client's requirements follow every certificate the walk reaches, not the one it starts from: walking back from a concatenation certificate can land on a recursive one, which stops the walk there and needs the Schnorr half and certified circuit keys.
 
-Behind the client library's `unstable` feature, a certificate cache can shorten repeated walks. By default it only saves downloads, and the certificates it returns are verified again. In its early-stop mode the walk ends at the first cached certificate, which is trusted because it was committed after a full verification of its chain, so the cache has to be protected against tampering.
+Behind the client library's `unstable` feature, a certificate cache can shorten repeated walks. In the library and the command-line client it only saves downloads by default, and the certificates it returns are verified again. In its early-stop mode, the WASM client's default, the walk ends at the first cached certificate, which is trusted because it was committed after a full verification of its chain, so the cache has to be protected against tampering. A certificate trusted from the cache is not checked against the registry again, so a revocation published after it was committed does not reach it while its cache entry lasts.
 
 A client built without the SNARK feature cannot verify either SNARK flavor, and the rigid message variant is itself behind that feature. Backward compatibility of unchanged fields does not extend to a client understanding a rigid message or a proof, so a deployment plan needs the client versions in use, not only the aggregator's.
 
@@ -1540,7 +1534,7 @@ A prover checks the string against the pinned hash each time it loads it, and fo
 
 **The circuit expresses the intended relation.** Soundness establishes that the circuit's constraints were satisfied. That those constraints express the protocol's rules is established by design, review and testing, which the next section covers.
 
-**The circuit keys a verifier accepts are the intended ones.** At the baseline nothing certifies them: the standard verifier takes the keys from the certificate and consults no registry. Decoding checks a key's structural compatibility with its position; it does not establish that the key represents Mithril's intended relation. Accepting a recursive certificate also ends the walk to its predecessors, so that walk adds no later check on the circuit it was proved with. Enforcement therefore has to be in place before a distribution enables `snark`. Under the in-review enforcement it checks their digests against the genesis-signed registry, and Part 8 gives the refresh behaviour that decides when a published revocation reaches a given node.
+**The circuit keys a verifier accepts are the intended ones.** The standard verifier takes the keys from the certificate and checks their digests against the genesis-signed registry. Decoding checks a key's structural compatibility with its position; it does not establish that the key represents Mithril's intended relation, which is what the registry check adds. Accepting a recursive certificate also ends the walk to its predecessors, so that walk adds no later check on the circuit it was proved with. A distribution enabling `snark` therefore needs a published registry and nodes configured with a source, and Part 8 gives the refresh behaviour that decides when a published revocation reaches a given node.
 
 Before a revocation is published and applied, what an adversary gains follows from why the key is revoked. If the circuit permits a protocol-invalid witness, a prover can produce a proof that verifies while violating the protocol, and a verifier that has not yet applied the revocation still authorizes the key identifying that circuit, so the certificate passes the registry check. It must still pass the proof and integrity checks, so continued authorization is not acceptance by itself. Once applied, revocation blocks later verifications and does not undo what was decided from certificates already accepted. Not every revoked circuit is exploitable, and the window has no established upper bound.
 
@@ -1558,9 +1552,9 @@ Before a revocation is published and applied, what an adversary gains follows fr
 
 ## Proof of bound possession
 
-**In review** in PR #3539, for issue #3537. Part 3 describes where it sits in registration.
+Part 3 describes where it sits in registration.
 
-**The problem.** The KES signature over a registration proves it came from that pool operator. It does not prove the registrant holds the signing key corresponding to the submitted Schnorr verification key, so a registrant can submit a key it does not control, including one another signer has already registered.
+**The problem.** The KES signature over a registration proves it came from that pool operator. It does not prove the registrant holds the signing key corresponding to the submitted Schnorr verification key, so on that signature alone a registrant could submit a key it does not control, including one another signer has already registered.
 
 **The construction.** Two SHA-256 digests produce the value the registrant signs.
 
@@ -1568,24 +1562,24 @@ Before a revocation is published and applied, what an adversary gains follows fr
 %%{init: {"flowchart": {"htmlLabels": false, "wrappingWidth": 400}}}%%
 flowchart LR
     BIND["stake · 8 bytes<br/>epoch · 8 bytes<br/>pool identifier · 28 bytes"]
-    PREFIX["Prefix<br/>32 bytes"]
     DST["Domain separation tag"]
+    PREFIX["Prefix<br/>32 bytes"]
     VK["Schnorr verification key<br/>64 bytes"]
     H["SHA-256"]
     VALUE["Signed value,<br/>taken as a base<br/>field element"]
     POBP["Proof of bound<br/>possession"]
 
     BIND -->|SHA-256| PREFIX
-    PREFIX --> H
     DST --> H
+    PREFIX --> H
     VK --> H
     H --> VALUE
     VALUE -->|standard Schnorr signature<br/>under the signing key| POBP
 ```
 
-**What it establishes.** Possession, since only the holder of the signing key can produce the signature, and binding, since the signed value covers the stake, epoch and pool identifier, so a proof does not transfer to another identity, epoch or stake. The verifier recomputes both digests from its own stake distribution, its own current epoch and the pool identifier in the operational certificate, so the binding values are its view and not the registrant's claim. On that authenticated path a SNARK key without a valid proof is rejected; the lower STM registration API does not itself check one.
+**What it establishes.** Possession, since only the holder of the signing key can produce the signature, and binding, since the signed value covers the stake, epoch and pool identifier, so a proof does not transfer to another identity, epoch or stake. The verifier recomputes both digests from its own stake distribution, the registration round's recording label and the pool identifier in the operational certificate, so the binding values are its view and not the registrant's claim. On that authenticated path a SNARK key without a valid proof is rejected; the lower STM registration API does not itself check one.
 
-**Collision resolution.** Two registrations can still present the same SNARK key, so registration no longer treats that as an error. The two entries are compared on stake, then on the concatenation verification key as a deterministic tie-break, and only the lesser keeps the SNARK key; the other's SNARK key is dropped while its concatenation registration is left intact. One SNARK key therefore counts once towards registered SNARK stake, and a collision excludes no one from concatenation. Because the authenticated path requires a valid proof, a registrant cannot copy a published key it does not hold and use the tie-break to evict its owner, which is the property the tie-break needs. It does not follow that the submitting process holds the secret itself, nor that an operator cannot share a key across registrations it controls.
+**Duplicate keys.** Registration still rejects an entry whose SNARK key is already in the set, as Part 3 describes. What the proof changes is who can cause a collision: because the authenticated path requires a valid proof, a registrant cannot copy a published key it does not hold and collide with its owner. It does not follow that the submitting process holds the secret itself, nor that an operator cannot share a key across registrations it controls, in which case the duplicate is rejected.
 
 ## What a signer can influence
 
